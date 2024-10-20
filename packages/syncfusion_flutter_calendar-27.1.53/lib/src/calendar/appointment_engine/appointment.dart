@@ -10,6 +10,17 @@ enum RepeatFrequency {
   weekly,
   monthly,
 }
+enum PrayerTime {
+  fajr,
+  dhuhr,
+  asr,
+  maghrib,
+  isha,
+}
+enum TimeRelation {
+  before,
+  after,
+}
 
 /// Appointment data for calendar.
 ///
@@ -82,6 +93,13 @@ class Appointment with Diagnosticable {
     int? repeatInterval; // Yeni özellik: Tekrarlama sıklığı
     RepeatFrequency? repeatFrequency; // Yeni özellik: Tekrarlama türü
     DateTime? repeatEndDate; // Yeni özellik
+
+    // New properties for prayer time-related appointments
+    DateTime? prayerDate; // New property for storing the selected day
+    PrayerTime? prayerTime;
+    TimeRelation? timeRelation; // Yeni özellik
+    Duration? offsetDuration; // Yeni özellik
+    Duration? duration;
   Appointment({
     this.startTimeZone,
     this.endTimeZone,
@@ -103,6 +121,12 @@ class Appointment with Diagnosticable {
     this.repeatInterval,
     this.repeatFrequency,
     this.repeatEndDate,
+
+    this.prayerDate,
+    this.prayerTime, // New feature
+    this.timeRelation,
+    this.offsetDuration,
+    this.duration, // New feature
 
   })  : notes = notes != null && notes.contains('isOccurrenceAppointment')
             ? notes.replaceAll('isOccurrenceAppointment', '')
@@ -998,7 +1022,11 @@ class Appointment with Diagnosticable {
         otherStyle.recurrenceExceptionDates == recurrenceExceptionDates &&
         otherStyle.recurrenceId == recurrenceId &&
         otherStyle.id == id &&
-        otherStyle.appointmentType == appointmentType;
+        otherStyle.appointmentType == appointmentType &&
+        otherStyle.prayerTime == prayerTime && // Check new properties
+        otherStyle.timeRelation == timeRelation &&
+        otherStyle.offsetDuration == offsetDuration &&
+        otherStyle.duration == duration;
   }
 
   @override
@@ -1049,5 +1077,9 @@ class Appointment with Diagnosticable {
     properties.add(IterableDiagnostics<Object>(resourceIds)
         .toDiagnosticsNode(name: 'resourceIds'));
     properties.add(DiagnosticsProperty<bool>('isAllDay', isAllDay));
+    properties.add(EnumProperty<PrayerTime>('prayerTime', prayerTime)); // New
+    properties.add(DiagnosticsProperty<TimeRelation>('timeRelation', timeRelation)); // New
+    properties.add(DiagnosticsProperty<Duration>('offsetDuration', offsetDuration)); // New
+    properties.add(DiagnosticsProperty<Duration>('duration', duration)); // New
   }
 }

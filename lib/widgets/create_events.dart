@@ -2,6 +2,106 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
+
+
+Future<Position?> _determinePosition() async {
+  bool serviceEnabled;
+  LocationPermission permission;
+
+  // Test if location services are enabled.
+  serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  if (!serviceEnabled) {
+    return null;
+  }
+
+  permission = await Geolocator.checkPermission();
+  if (permission == LocationPermission.denied) {
+    permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied) {
+      return null;
+    }
+  }
+
+  if (permission == LocationPermission.deniedForever) {
+    return null;
+  }
+
+  return await Geolocator.getCurrentPosition();
+}
+ Future<Map<String, DateTime>> fetchPrayerTimes(Position position, DateTime date) async {
+    final prefs = await SharedPreferences.getInstance();
+    String cacheKey = '${date.year}-${date.month}-${date.day}-${position.latitude}-${position.longitude}';
+    String? cachedTimes = prefs.getString(cacheKey);
+
+    if (cachedTimes != null) {
+      return Map<String, DateTime>.from(jsonDecode(cachedTimes));
+    }
+
+    // Fetch prayer times from API
+    final String apiUrl = 'https://api.aladhan.com/v1/timings/${date.day}-${date.month}-${date.year}?latitude=${position.latitude}&longitude=${position.longitude}&method=3';
+    final response = await http.get(Uri.parse(apiUrl));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      Map<String, DateTime> prayerTimes = {
+        'fajr': DateTime.parse(data['data']['timings']['Fajr']),
+        'dhuhr': DateTime.parse(data['data']['timings']['Dhuhr']),
+        'asr': DateTime.parse(data['data']['timings']['Asr']),
+        'maghrib': DateTime.parse(data['data']['timings']['Maghrib']),
+        'isha': DateTime.parse(data['data']['timings']['Isha']),
+      };
+
+      // Cache the prayer times
+      prefs.setString(cacheKey, jsonEncode(prayerTimes));
+      return prayerTimes;
+    } else {
+      throw Exception('Failed to load prayer times');
+    }
+  }
+
+Future<DateTime> getPrayerTimeForDate(DateTime date, PrayerTime prayerTime) async {
+  Position? position = await _determinePosition();
+
+  if (position != null) {
+    try {
+      Map<String, DateTime> prayerTimes = await fetchPrayerTimes(position, date);
+      switch (prayerTime) {
+        case PrayerTime.fajr:
+          return prayerTimes['fajr']!;
+        case PrayerTime.dhuhr:
+          return prayerTimes['dhuhr']!;
+        case PrayerTime.asr:
+          return prayerTimes['asr']!;
+        case PrayerTime.maghrib:
+          return prayerTimes['maghrib']!;
+        case PrayerTime.isha:
+          return prayerTimes['isha']!;
+        default:
+          return date;
+      }
+    } catch (e) {
+      // Handle exceptions and fallback to default times
+    }
+  }
+
+  // Default prayer times if location or internet access is denied
+  switch (prayerTime) {
+    case PrayerTime.fajr:
+      return DateTime(date.year, date.month, date.day, 5, 0);
+    case PrayerTime.dhuhr:
+      return DateTime(date.year, date.month, date.day, 12, 0);
+    case PrayerTime.asr:
+      return DateTime(date.year, date.month, date.day, 15, 0);
+    case PrayerTime.maghrib:
+      return DateTime(date.year, date.month, date.day, 18, 0);
+    case PrayerTime.isha:
+      return DateTime(date.year, date.month, date.day, 20, 0);
+    default:
+      return date;
+  }
+}
 
 Future<List<Appointment>> loadAppointments() async {
   final prefs = await SharedPreferences.getInstance();
@@ -28,12 +128,37 @@ Future<List<Appointment>> loadAppointments() async {
       repeatEndDate: appointmentData['repeatEndDate'] != null
           ? DateTime.parse(appointmentData['repeatEndDate'])
           : null,
+      prayerTime: appointmentData['prayerTime'] != null
+          ? PrayerTime.values[appointmentData['prayerTime']]
+          : null,
+      timeRelation: appointmentData['timeRelation'] != null
+          ? TimeRelation.values[appointmentData['timeRelation']]
+          : null,
+      offsetDuration: appointmentData['offsetDuration'] != null
+          ? Duration(minutes: appointmentData['offsetDuration'])
+          : null,
+      duration: appointmentData['duration'] != null
+          ? Duration(minutes: appointmentData['duration'])
+          : null,
     );
+
+    if (appointment.isRelatedToPrayerTimes && appointment.prayerTime != null) {
+      DateTime prayerTime = await getPrayerTimeForDate(appointment.startTime, appointment.prayerTime!);
+      final offset = appointment.offsetDuration ?? Duration();
+      final duration = appointment.duration ?? Duration();
+
+      if (appointment.timeRelation == TimeRelation.before) {
+        appointment.startTime = prayerTime.subtract(offset);
+        appointment.endTime = appointment.startTime.add(duration);
+      } else {
+        appointment.startTime = prayerTime.add(offset);
+        appointment.endTime = appointment.startTime.add(duration);
+      }
+    }
 
     if (!appointment.isRecurring) {
       visibleAppointments.add(appointment);
     } else {
-      // Tekrarlayan olaylar için tüm uygun tarihleri ekleyin
       DateTime recurrenceDate = appointment.startTime;
       while (recurrenceDate.isBefore(appointment.repeatEndDate ?? today.add(Duration(days: 365)))) {
         if (recurrenceDate.isAfter(today.subtract(Duration(days: 365))) && shouldDisplayEvent(appointment, recurrenceDate)) {
@@ -53,7 +178,6 @@ Future<List<Appointment>> loadAppointments() async {
       }
     }
   }
-
   return visibleAppointments;
 }
 

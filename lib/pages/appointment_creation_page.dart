@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart'; // Renk seçici paketi
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+
 
 class AppointmentCreationPage extends StatefulWidget {
   @override
@@ -14,6 +15,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   DateTime _startTime = DateTime.now();
   DateTime _endTime = DateTime.now().add(Duration(hours: 1));
   DateTime? _repeatEndDate;
+  DateTime? _prayerDate;
   bool _isAllDay = false;
   bool _isRecurring = false;
   bool _isRelatedToPrayerTimes = false;
@@ -23,10 +25,27 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   String _notes = '';
   String _location = '';
   Color _color = Colors.lightBlue;
+  PrayerTime? _prayerTime;
+  TimeRelation _timeRelation = TimeRelation.before;
+  int _offsetMinutes = 0;
+  int _durationMinutes = 60; // Yeni özellik: Süre
 
   void _submitForm() {
     if (_formKey.currentState?.validate() ?? false) {
       _formKey.currentState?.save();
+
+      if (_isRelatedToPrayerTimes && _prayerTime != null && _prayerDate != null) {
+        DateTime prayerDateTime = _prayerDate!;
+        Duration offset = Duration(minutes: _offsetMinutes);
+        Duration duration = Duration(minutes: _durationMinutes);
+        _startTime = _timeRelation == TimeRelation.before
+            ? prayerDateTime.subtract(offset)
+            : prayerDateTime;
+        _endTime = _timeRelation == TimeRelation.before
+            ? prayerDateTime.subtract(offset).add(duration)
+            : prayerDateTime.add(offset).add(duration);
+      }
+
       final appointment = Appointment(
         startTime: _startTime,
         endTime: _endTime,
@@ -40,6 +59,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         repeatInterval: _isRecurring ? _repeatInterval : null,
         repeatFrequency: _isRecurring ? _repeatFrequency : null,
         repeatEndDate: _isRecurring ? _repeatEndDate : null,
+        prayerTime: _prayerTime,
+        timeRelation: _timeRelation,
+        offsetDuration: Duration(minutes: _offsetMinutes),
+        duration: Duration(minutes: _durationMinutes),
+        prayerDate: _prayerDate,
       );
       _saveAppointment(appointment);
       print('Appointment Created: $appointment');
@@ -63,10 +87,30 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       'repeatInterval': appointment.repeatInterval,
       'repeatFrequency': appointment.repeatFrequency?.index,
       'repeatEndDate': appointment.repeatEndDate?.toIso8601String(),
+      'prayerTime': appointment.prayerTime?.index,
+      'timeRelation': appointment.timeRelation?.index,
+      'offsetDuration': appointment.offsetDuration?.inMinutes,
+      'duration': appointment.duration?.inMinutes,
+      'prayerDate': appointment.prayerDate?.toIso8601String(),
     }));
     await prefs.setStringList('appointments', appointmentList);
   }
 
+  Future<void> _selectPrayerDate(BuildContext context) async {
+    DateTime initialDate = _prayerDate ?? DateTime.now();
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2101),
+    );
+
+    if (pickedDate != null) {
+      setState(() {
+        _prayerDate = pickedDate;
+      });
+    }
+  }
   Future<void> _selectDateTime(BuildContext context, bool isStart) async {
     DateTime initialDate = isStart ? _startTime : _endTime;
     DateTime? pickedDate = await showDatePicker(
@@ -145,7 +189,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       },
     );
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -154,7 +197,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView( // Scrollable feature added
+        child: SingleChildScrollView(
           child: Form(
             key: _formKey,
             child: Column(
@@ -224,16 +267,84 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                     });
                   },
                 ),
-                ListTile(
-                  title: Text('Start Time: ${_startTime.toString()}'),
-                  trailing: Icon(Icons.calendar_today),
-                  onTap: () => _selectDateTime(context, true),
-                ),
-                ListTile(
-                  title: Text('End Time: ${_endTime.toString()}'),
-                  trailing: Icon(Icons.calendar_today),
-                  onTap: () => _selectDateTime(context, false),
-                ),
+                if (_isRelatedToPrayerTimes) ...[
+                  ListTile(
+                    title: Text('Prayer Date: ${_prayerDate?.toString() ?? "Not Set"}'),
+                    trailing: Icon(Icons.calendar_today),
+                    onTap: () => _selectPrayerDate(context),
+                  ),
+                  DropdownButtonFormField<PrayerTime>(
+                    decoration: InputDecoration(labelText: 'Prayer Time'),
+                    value: _prayerTime,
+                    items: PrayerTime.values.map((PrayerTime prayer) {
+                      return DropdownMenuItem<PrayerTime>(
+                        value: prayer,
+                        child: Text(prayer.toString().split('.').last),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _prayerTime = value!;
+                      });
+                    },
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<TimeRelation>(
+                          decoration: InputDecoration(labelText: 'Relation'),
+                          value: _timeRelation,
+                          items: TimeRelation.values.map((TimeRelation relation) {
+                            return DropdownMenuItem<TimeRelation>(
+                              value: relation,
+                              child: Text(relation.toString().split('.').last),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _timeRelation = value!;
+                            });
+                          },
+                        ),
+                      ),
+                      SizedBox(width: 16.0),
+                      Expanded(
+                        child: TextFormField(
+                          decoration: InputDecoration(labelText: 'Offset (minutes)'),
+                          keyboardType: TextInputType.number,
+                          initialValue: _offsetMinutes.toString(),
+                          onChanged: (value) {
+                            setState(() {
+                              _offsetMinutes = int.parse(value);
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  TextFormField(
+                    decoration: InputDecoration(labelText: 'Duration (minutes)'),
+                    keyboardType: TextInputType.number,
+                    initialValue: _durationMinutes.toString(),
+                    onChanged: (value) {
+                                            setState(() {
+                        _durationMinutes = int.parse(value);
+                      });
+                    },
+                  ),
+                ],
+                if (!_isRelatedToPrayerTimes) ...[
+                  ListTile(
+                    title: Text('Start Time: ${_startTime.toString()}'),
+                    trailing: Icon(Icons.calendar_today),
+                    onTap: () => _selectDateTime(context, true),
+                  ),
+                  ListTile(
+                    title: Text('End Time: ${_endTime.toString()}'),
+                    trailing: Icon(Icons.calendar_today),
+                    onTap: () => _selectDateTime(context, false),
+                  ),
+                ],
                 ListTile(
                   title: Text('Color:'),
                   trailing: Container(
@@ -267,3 +378,4 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 void main() => runApp(MaterialApp(
   home: AppointmentCreationPage(),
 ));
+                       
