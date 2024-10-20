@@ -31,7 +31,11 @@ dependencies:
   flutter:
     sdk: flutter
   fluttertoast: ^8.0.9
-  syncfusion_flutter_calendar: ^27.1.53
+  syncfusion_flutter_calendar: 
+    path: ./packages/syncfusion_flutter_calendar-27.1.53
+  shared_preferences: ^2.0.6
+  flutter_colorpicker: ^1.0.3
+
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:muslim_calendar/pages/appointment_creation_page.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import '../widgets/create_events.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -73,38 +74,38 @@ class _HomePageState extends State<HomePage> {
       body: _getViewWidget(),
       floatingActionButton: FloatingActionButton(
         elevation: 8,
-        onPressed: () => {},
+        onPressed: () => {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => AppointmentCreationPage()),
+          )
+        },
         child: const Icon(Icons.add),
       ),
     );
   }
 
   Widget _getViewWidget() {
-    switch (_selectedView) {
-      case CalendarView.week:
-        return SfCalendar(
-          view: _selectedView,
-          key: ValueKey(_selectedView),
-          firstDayOfWeek: 1,
-          dataSource: MeetingDataSource(getAppointments()),
-        );
-      case CalendarView.day:
-        return SfCalendar(
-          view: _selectedView,
-          key: ValueKey(_selectedView),
-          dataSource: MeetingDataSource(getAppointments()),
-        );
-      case CalendarView.month:
-      default:
-        return SfCalendar(
-          view: _selectedView,
-          key: ValueKey(_selectedView),
-          monthViewSettings: const MonthViewSettings(
-            showTrailingAndLeadingDates: false,
-          ),
-          dataSource: MeetingDataSource(getAppointments()),
-        );
-    }
+    return FutureBuilder<List<Appointment>>(
+      future: loadAppointments(),
+      builder: (BuildContext context, AsyncSnapshot<List<Appointment>> snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        } else if (snapshot.hasData) {
+          return SfCalendar(
+            view: _selectedView,
+            key: ValueKey(_selectedView),
+            monthViewSettings: const MonthViewSettings(
+              showTrailingAndLeadingDates: false,
+            ),
+            dataSource: MeetingDataSource(snapshot.data!),
+          );
+        } else {
+          return Center(child: Text('No appointments available.'));
+        }
+      },
+    );
   }
 
   void _showDaySelector(BuildContext context) {
