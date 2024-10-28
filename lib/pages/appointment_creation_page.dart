@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-
+import 'package:flutter/services.dart' show rootBundle;
 
 class AppointmentCreationPage extends StatefulWidget {
   @override
@@ -23,12 +23,33 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   RepeatFrequency _repeatFrequency = RepeatFrequency.daily;
   String _subject = '';
   String _notes = '';
-  String _location = '';
+  String? _country;
+  String? _city;
   Color _color = Colors.lightBlue;
   PrayerTime? _prayerTime;
   TimeRelation _timeRelation = TimeRelation.before;
   int _offsetMinutes = 0;
   int _durationMinutes = 60; // Yeni özellik: Süre
+
+  late Future<Map<String, List<String>>> _countryCityDataFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _countryCityDataFuture = loadCountryCityData();
+  }
+
+  Future<Map<String, List<String>>> loadCountryCityData() async {
+    String jsonString = await rootBundle.loadString('assets/country_city_data.json');
+    Map<String, dynamic> jsonMap = json.decode(jsonString);
+    
+    Map<String, List<String>> countryCityMap = {};
+    jsonMap.forEach((key, value) {
+      countryCityMap[key] = List<String>.from(value);
+    });
+    
+    return countryCityMap;
+  }
 
   void _submitForm() {
     if (_formKey.currentState?.validate() ?? false) {
@@ -52,7 +73,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         isAllDay: _isAllDay,
         subject: _subject,
         notes: _notes,
-        location: _location,
+        country: _country,
+        city: _city,
         color: _color,
         isRecurring: _isRecurring,
         isRelatedToPrayerTimes: _isRelatedToPrayerTimes,
@@ -80,7 +102,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       'isAllDay': appointment.isAllDay,
       'subject': appointment.subject,
       'notes': appointment.notes,
-      'location': appointment.location,
+      'country': appointment.country,
+      'city': appointment.city,
       'color': appointment.color.value.toString(),
       'isRecurring': appointment.isRecurring,
       'isRelatedToPrayerTimes': appointment.isRelatedToPrayerTimes,
@@ -189,190 +212,244 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       },
     );
   }
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Create Appointment'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                TextFormField(
-                  decoration: InputDecoration(labelText: 'Subject'),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a subject';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) => _subject = value ?? '',
-                ),
-                SwitchListTile(
-                  title: Text('All Day'),
-                  value: _isAllDay,
-                  onChanged: (value) {
-                    setState(() {
-                      _isAllDay = value;
-                    });
-                  },
-                ),
-                SwitchListTile(
-                  title: Text('Recurring'),
-                  value: _isRecurring,
-                  onChanged: (value) {
-                    setState(() {
-                      _isRecurring = value;
-                    });
-                  },
-                ),
-                if (_isRecurring) ...[
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: Text('Create Appointment'),
+    ),
+    body: FutureBuilder<Map<String, List<String>>>(
+      future: _countryCityDataFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        } else if (!snapshot.hasData) {
+          return Center(child: Text('No data available'));
+        }
+
+        final countryCityMap = snapshot.data!;
+
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
                   TextFormField(
-                    decoration: InputDecoration(labelText: 'Repeat Interval'),
-                    keyboardType: TextInputType.number,
-                    initialValue: _repeatInterval.toString(),
-                    onSaved: (value) => _repeatInterval = int.parse(value ?? '1'),
+                    decoration: InputDecoration(labelText: 'Subject'),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a subject';
+                      }
+                      return null;
+                    },
+                    onSaved: (value) => _subject = value ?? '',
                   ),
-                  DropdownButtonFormField<RepeatFrequency>(
-                    decoration: InputDecoration(labelText: 'Repeat Frequency'),
-                    value: _repeatFrequency,
-                    items: RepeatFrequency.values.map((RepeatFrequency frequency) {
-                      return DropdownMenuItem<RepeatFrequency>(
-                        value: frequency,
-                        child: Text(frequency.toString().split('.').last),
-                      );
-                    }).toList(),
+                  SwitchListTile(
+                    title: Text('All Day'),
+                    value: _isAllDay,
                     onChanged: (value) {
                       setState(() {
-                        _repeatFrequency = value!;
+                        _isAllDay = value;
                       });
                     },
                   ),
-                  ListTile(
-                    title: Text('Repeat End Date: ${_repeatEndDate?.toString() ?? "Not Set"}'),
-                    trailing: Icon(Icons.calendar_today),
-                    onTap: () => _selectRepeatEndDate(context),
-                  ),
-                ],
-                SwitchListTile(
-                  title: Text('Related to Prayer Times'),
-                  value: _isRelatedToPrayerTimes,
-                  onChanged: (value) {
-                    setState(() {
-                      _isRelatedToPrayerTimes = value;
-                    });
-                  },
-                ),
-                if (_isRelatedToPrayerTimes) ...[
-                  ListTile(
-                    title: Text('Prayer Date: ${_prayerDate?.toString() ?? "Not Set"}'),
-                    trailing: Icon(Icons.calendar_today),
-                    onTap: () => _selectPrayerDate(context),
-                  ),
-                  DropdownButtonFormField<PrayerTime>(
-                    decoration: InputDecoration(labelText: 'Prayer Time'),
-                    value: _prayerTime,
-                    items: PrayerTime.values.map((PrayerTime prayer) {
-                      return DropdownMenuItem<PrayerTime>(
-                        value: prayer,
-                        child: Text(prayer.toString().split('.').last),
-                      );
-                    }).toList(),
+                  SwitchListTile(
+                    title: Text('Recurring'),
+                    value: _isRecurring,
                     onChanged: (value) {
                       setState(() {
-                        _prayerTime = value!;
+                        _isRecurring = value;
                       });
                     },
                   ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<TimeRelation>(
-                          decoration: InputDecoration(labelText: 'Relation'),
-                          value: _timeRelation,
-                          items: TimeRelation.values.map((TimeRelation relation) {
-                            return DropdownMenuItem<TimeRelation>(
-                              value: relation,
-                              child: Text(relation.toString().split('.').last),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _timeRelation = value!;
-                            });
-                          },
-                        ),
-                      ),
-                      SizedBox(width: 16.0),
-                      Expanded(
-                        child: TextFormField(
-                          decoration: InputDecoration(labelText: 'Offset (minutes)'),
-                          keyboardType: TextInputType.number,
-                          initialValue: _offsetMinutes.toString(),
-                          onChanged: (value) {
-                            setState(() {
-                              _offsetMinutes = int.parse(value);
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  TextFormField(
-                    decoration: InputDecoration(labelText: 'Duration (minutes)'),
-                    keyboardType: TextInputType.number,
-                    initialValue: _durationMinutes.toString(),
+                  if (_isRecurring) ...[
+                    TextFormField(
+                      decoration: InputDecoration(labelText: 'Repeat Interval'),
+                      keyboardType: TextInputType.number,
+                      initialValue: _repeatInterval.toString(),
+                      onSaved: (value) => _repeatInterval = int.parse(value ?? '1'),
+                    ),
+                    DropdownButtonFormField<RepeatFrequency>(
+                      decoration: InputDecoration(labelText: 'Repeat Frequency'),
+                      value: _repeatFrequency,
+                      items: RepeatFrequency.values.map((RepeatFrequency frequency) {
+                        return DropdownMenuItem<RepeatFrequency>(
+                          value: frequency,
+                          child: Text(frequency.toString().split('.').last),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _repeatFrequency = value!;
+                        });
+                      },
+                    ),
+                    ListTile(
+                      title: Text('Repeat End Date: ${_repeatEndDate?.toString() ?? "Not Set"}'),
+                      trailing: Icon(Icons.calendar_today),
+                      onTap: () => _selectRepeatEndDate(context),
+                    ),
+                  ],
+                  SwitchListTile(
+                    title: Text('Related to Prayer Times'),
+                    value: _isRelatedToPrayerTimes,
                     onChanged: (value) {
-                                            setState(() {
-                        _durationMinutes = int.parse(value);
+                      setState(() {
+                        _isRelatedToPrayerTimes = value;
                       });
                     },
                   ),
-                ],
+                  if (_isRelatedToPrayerTimes) ...[
+                    ListTile(
+                      title: Text('Prayer Date: ${_prayerDate?.toString() ?? "Not Set"}'),
+                      trailing: Icon(Icons.calendar_today),
+                      onTap: () => _selectPrayerDate(context),
+                    ),
+                    DropdownButtonFormField<PrayerTime>(
+                      decoration: InputDecoration(labelText: 'Prayer Time'),
+                      value: _prayerTime,
+                      items: PrayerTime.values.map((PrayerTime prayer) {
+                        return DropdownMenuItem<PrayerTime>(
+                          value: prayer,
+                          child: Text(prayer.toString().split('.').last),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _prayerTime = value!;
+                        });
+                      },
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<TimeRelation>(
+                            decoration: InputDecoration(labelText: 'Relation'),
+                            value: _timeRelation,
+                            items: TimeRelation.values.map((TimeRelation relation) {
+                              return DropdownMenuItem<TimeRelation>(
+                                value: relation,
+                                child: Text(relation.toString().split('.').last),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _timeRelation = value!;
+                              });
+                            },
+                          ),
+                        ),
+                        SizedBox(width: 16.0),
+                        Expanded(
+                          child: TextFormField(
+                            decoration: InputDecoration(labelText: 'Offset (minutes)'),
+                            keyboardType: TextInputType.number,
+                            initialValue: _offsetMinutes.toString(),
+                            onChanged: (value) {
+                              setState(() {
+                                _offsetMinutes = int.parse(value);
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    TextFormField(
+                      decoration: InputDecoration(labelText: 'Duration (minutes)'),
+                      keyboardType: TextInputType.number,
+                      initialValue: _durationMinutes.toString(),
+                      onChanged: (value) {
+                        setState(() {
+                          _durationMinutes = int.parse(value);
+                        });
+                      },
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            decoration: InputDecoration(labelText: 'Country'),
+                            value: _country,
+                            items: countryCityMap.keys.map((String country) {
+                              return DropdownMenuItem<String>(
+                                value: country,
+                                child: Text(country),
+                              );
+                            }).toList(),
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                _country = newValue;
+                                _city = null; // Ülke değiştiğinde şehri sıfırla
+                              });
+                            },
+                          ),
+                        ),
+                        SizedBox(width: 16.0),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            decoration: InputDecoration(labelText: 'City'),
+                            value: _city,
+                            items: _country != null
+                                ? countryCityMap[_country]?.map((String city) {
+                                    return DropdownMenuItem<String>(
+                                      value: city,
+                                      child: Text(city),
+                                    );
+                                  }).toList() ?? []
+                                : [],
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                _city = newValue;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 if (!_isRelatedToPrayerTimes) ...[
+                    ListTile(
+                      title: Text('Start Time: ${_startTime.toString()}'),
+                      trailing: Icon(Icons.calendar_today),
+                      onTap: () => _selectDateTime(context, true),
+                    ),
+                    ListTile(
+                      title: Text('End Time: ${_endTime.toString()}'),
+                      trailing: Icon(Icons.calendar_today),
+                      onTap: () => _selectDateTime(context, false),
+                    ),
+                  ],
                   ListTile(
-                    title: Text('Start Time: ${_startTime.toString()}'),
-                    trailing: Icon(Icons.calendar_today),
-                    onTap: () => _selectDateTime(context, true),
+                    title: Text('Color:'),
+                    trailing: Container(
+                      width: 24,
+                      height: 24,
+                      color: _color,
+                    ),
+                    onTap: () => _pickColor(context),
                   ),
-                  ListTile(
-                    title: Text('End Time: ${_endTime.toString()}'),
-                    trailing: Icon(Icons.calendar_today),
-                    onTap: () => _selectDateTime(context, false),
+                  TextFormField(
+                    decoration: InputDecoration(labelText: 'Notes'),
+                    onSaved: (value) => _notes = value ?? '',
+                  ),
+                  SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _submitForm,
+                    child: Text('Create Appointment'),
                   ),
                 ],
-                ListTile(
-                  title: Text('Color:'),
-                  trailing: Container(
-                    width: 24,
-                    height: 24,
-                    color: _color,
-                  ),
-                  onTap: () => _pickColor(context),
-                ),
-                TextFormField(
-                  decoration: InputDecoration(labelText: 'Notes'),
-                  onSaved: (value) => _notes = value ?? '',
-                ),
-                TextFormField(
-                  decoration: InputDecoration(labelText: 'Location'),
-                  onSaved: (value) => _location = value ?? '',
-                ),
-                ElevatedButton(
-                  onPressed: _submitForm,
-                  child: Text('Create Appointment'),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
-    );
-  }
+        );
+      },
+    ),
+  );
+}
 }
 
 void main() => runApp(MaterialApp(

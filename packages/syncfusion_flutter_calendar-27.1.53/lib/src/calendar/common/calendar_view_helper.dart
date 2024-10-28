@@ -953,7 +953,8 @@ class CalendarAppointment {
     this.recurrenceRule,
     this.isAllDay = false,
     this.notes,
-    this.location,
+    this.country,
+    this.city,
     this.resourceIds,
     this.recurrenceId,
     this.id,
@@ -1024,10 +1025,8 @@ class CalendarAppointment {
   /// Defaults to null.
   String? notes;
 
-  /// Defines the location for an [CalendarAppointment] in [SfCalendar].
-  ///
-  /// Defaults to null.
-  String? location;
+  String? country;
+  String? city;
 
   /// The ids of the [CalendarResource] that shares this [CalendarAppointment].
   List<Object>? resourceIds;
@@ -1085,7 +1084,8 @@ class CalendarAppointment {
         startTimeZone: startTimeZone,
         endTimeZone: endTimeZone,
         notes: notes,
-        location: location,
+        country: country,
+        city: city,
         recurrenceExceptionDates: recurrenceExceptionDates);
   }
 
@@ -1116,7 +1116,8 @@ class CalendarAppointment {
         otherAppointment.endTimeZone == endTimeZone &&
         otherAppointment.isAllDay == isAllDay &&
         otherAppointment.notes == notes &&
-        otherAppointment.location == location &&
+        otherAppointment.country == country &&
+        otherAppointment.city == city &&
         CalendarViewHelper.isCollectionEqual(
             otherAppointment.resourceIds, resourceIds) &&
         otherAppointment.recurrenceId == recurrenceId &&
@@ -1139,7 +1140,9 @@ class CalendarAppointment {
       recurrenceRule,
       isAllDay = false,
       notes,
-      location,
+      
+      country,
+      city,
 
       /// Below condition is referred from text style class
       /// https://api.flutter.dev/flutter/painting/TextStyle/hashCode.html

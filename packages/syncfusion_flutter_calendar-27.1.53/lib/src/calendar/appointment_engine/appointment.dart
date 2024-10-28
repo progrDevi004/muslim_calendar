@@ -100,13 +100,19 @@ class Appointment with Diagnosticable {
     TimeRelation? timeRelation; // Yeni özellik
     Duration? offsetDuration; // Yeni özellik
     Duration? duration;
+    String? country;
+    String? city;
+
   Appointment({
     this.startTimeZone,
     this.endTimeZone,
     this.recurrenceRule,
     this.isAllDay = false,
     String? notes,
-    this.location,
+
+    this.country,
+    this.city,
+
     this.resourceIds,
     this.recurrenceId,
     this.id,
@@ -136,6 +142,12 @@ class Appointment with Diagnosticable {
     _appointmentType = _getAppointmentType();
     id = id ?? hashCode;
   }
+
+  // Ülke ve şehir bilgisini birleştiren getter
+  String? get location => country != null || city != null 
+      ? '${country ?? ''}${country != null && city != null ? ', ' : ''}${city ?? ''}'
+      : null;
+
 
   String? _notes;
 
@@ -712,68 +724,6 @@ class Appointment with Diagnosticable {
   ///  ```
   String? notes;
 
-  /// Defines the location for an [Appointment] in [SfCalendar].
-  ///
-  /// Allow to store location information about the [Appointment] and can be
-  /// obtained through the [Appointment] object.
-  ///
-  /// Defaults to null.
-  ///
-  /// See also:
-  /// * [CalendarDataSource.getLocation], which maps the custom business objects
-  /// corresponding property to this property.
-  /// * [notes], which used to store some additional data or information about
-  /// the  appointment in the calendar.
-  ///
-  /// ```dart
-  ///Widget build(BuildContext context) {
-  ///   return Container(
-  ///      child: SfCalendar(
-  ///        view: CalendarView.day,
-  ///        dataSource: _getCalendarDataSource(),
-  ///      ),
-  ///    );
-  ///  }
-  ///
-  /// class DataSource extends CalendarDataSource {
-  ///  DataSource(List<Appointment> source) {
-  ///    appointments = source;
-  ///  }
-  /// }
-  ///
-  /// DataSource _getCalendarDataSource() {
-  ///    List<Appointment> appointments = <Appointment>[];
-  ///    RecurrenceProperties recurrence =
-  ///       RecurrenceProperties(startDate: DateTime.now());
-  ///    recurrence.recurrenceType = RecurrenceType.daily;
-  ///    recurrence.interval = 2;
-  ///    recurrence.recurrenceRange = RecurrenceRange.noEndDate;
-  ///    recurrence.recurrenceCount = 10;
-  ///    appointments.add(
-  ///        Appointment(
-  ///            startTime: DateTime.now(),
-  ///            endTime: DateTime.now().add(
-  ///                Duration(hours: 2)),
-  ///            isAllDay: true,
-  ///            subject: 'Meeting',
-  ///            color: Colors.blue,
-  ///            startTimeZone: '',
-  ///            notes: '',
-  ///            location: '',
-  ///            endTimeZone: '',
-  ///            recurrenceRule: SfCalendar.generateRRule(
-  ///                recurrence, DateTime.now(), DateTime.now().add(
-  ///                Duration(hours: 2))),
-  ///            recurrenceExceptionDates: [
-  ///              DateTime.now().add(Duration(days: 2))
-  ///            ]
-  ///        ));
-  ///
-  ///    return DataSource(appointments);
-  ///  }
-  ///  ```
-  String? location;
-
   /// The ids of the [CalendarResource] that shares this [Appointment].
   ///
   /// Based on this Id the appointments are grouped and arranged to each
@@ -1015,7 +965,10 @@ class Appointment with Diagnosticable {
         otherStyle.endTimeZone == endTimeZone &&
         otherStyle.isAllDay == isAllDay &&
         otherStyle.notes == notes &&
-        otherStyle.location == location &&
+
+        otherStyle.country == country &&
+        otherStyle.city == city &&
+
         otherStyle.resourceIds == resourceIds &&
         otherStyle.subject == subject &&
         otherStyle.color == color &&
@@ -1038,7 +991,9 @@ class Appointment with Diagnosticable {
       recurrenceRule,
       isAllDay,
       notes,
-      location,
+      
+      country,
+      city,
 
       /// Below condition is referred from text style class
       /// https://api.flutter.dev/flutter/painting/TextStyle/hashCode.html
@@ -1063,7 +1018,10 @@ class Appointment with Diagnosticable {
     properties.add(StringProperty('endTimeZone', endTimeZone));
     properties.add(StringProperty('recurrenceRule', recurrenceRule));
     properties.add(StringProperty('notes', notes));
-    properties.add(StringProperty('location', location));
+    
+    properties.add(StringProperty('country', country));
+    properties.add(StringProperty('city', city));
+
     properties.add(StringProperty('subject', subject));
     properties.add(ColorProperty('color', color));
     properties.add(DiagnosticsProperty<Object>('recurrenceId', recurrenceId));

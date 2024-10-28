@@ -97,6 +97,7 @@ class _HomePageState extends State<HomePage> {
             view: _selectedView,
             key: ValueKey(_selectedView),
             monthViewSettings: const MonthViewSettings(
+
               showTrailingAndLeadingDates: false,
             ),
             dataSource: MeetingDataSource(snapshot.data!),
