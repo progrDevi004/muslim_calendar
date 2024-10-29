@@ -11,6 +11,15 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   CalendarView _selectedView = CalendarView.month;
+  late LazyLoadingCalendarDataSource _dataSource;
+  late CalendarController _calendarController;
+
+  @override
+  void initState() {
+    super.initState();
+    _dataSource = LazyLoadingCalendarDataSource(loadAppointments);
+    _calendarController = CalendarController();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,102 +28,62 @@ class _HomePageState extends State<HomePage> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            // Monthly view Button
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _selectedView = CalendarView.month; // Change to monthly view
-                });
-              },
-              child: Text(
-                "Month",
-                style: TextStyle(
-                  color: _selectedView == CalendarView.month
-                      ? Colors.black // Highlight selected view
-                      : Colors.black.withOpacity(0.7),
-                ),
-              ),
-            ),
-            // Weekly view Button
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _selectedView = CalendarView.week; // Change to weekly view
-                });
-              },
-              child: Text(
-                "Week",
-                style: TextStyle(
-                  color: _selectedView == CalendarView.week
-                      ? Colors.black // Highlight selected view
-                      : Colors.black.withOpacity(0.7),
-                ),
-              ),
-            ),
-            // Daily view Button
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _selectedView = CalendarView.day;
-                  // Change to daily view
-                });
-              },
-              child: Text(
-                "Day",
-                style: TextStyle(
-                  color: _selectedView == CalendarView.day
-                      ? Colors.black // Highlight selected view
-                      : Colors.black.withOpacity(0.7),
-                ),
-              ),
-            ),
+            _buildViewButton("Month", CalendarView.month),
+            _buildViewButton("Week", CalendarView.week),
+            _buildViewButton("Day", CalendarView.day),
           ],
         ),
       ),
-      body: _getViewWidget(),
+      body: SfCalendar(
+        view: _selectedView,
+        dataSource: _dataSource,
+        loadMoreWidgetBuilder: _buildLoadMoreWidget,
+        monthViewSettings: const MonthViewSettings(
+          showTrailingAndLeadingDates: false,
+        ),
+        onViewChanged: (ViewChangedDetails details) {
+          _dataSource.handleLoadMore(details.visibleDates.first, details.visibleDates.last);
+        },
+        controller: _calendarController,
+      ),
       floatingActionButton: FloatingActionButton(
         elevation: 8,
-        onPressed: () => {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => AppointmentCreationPage()),
-          )
-        },
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => AppointmentCreationPage()),
+        ),
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  Widget _getViewWidget() {
-    return FutureBuilder<List<Appointment>>(
-      future: loadAppointments(),
-      builder: (BuildContext context, AsyncSnapshot<List<Appointment>> snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        } else if (snapshot.hasData) {
-          return SfCalendar(
-            view: _selectedView,
-            key: ValueKey(_selectedView),
-            monthViewSettings: const MonthViewSettings(
-
-              showTrailingAndLeadingDates: false,
-            ),
-            dataSource: MeetingDataSource(snapshot.data!),
-          );
-        } else {
-          return Center(child: Text('No appointments available.'));
-        }
+  Widget _buildViewButton(String title, CalendarView view) {
+    return TextButton(
+      onPressed: () {
+        setState(() {
+          _selectedView = view;
+          _calendarController.view = view;
+        });
       },
+      child: Text(
+        title,
+        style: TextStyle(
+          color: _selectedView == view
+              ? Colors.black
+              : Colors.black.withOpacity(0.7),
+        ),
+      ),
     );
   }
 
-  void _showDaySelector(BuildContext context) {
-    // Burada gün seçimi için bir widget gösterebilirsiniz.
-  }
-
-  String _getMonthName() {
-    // Burada mevcut ayın ismini döndüren bir fonksiyon yazabilirsiniz.
-    return "Month";
+  Widget _buildLoadMoreWidget(BuildContext context, LoadMoreCallback loadMoreAppointments) {
+    return FutureBuilder(
+      future: loadMoreAppointments(),
+      builder: (context, snapshot) {
+        return Container(
+          alignment: Alignment.center,
+          child: CircularProgressIndicator(),
+        );
+      },
+    );
   }
 }

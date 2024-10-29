@@ -95,7 +95,6 @@ class Appointment with Diagnosticable {
     DateTime? repeatEndDate; // Yeni özellik
 
     // New properties for prayer time-related appointments
-    DateTime? prayerDate; // New property for storing the selected day
     PrayerTime? prayerTime;
     TimeRelation? timeRelation; // Yeni özellik
     Duration? offsetDuration; // Yeni özellik
@@ -128,7 +127,6 @@ class Appointment with Diagnosticable {
     this.repeatFrequency,
     this.repeatEndDate,
 
-    this.prayerDate,
     this.prayerTime, // New feature
     this.timeRelation,
     this.offsetDuration,

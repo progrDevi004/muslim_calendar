@@ -15,7 +15,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   DateTime _startTime = DateTime.now();
   DateTime _endTime = DateTime.now().add(Duration(hours: 1));
   DateTime? _repeatEndDate;
-  DateTime? _prayerDate;
   bool _isAllDay = false;
   bool _isRecurring = false;
   bool _isRelatedToPrayerTimes = false;
@@ -52,88 +51,92 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   }
 
   void _submitForm() {
-    if (_formKey.currentState?.validate() ?? false) {
-      _formKey.currentState?.save();
+  if (_formKey.currentState?.validate() ?? false) {
+    _formKey.currentState?.save();
 
-      if (_isRelatedToPrayerTimes && _prayerTime != null && _prayerDate != null) {
-        DateTime prayerDateTime = _prayerDate!;
-        Duration offset = Duration(minutes: _offsetMinutes);
-        Duration duration = Duration(minutes: _durationMinutes);
-        _startTime = _timeRelation == TimeRelation.before
-            ? prayerDateTime.subtract(offset)
-            : prayerDateTime;
-        _endTime = _timeRelation == TimeRelation.before
-            ? prayerDateTime.subtract(offset).add(duration)
-            : prayerDateTime.add(offset).add(duration);
-      }
-
-      final appointment = Appointment(
-        startTime: _startTime,
-        endTime: _endTime,
-        isAllDay: _isAllDay,
-        subject: _subject,
-        notes: _notes,
-        country: _country,
-        city: _city,
-        color: _color,
-        isRecurring: _isRecurring,
-        isRelatedToPrayerTimes: _isRelatedToPrayerTimes,
-        repeatInterval: _isRecurring ? _repeatInterval : null,
-        repeatFrequency: _isRecurring ? _repeatFrequency : null,
-        repeatEndDate: _isRecurring ? _repeatEndDate : null,
-        prayerTime: _prayerTime,
-        timeRelation: _timeRelation,
-        offsetDuration: Duration(minutes: _offsetMinutes),
-        duration: Duration(minutes: _durationMinutes),
-        prayerDate: _prayerDate,
-      );
-      _saveAppointment(appointment);
-      print('Appointment Created: $appointment');
-      Navigator.of(context).pop();
+    if (_isRelatedToPrayerTimes && _prayerTime != null) {
+      Duration offset = Duration(minutes: _offsetMinutes);
+      Duration duration = Duration(minutes: _durationMinutes);
+      _endTime = _timeRelation == TimeRelation.before
+          ? _startTime.subtract(offset).add(duration)
+          : _startTime.add(offset).add(duration);
     }
+
+    final appointment = Appointment(
+      startTime: _startTime,
+      endTime: _endTime,
+      isAllDay: _isAllDay,
+      subject: _subject,
+      notes: _notes,
+      country: _country,
+      city: _city,
+      color: _color,
+      isRecurring: _isRecurring,
+      isRelatedToPrayerTimes: _isRelatedToPrayerTimes,
+      repeatInterval: _isRecurring ? _repeatInterval : null,
+      repeatFrequency: _isRecurring ? _repeatFrequency : null,
+      repeatEndDate: _isRecurring ? _repeatEndDate : null,
+      prayerTime: _prayerTime,
+      timeRelation: _timeRelation,
+      offsetDuration: Duration(minutes: _offsetMinutes),
+      duration: Duration(minutes: _durationMinutes),
+      // Remove prayerDate: _prayerDate,
+    );
+    _saveAppointment(appointment);
+    print('Appointment Created: $appointment');
+    Navigator.of(context).pop();
   }
+}
 
   Future<void> _saveAppointment(Appointment appointment) async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String> appointmentList = prefs.getStringList('appointments') ?? [];
-    appointmentList.add(jsonEncode({
-      'startTime': appointment.startTime.toIso8601String(),
-      'endTime': appointment.endTime.toIso8601String(),
-      'isAllDay': appointment.isAllDay,
-      'subject': appointment.subject,
-      'notes': appointment.notes,
-      'country': appointment.country,
-      'city': appointment.city,
-      'color': appointment.color.value.toString(),
-      'isRecurring': appointment.isRecurring,
-      'isRelatedToPrayerTimes': appointment.isRelatedToPrayerTimes,
-      'repeatInterval': appointment.repeatInterval,
-      'repeatFrequency': appointment.repeatFrequency?.index,
-      'repeatEndDate': appointment.repeatEndDate?.toIso8601String(),
-      'prayerTime': appointment.prayerTime?.index,
-      'timeRelation': appointment.timeRelation?.index,
-      'offsetDuration': appointment.offsetDuration?.inMinutes,
-      'duration': appointment.duration?.inMinutes,
-      'prayerDate': appointment.prayerDate?.toIso8601String(),
-    }));
-    await prefs.setStringList('appointments', appointmentList);
-  }
+  final prefs = await SharedPreferences.getInstance();
+  List<String> appointmentList = prefs.getStringList('appointments') ?? [];
+  appointmentList.add(jsonEncode({
+    'startTime': appointment.startTime.toIso8601String(),
+    'endTime': appointment.endTime.toIso8601String(),
+    'isAllDay': appointment.isAllDay,
+    'subject': appointment.subject,
+    'notes': appointment.notes,
+    'country': appointment.country,
+    'city': appointment.city,
+    'color': appointment.color.value.toString(),
+    'isRecurring': appointment.isRecurring,
+    'isRelatedToPrayerTimes': appointment.isRelatedToPrayerTimes,
+    'repeatInterval': appointment.repeatInterval,
+    'repeatFrequency': appointment.repeatFrequency?.index,
+    'repeatEndDate': appointment.repeatEndDate?.toIso8601String(),
+    'prayerTime': appointment.prayerTime?.index,
+    'timeRelation': appointment.timeRelation?.index,
+    'offsetDuration': appointment.offsetDuration?.inMinutes,
+    'duration': appointment.duration?.inMinutes,
+    // Remove 'prayerDate': appointment.prayerDate?.toIso8601String(),
+  }));
+  await prefs.setStringList('appointments', appointmentList);
+}
 
-  Future<void> _selectPrayerDate(BuildContext context) async {
-    DateTime initialDate = _prayerDate ?? DateTime.now();
-    DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2101),
-    );
 
-    if (pickedDate != null) {
-      setState(() {
-        _prayerDate = pickedDate;
-      });
-    }
+  // Update the _selectPrayerDate method to modify _startTime
+Future<void> _selectPrayerDate(BuildContext context) async {
+  DateTime initialDate = _startTime;
+  DateTime? pickedDate = await showDatePicker(
+    context: context,
+    initialDate: initialDate,
+    firstDate: DateTime.now(),
+    lastDate: DateTime(2101),
+  );
+
+  if (pickedDate != null) {
+    setState(() {
+      _startTime = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        _startTime.hour,
+        _startTime.minute,
+      );
+    });
   }
+}
   Future<void> _selectDateTime(BuildContext context, bool isStart) async {
     DateTime initialDate = isStart ? _startTime : _endTime;
     DateTime? pickedDate = await showDatePicker(
@@ -305,7 +308,7 @@ Widget build(BuildContext context) {
                   ),
                   if (_isRelatedToPrayerTimes) ...[
                     ListTile(
-                      title: Text('Prayer Date: ${_prayerDate?.toString() ?? "Not Set"}'),
+                      title: Text('Appointment Start Date: ${_startTime.toString().split(' ')[0]}'),
                       trailing: Icon(Icons.calendar_today),
                       onTap: () => _selectPrayerDate(context),
                     ),

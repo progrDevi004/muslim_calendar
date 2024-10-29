@@ -4,74 +4,75 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:http/http.dart' as http;
 
-Future<Map<String, List<DateTime>>> fetchPrayerTimes(String city, String country, int year, int month) async {
-  final prefs = await SharedPreferences.getInstance();
-  String cacheKey = '$year-$month-$city-$country';
-  String? cachedTimes = prefs.getString(cacheKey);
+class PrayerTimeCache {
+  static final Map<String, Map<String, List<DateTime>>> _cache = {};
 
-  if (cachedTimes != null) {
-    return Map<String, List<DateTime>>.from(json.decode(cachedTimes));
-  }
-
-  final String apiUrl = 'https://api.aladhan.com/v1/calendarByAddress/$year/$month?address=$city,$country';
-  final response = await http.get(Uri.parse(apiUrl));
-
-  if (response.statusCode == 200) {
-    final data = json.decode(response.body);
-    Map<String, List<DateTime>> prayerTimes = {
-      'fajr': [],
-      'dhuhr': [],
-      'asr': [],
-      'maghrib': [],
-      'isha': [],
-    };
-
-    for (var day in data['data']) {
-      DateTime date = DateTime.parse(day['date']['gregorian']['date']);
-      prayerTimes['fajr']!.add(DateTime(date.year, date.month, date.day, 
-          int.parse(day['timings']['Fajr'].split(':')[0]), 
-          int.parse(day['timings']['Fajr'].split(':')[1])));
-      prayerTimes['dhuhr']!.add(DateTime(date.year, date.month, date.day, 
-          int.parse(day['timings']['Dhuhr'].split(':')[0]), 
-          int.parse(day['timings']['Dhuhr'].split(':')[1])));
-      prayerTimes['asr']!.add(DateTime(date.year, date.month, date.day, 
-          int.parse(day['timings']['Asr'].split(':')[0]), 
-          int.parse(day['timings']['Asr'].split(':')[1])));
-      prayerTimes['maghrib']!.add(DateTime(date.year, date.month, date.day, 
-          int.parse(day['timings']['Maghrib'].split(':')[0]), 
-          int.parse(day['timings']['Maghrib'].split(':')[1])));
-      prayerTimes['isha']!.add(DateTime(date.year, date.month, date.day, 
-          int.parse(day['timings']['Isha'].split(':')[0]), 
-          int.parse(day['timings']['Isha'].split(':')[1])));
+  static Future<Map<String, List<DateTime>>> getPrayerTimes(String city, String country, int year, int month) async {
+    final String cacheKey = '$year-$month-$city-$country';
+    
+    if (_cache.containsKey(cacheKey)) {
+      return _cache[cacheKey]!;
     }
 
-    prefs.setString(cacheKey, json.encode(prayerTimes));
-    return prayerTimes;
-  } else {
-    throw Exception('Failed to load prayer times');
+    final prefs = await SharedPreferences.getInstance();
+    String? cachedTimes = prefs.getString(cacheKey);
+
+    if (cachedTimes != null) {
+      final Map<String, List<DateTime>> prayerTimes = Map<String, List<DateTime>>.from(
+        json.decode(cachedTimes).map((key, value) => MapEntry(
+          key,
+          (value as List).map((item) => DateTime.parse(item)).toList(),
+        )),
+      );
+      _cache[cacheKey] = prayerTimes;
+      return prayerTimes;
+    }
+
+    return await fetchPrayerTimes(city, country, year, month);
+  }
+
+  static Future<Map<String, List<DateTime>>> fetchPrayerTimes(String city, String country, int year, int month) async {
+    final String apiUrl = 'https://api.aladhan.com/v1/calendarByAddress/$year/$month?address=$city,$country';
+    final response = await http.get(Uri.parse(apiUrl));
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      Map<String, List<DateTime>> prayerTimes = {
+        'fajr': [], 'dhuhr': [], 'asr': [], 'maghrib': [], 'isha': [],
+      };
+
+      for (var day in data['data']) {
+        DateTime date = DateTime.parse(day['date']['gregorian']['date']);
+        for (var prayer in prayerTimes.keys) {
+          prayerTimes[prayer]!.add(DateTime(
+            date.year, date.month, date.day,
+            int.parse(day['timings'][prayer.capitalize()].split(':')[0]),
+            int.parse(day['timings'][prayer.capitalize()].split(':')[1]),
+          ));
+        }
+      }
+
+      final String cacheKey = '$year-$month-$city-$country';
+      _cache[cacheKey] = prayerTimes;
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(cacheKey, json.encode(prayerTimes.map(
+        (key, value) => MapEntry(key, value.map((dt) => dt.toIso8601String()).toList()),
+      )));
+
+      return prayerTimes;
+    } else {
+      throw Exception('Failed to load prayer times');
+    }
   }
 }
 
 Future<DateTime> getPrayerTimeForDate(DateTime date, PrayerTime prayerTime, String city, String country) async {
   try {
-    Map<String, List<DateTime>> prayerTimes = await fetchPrayerTimes(city, country, date.year, date.month);
-    int dayIndex = date.day - 1; // API returns 1-indexed days, we need 0-indexed
-    switch (prayerTime) {
-      case PrayerTime.fajr:
-        return prayerTimes['fajr']![dayIndex];
-      case PrayerTime.dhuhr:
-        return prayerTimes['dhuhr']![dayIndex];
-      case PrayerTime.asr:
-        return prayerTimes['asr']![dayIndex];
-      case PrayerTime.maghrib:
-        return prayerTimes['maghrib']![dayIndex];
-      case PrayerTime.isha:
-        return prayerTimes['isha']![dayIndex];
-      default:
-        return date;
-    }
+    Map<String, List<DateTime>> prayerTimes = await PrayerTimeCache.getPrayerTimes(city, country, date.year, date.month);
+    int dayIndex = date.day - 1;
+    return prayerTimes[prayerTime.toString().split('.').last]![dayIndex];
   } catch (e) {
-    // Handle exceptions and fallback to default times
     return getDefaultPrayerTime(date, prayerTime);
   }
 }
@@ -127,11 +128,13 @@ bool shouldDisplayEvent(Appointment appointment, DateTime currentDate) {
 }
 
 
-Future<List<Appointment>> loadAppointments() async {
+Future<List<Appointment>> loadAppointments({DateTime? start, DateTime? end}) async {
   final prefs = await SharedPreferences.getInstance();
   List<String> appointmentList = prefs.getStringList('appointments') ?? [];
   List<Appointment> visibleAppointments = [];
-  DateTime today = DateTime.now();
+  
+  start ??= DateTime.now().subtract(Duration(days: 30));
+  end ??= DateTime.now().add(Duration(days: 365));
 
   for (String appointmentStr in appointmentList) {
     final appointmentData = json.decode(appointmentStr);
@@ -168,14 +171,17 @@ Future<List<Appointment>> loadAppointments() async {
     );
 
     if (!appointment.isRecurring) {
-      if (appointment.isRelatedToPrayerTimes && appointment.prayerTime != null) {
-        await updateAppointmentTime(appointment, appointment.startTime);
+      if (appointment.startTime.isAfter(start) && appointment.startTime.isBefore(end)) {
+        if (appointment.isRelatedToPrayerTimes && appointment.prayerTime != null) {
+          await updateAppointmentTime(appointment, appointment.startTime);
+        }
+        visibleAppointments.add(appointment);
       }
-      visibleAppointments.add(appointment);
     } else {
       DateTime recurrenceDate = appointment.startTime;
-      while (recurrenceDate.isBefore(appointment.repeatEndDate ?? today.add(Duration(days: 365)))) {
-        if (recurrenceDate.isAfter(today.subtract(Duration(days: 365))) && shouldDisplayEvent(appointment, recurrenceDate)) {
+      while (recurrenceDate.isBefore(appointment.repeatEndDate ?? end)) {
+        if (recurrenceDate.isAfter(start) && recurrenceDate.isBefore(end) && 
+            shouldDisplayEvent(appointment, recurrenceDate)) {
           Appointment recurrentAppointment = Appointment(
             startTime: recurrenceDate,
             endTime: recurrenceDate.add(appointment.endTime.difference(appointment.startTime)),
@@ -185,7 +191,7 @@ Future<List<Appointment>> loadAppointments() async {
             country: appointment.country,
             city: appointment.city,
             color: appointment.color,
-            isRecurring: appointment.isRecurring,
+            isRecurring: false, // Tekil randevu olarak işaretliyoruz
             isRelatedToPrayerTimes: appointment.isRelatedToPrayerTimes,
             prayerTime: appointment.prayerTime,
             timeRelation: appointment.timeRelation,
@@ -194,7 +200,7 @@ Future<List<Appointment>> loadAppointments() async {
           );
           
           if (recurrentAppointment.isRelatedToPrayerTimes && recurrentAppointment.prayerTime != null) {
-            await updateAppointmentTime(recurrentAppointment, recurrenceDate); // Günlük namaz vakti güncelleniyor
+            await updateAppointmentTime(recurrentAppointment, recurrenceDate);
           }
           
           visibleAppointments.add(recurrentAppointment);
@@ -205,8 +211,10 @@ Future<List<Appointment>> loadAppointments() async {
   }
   return visibleAppointments;
 }
-
-
+String _generateAppointmentId(Appointment appointment) {
+    // Benzersiz bir kimlik oluştur
+    return '${appointment.subject}_${appointment.startTime}_${appointment.endTime}';
+  }
 Future<void> updateAppointmentTime(Appointment appointment, DateTime date) async {
   DateTime prayerTime = await getPrayerTimeForDate(date, appointment.prayerTime!, appointment.city!, appointment.country!);
   final offset = appointment.offsetDuration ?? Duration();
@@ -224,5 +232,50 @@ Future<void> updateAppointmentTime(Appointment appointment, DateTime date) async
 class MeetingDataSource extends CalendarDataSource {
   MeetingDataSource(List<Appointment> source) {
     appointments = source;
+  }
+}
+
+class LazyLoadingCalendarDataSource extends CalendarDataSource {
+  final Future<List<Appointment>> Function({DateTime? start, DateTime? end}) loadAppointments;
+  final Set<String> _loadedAppointmentIds = {};
+
+  LazyLoadingCalendarDataSource(this.loadAppointments) {
+    appointments = <Appointment>[];
+  }
+
+  @override
+  Future<void> handleLoadMore(DateTime startDate, DateTime endDate) async {
+    try {
+      final List<Appointment> newAppointments = await loadAppointments(start: startDate, end: endDate);
+      List<Appointment> uniqueNewAppointments = [];
+
+      for (var appointment in newAppointments) {
+        String appointmentId = _generateAppointmentId(appointment);
+        if (!_loadedAppointmentIds.contains(appointmentId)) {
+          _loadedAppointmentIds.add(appointmentId);
+          uniqueNewAppointments.add(appointment);
+        }
+      }
+      notifyListeners(CalendarDataSourceAction.add, uniqueNewAppointments);
+    } catch (e) {
+      print('Error loading more appointments: $e');
+    }
+  }
+  String _generateAppointmentId(Appointment appointment) {
+    // Benzersiz bir kimlik oluştur
+    return '${appointment.subject}_${appointment.startTime}_${appointment.endTime}';
+  }
+
+  @override
+  List<Appointment> get appointments => super.appointments as List<Appointment>;
+
+  @override
+  set appointments(List<dynamic>? value) {
+    super.appointments = value?.cast<Appointment>() ?? <Appointment>[];
+  }
+}
+extension StringExtension on String {
+  String capitalize() {
+    return "${this[0].toUpperCase()}${this.substring(1)}";
   }
 }
