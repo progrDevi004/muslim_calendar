@@ -167,20 +167,6 @@ Future<List<Appointment>> loadAppointments() async {
           : null,
     );
 
-    if (appointment.isRelatedToPrayerTimes && appointment.prayerTime != null) {
-      DateTime prayerTime = await getPrayerTimeForDate(appointment.startTime, appointment.prayerTime!, appointment.city!, appointment.country!);
-      final offset = appointment.offsetDuration ?? Duration();
-      final duration = appointment.duration ?? Duration();
-
-      if (appointment.timeRelation == TimeRelation.before) {
-        appointment.startTime = prayerTime.subtract(offset);
-        appointment.endTime = appointment.startTime.add(duration);
-            } else {
-        appointment.startTime = prayerTime.add(offset);
-        appointment.endTime = appointment.startTime.add(duration);
-      }
-    }
-
     if (!appointment.isRecurring) {
       if (appointment.isRelatedToPrayerTimes && appointment.prayerTime != null) {
         await updateAppointmentTime(appointment, appointment.startTime);
@@ -208,7 +194,7 @@ Future<List<Appointment>> loadAppointments() async {
           );
           
           if (recurrentAppointment.isRelatedToPrayerTimes && recurrentAppointment.prayerTime != null) {
-            await updateAppointmentTime(recurrentAppointment, recurrenceDate);
+            await updateAppointmentTime(recurrentAppointment, recurrenceDate); // Günlük namaz vakti güncelleniyor
           }
           
           visibleAppointments.add(recurrentAppointment);
