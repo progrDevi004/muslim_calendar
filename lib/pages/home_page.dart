@@ -22,6 +22,9 @@ class _HomePageState extends State<HomePage> {
     _calendarController = CalendarController();
     _dataSource = EventDataSource([]);
     //_loadAppointments();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
+    });
   }
 
   Future<void> _loadAppointments() async {
@@ -45,6 +48,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       body: SfCalendar(
+        headerStyle: CalendarHeaderStyle(backgroundColor: Colors.white),
         view: _selectedView,
         controller: _calendarController,
         dataSource: _dataSource,
@@ -53,13 +57,20 @@ class _HomePageState extends State<HomePage> {
           appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
           showAgenda: true,
           ),
-          onTap: (calendarTapDetails) {
+          onTap: (calendarTapDetails) async {
             print(calendarTapDetails.targetElement);
+            if(calendarTapDetails.targetElement == CalendarElement.appointment){
+              int appointmentId = int.parse(((calendarTapDetails.appointments?.firstOrNull as Appointment?)?.id ?? '').toString());
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => AppointmentCreationPage(appointmentId: appointmentId,)),
+                );
+              _loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
+            }
           },
         onViewChanged: (ViewChangedDetails details) {
           //print("Before:" + _dataSource.appointments.toString());
           //print(details.visibleDates);
-          _loadAppointmentsForVisibleDates(details.visibleDates);
+          _loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
         },
       ),
       floatingActionButton: FloatingActionButton(
@@ -68,7 +79,7 @@ class _HomePageState extends State<HomePage> {
           await Navigator.of(context).push(
             MaterialPageRoute(builder: (context) => AppointmentCreationPage()),
           );
-          _loadAppointments();
+          _loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
         },
         child: const Icon(Icons.add),
       ),
@@ -81,8 +92,9 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           _selectedView = view;
           _calendarController.view = view;
-          //print("Günlük görünümdeki randevular: ${_dataSource}");
         });
+        // Görünüm değiştiğinde görünür tarihleri yeniden yükle
+        _loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
       },
       child: Text(
         title,
@@ -95,11 +107,11 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<void> _loadAppointmentsForVisibleDates(List<DateTime> visibleDates) async {
-  if (visibleDates.isEmpty) return;
 
-  final DateTime start = visibleDates.first;
-  final DateTime end = _calculateEndDate(start);
+  Future<void> _loadAppointmentsForVisibleDates(DateTime displayDate, CalendarView view) async {
+  DateTime start = displayDate;
+  DateTime end = _calculateEndDate(start, view);
+
 
   try {
     final List<PrayerTimeAppointment> appointments = 
@@ -120,14 +132,18 @@ class _HomePageState extends State<HomePage> {
     // );
   }
 }
-  DateTime _calculateEndDate(DateTime start) {
-    switch (_selectedView) {
+  DateTime _calculateEndDate(DateTime start, CalendarView view) {
+    switch (view) {
       case CalendarView.day:
         return start.add(Duration(days: 1));
       case CalendarView.week:
-        return start.add(Duration(days: 8));
+        return start.add(Duration(days: 7));
+      case CalendarView.workWeek:
+        return start.add(Duration(days: 5));
+      case CalendarView.month:
+        return DateTime(start.year, start.month + 1, 0);
       default:
-        return start.add(Duration(days: 32));
+        return start.add(Duration(days: 30));
     }
   }
 }

@@ -2,14 +2,15 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:syncfusion_flutter_calendar/src/calendar/appointment_engine/recurrence_helper.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../widgets/prayer_time_appointment.dart';
 import '../database/database_helper.dart';
 
 class AppointmentCreationPage extends StatefulWidget {
-  final PrayerTimeAppointment? appointment;
+  final int? appointmentId;
 
-  AppointmentCreationPage({this.appointment});
+  AppointmentCreationPage({this.appointmentId});
 
   @override
   _AppointmentCreationPageState createState() => _AppointmentCreationPageState();
@@ -43,18 +44,85 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.appointment?.subject ?? '');
-    _descriptionController = TextEditingController(text: widget.appointment?.notes ?? '');
-    _isAllDay = widget.appointment?.isAllDay ?? false;
-    _isRelatedToPrayerTimes = widget.appointment?.isRelatedToPrayerTimes ?? false;
-    _selectedPrayerTime = widget.appointment?.prayerTime;
-    _selectedTimeRelation = widget.appointment?.timeRelation;
-    _minutesBeforeAfter = widget.appointment?.minutesBeforeAfter;
-    _duration = widget.appointment?.duration ?? Duration(minutes: 30);
-    _startTime = widget.appointment?.startTime ?? DateTime.now();
-    _endTime = widget.appointment?.endTime ?? DateTime.now().add(Duration(minutes: 30));
-    _color = widget.appointment?.color ?? Colors.blue;
+    print(widget.appointmentId);
+    _titleController = TextEditingController();
+    _descriptionController = TextEditingController();
     _loadCountryCityData();
+    _loadAppointmentData();
+  }
+
+  Future<void> _loadAppointmentData() async {
+    if (widget.appointmentId != null) {
+      final db = DatabaseHelper();
+      try {
+        final appointment = await db.getAppointment(widget.appointmentId!);
+        if (appointment != null) {
+          print(appointment.recurrenceExceptionDates);
+          setState(() {
+            _titleController.text = appointment.subject;
+            _descriptionController.text = appointment.notes ?? '';
+            _isAllDay = appointment.isAllDay;
+            _isRelatedToPrayerTimes = appointment.isRelatedToPrayerTimes!;
+            _selectedPrayerTime = appointment.prayerTime;
+            _selectedTimeRelation = appointment.timeRelation;
+            _minutesBeforeAfter = appointment.minutesBeforeAfter;
+            _duration = appointment.duration ?? Duration(minutes: 30);
+            _startTime = appointment.startTime;
+            _endTime = appointment.endTime;
+            _color = appointment.color;
+
+            // Lokasyon bilgisini ayırma
+            if (appointment.location != null) {
+              final locationParts = appointment.location!.split(',');
+              if (locationParts.length == 2) {
+                _selectedCity = locationParts[0].trim();
+                _selectedCountry = locationParts[1].trim();
+              }
+            }
+
+            // Tekrarlama bilgilerini ayarlama
+            if (appointment.recurrenceRule != null) {
+              _isRecurring = true;
+              final recurrenceProperties = RecurrenceHelper.parseRRule(appointment.recurrenceRule!, appointment.startTime);
+              _recurrenceType = recurrenceProperties.recurrenceType;
+              _recurrenceInterval = recurrenceProperties.interval;
+              _recurrenceRange = recurrenceProperties.recurrenceRange;
+              _recurrenceCount = recurrenceProperties.recurrenceCount;
+              _recurrenceEndDate = recurrenceProperties.endDate;
+
+              // Haftalık tekrar için gün seçimlerini ayarlama
+              if (_recurrenceType == RecurrenceType.weekly) {
+                _selectedWeekDays = List.filled(7, false);
+                recurrenceProperties.weekDays.forEach((weekDay) {
+                  _selectedWeekDays[(weekDay.index + 6) % 7] = true;
+                });
+              }
+            }
+
+            // İstisna tarihlerini ayarlama
+            _exceptionDates = appointment.recurrenceExceptionDates ?? [];
+          });
+        } else {
+          // Eğer randevu bulunamazsa, kullanıcıya bilgi ver
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Randevu bulunamadı. Yeni bir randevu oluşturuyorsunuz.')),
+          );
+        }
+        print(appointment!.id);
+      } catch (e) {
+        // Hata durumunda kullanıcıya bilgi ver
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Randevu yüklenirken bir hata oluştu: $e')),
+        );
+      }
+    } else {
+      // Yeni randevu oluşturma durumu
+      setState(() {
+        _startTime = DateTime.now();
+        _endTime = _startTime!.add(Duration(minutes: 30));
+        _duration = Duration(minutes: 30);
+      });
+    }
   }
 
   Future<void> _loadCountryCityData() async {
@@ -98,7 +166,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.appointment == null ? 'Create Appointment' : 'Edit Appointment'),
+        title: Text(widget.appointmentId == null ? 'Create Appointment' : 'Edit Appointment'),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -183,6 +251,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                     }).toList(),
                   ),
                   DropdownButtonFormField<TimeRelation>(
+                    value: _selectedTimeRelation,
                     items: TimeRelation.values.map((timeRelation) {
                       return DropdownMenuItem<TimeRelation>(
                         value: timeRelation,
@@ -190,10 +259,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                       );
                     },).toList(), 
                     onChanged: (value) {
-                    setState(() {
-                      _selectedTimeRelation = value;
-                    });
-                  },
+                      setState(() {
+                        _selectedTimeRelation = value;
+                      });
+                    },
                   ),
                   TextFormField(
                     initialValue: _minutesBeforeAfter?.toString(),
@@ -443,9 +512,21 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   onTap: () => _pickColor(context),
                 ),
                 SizedBox(height: 16.0),
-                ElevatedButton(
-                  onPressed: _saveAppointment,
-                  child: Text('Save'),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: _saveAppointment,
+                      child: Text('Save'),
+                    ),
+                    if(widget.appointmentId != null) ...[
+                      SizedBox(width: 10),
+                      ElevatedButton(
+                        onPressed: _deleteAppointment,
+                        child: Text('Delete'),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -474,6 +555,55 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         .where((entry) => _selectedWeekDays[entry.key])
         .map((entry) => entry.value)
         .join(',');
+  }
+  Future<void> _deleteAppointment() async {
+    if (widget.appointmentId == null) {
+      // Eğer appointmentId null ise, silinecek bir randevu yok demektir.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Silinecek randevu bulunamadı.')),
+      );
+      return;
+    }
+
+    // Kullanıcıya silme işlemini onaylatmak için bir dialog gösterelim
+    bool confirmDelete = await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Randevuyu Sil'),
+          content: Text('Bu randevuyu silmek istediğinizden emin misiniz?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('İptal'),
+              onPressed: () => Navigator.of(context).pop(false),
+            ),
+            TextButton(
+              child: Text('Sil'),
+              onPressed: () => Navigator.of(context).pop(true),
+            ),
+          ],
+        );
+      },
+    ) ?? false;
+
+    if (confirmDelete) {
+      try {
+        final db = DatabaseHelper();
+        await db.deleteAppointment(widget.appointmentId!);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Randevu başarıyla silindi.')),
+        );
+        
+        // Randevu silindikten sonra önceki sayfaya dön
+        Navigator.of(context).pop(true);  // true döndürerek ana sayfada yenileme yapılmasını sağlayabiliriz
+      } catch (e) {
+        print('Randevu silinirken hata oluştu: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Randevu silinirken bir hata oluştu.')),
+        );
+      }
+    }
   }
   void _saveAppointment() async {
     if (_formKey.currentState!.validate()) {
@@ -518,14 +648,14 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           recurrence.dayOfMonth = _startTime!.day;
         }
         if (_recurrenceRange == RecurrenceRange.count) {
-          recurrence.recurrenceCount = _recurrenceCount! * _recurrenceInterval;
+          recurrence.recurrenceCount = _recurrenceCount!;
         } else if (_recurrenceRange == RecurrenceRange.endDate) {
           recurrence.endDate = _recurrenceEndDate;
         }
         recurrenceRule = SfCalendar.generateRRule(recurrence, _startTime!, _endTime!);
       }
-
       final appointment = PrayerTimeAppointment(
+        id: widget.appointmentId,
         prayerTime: _isRelatedToPrayerTimes ? _selectedPrayerTime : null,
         timeRelation: _isRelatedToPrayerTimes ? _selectedTimeRelation : null,
         minutesBeforeAfter: _isRelatedToPrayerTimes ? _minutesBeforeAfter : null,
@@ -541,16 +671,15 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         recurrenceExceptionDates: _exceptionDates.isNotEmpty ? _exceptionDates : null,
         color: _color,
       );
-
       final db = DatabaseHelper();
-      if (widget.appointment == null) {
+      if (widget.appointmentId == null) {
         await db.insertAppointment(appointment);
       } else {
-        appointment.id = widget.appointment!.id;
         await db.updateAppointment(appointment);
       }
 
       Navigator.pop(context);
+
     }
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 
@@ -37,7 +39,7 @@ class PrayerTimeAppointment extends Appointment {
     String? location,
     List<Object>? resourceIds,
     Object? recurrenceId,
-    Object? id,
+    int? id,
     String subject = '',
     Color color = Colors.lightBlue,
     List<DateTime>? recurrenceExceptionDates,
@@ -66,6 +68,9 @@ class PrayerTimeAppointment extends Appointment {
       'startTimeZone': startTimeZone,
       'endTimeZone': endTimeZone,
       'recurrenceRule': recurrenceRule,
+      'recurrenceExceptionDates': recurrenceExceptionDates != null
+        ? json.encode(recurrenceExceptionDates!.map((date) => date.toIso8601String()).toList())
+        : null,
       'isAllDay': isAllDay ? 1 : 0,
       'isRelatedToPrayerTimes': isRelatedToPrayerTimes == true ? 1 : 0,
       'notes': notes,

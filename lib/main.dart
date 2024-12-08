@@ -16,8 +16,18 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+        colorScheme: const ColorScheme(
+          brightness: Brightness.light, // Helles Theme
+          primary: Color(0xFF007A33), // Hauptfarbe (Grün)
+          onPrimary: Colors.white, // Textfarbe auf Grün
+          secondary: Color(0xFF4CAF50), // Sekundärfarbe (helleres Grün)
+          onSecondary: Colors.white, // Textfarbe auf Sekundärfarbe
+          surface: Color.fromARGB(
+              255, 255, 255, 255), // Oberflächenfarbe (z. B. Karten)
+          onSurface: Colors.black, // Textfarbe auf Oberflächen
+          error: Colors.red, // Fehlerfarbe
+          onError: Colors.white, // Textfarbe auf Fehlerfarbe
+        ),
       ),
       home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );

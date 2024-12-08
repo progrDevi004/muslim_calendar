@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
@@ -30,6 +32,7 @@ class DatabaseHelper {
             startTimeZone TEXT,
             endTimeZone TEXT,
             recurrenceRule TEXT,
+            recurrenceExceptionDates TEXT,
             isAllDay INTEGER,
             isRelatedToPrayerTimes INTEGER,
             notes TEXT,
@@ -47,6 +50,7 @@ class DatabaseHelper {
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await db.execute('ALTER TABLE appointments ADD COLUMN duration INTEGER');
+          await db.execute('ALTER TABLE appointments ADD COLUMN recurrenceExceptionDates TEXT');
         }
       },
     );
@@ -54,9 +58,11 @@ class DatabaseHelper {
 
   Future<int> insertAppointment(PrayerTimeAppointment appointment) async {
     final db = await database;
+    // id'yi Map'ten çıkarıyoruz, böylece veritabanı otomatik olarak atayacak
+    final appointmentMap = appointment.toMap()..remove('id');
     return await db.insert(
       'appointments',
-      appointment.toMap(),
+      appointmentMap,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
@@ -93,14 +99,43 @@ class DatabaseHelper {
     });
   }
 
-  Future<void> updateAppointment(PrayerTimeAppointment appointment) async {
+  Future<PrayerTimeAppointment?> getAppointment(int id) async {
     final db = await database;
-    await db.update(
+    final List<Map<String, dynamic>> maps = await db.query(
       'appointments',
-      appointment.toMap(),
       where: 'id = ?',
-      whereArgs: [appointment.id],
+      whereArgs: [id],
     );
+
+    if (maps.isNotEmpty) {
+      return _createAppointment(maps.first);
+    }
+    return null;
+  }
+
+  Future<int> updateAppointment(PrayerTimeAppointment appointment) async {
+    final db = await database;
+    if (appointment.id == null) {
+      throw ArgumentError('Appointment ID cannot be null');
+    }
+    
+    try {
+      int updatedRows = await db.update(
+        'appointments',
+        appointment.toMap(),
+        where: 'id = ?',
+        whereArgs: [appointment.id is int ? appointment.id : int.parse(appointment.id.toString())],
+      );
+      
+      if (updatedRows == 0) {
+        print('No appointment found with ID: ${appointment.id}');
+      }
+      
+      return updatedRows;
+    } catch (e) {
+      print('Error updating appointment: $e');
+      rethrow;
+    }
   }
 
   Future<void> deleteAppointment(int id) async {
@@ -162,6 +197,12 @@ PrayerTimeAppointment _createAppointment(Map<String, dynamic> map) {
     startTimeZone: map['startTimeZone'],
     endTimeZone: map['endTimeZone'],
     recurrenceRule: map['recurrenceRule'],
+    recurrenceExceptionDates: map['recurrenceExceptionDates'] != null
+        ? (json.decode(map['recurrenceExceptionDates']) as List)
+            .map((item) => DateTime.parse(item))
+            .toList()
+        : null,
+
     prayerTime: map['prayerTime'] != null 
         ? PrayerTime.values[map['prayerTime']] 
         : null,
