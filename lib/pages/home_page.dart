@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:muslim_calendar/pages/appointment_creation_page.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import '../pages/appointment_creation_page.dart';
 import '../widgets/create_events.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import '../database/database_helper.dart';
+import '../widgets/prayer_time_appointment.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -11,14 +12,23 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   CalendarView _selectedView = CalendarView.month;
-  late LazyLoadingCalendarDataSource _dataSource;
   late CalendarController _calendarController;
+  late EventDataSource _dataSource;
+  final DatabaseHelper _databaseHelper = DatabaseHelper();
 
   @override
   void initState() {
     super.initState();
-    _dataSource = LazyLoadingCalendarDataSource(loadAppointments);
     _calendarController = CalendarController();
+    _dataSource = EventDataSource([]);
+    //_loadAppointments();
+  }
+
+  Future<void> _loadAppointments() async {
+    List<PrayerTimeAppointment> appointments = await _databaseHelper.getAllAppointments();
+    setState(() {
+      _dataSource = EventDataSource(appointments);
+    });
   }
 
   @override
@@ -36,21 +46,30 @@ class _HomePageState extends State<HomePage> {
       ),
       body: SfCalendar(
         view: _selectedView,
-        dataSource: _dataSource,
-        loadMoreWidgetBuilder: _buildLoadMoreWidget,
-        monthViewSettings: const MonthViewSettings(
-          showTrailingAndLeadingDates: false,
-        ),
-        onViewChanged: (ViewChangedDetails details) {
-          _dataSource.handleLoadMore(details.visibleDates.first, details.visibleDates.last);
-        },
         controller: _calendarController,
+        dataSource: _dataSource,
+        showDatePickerButton: true,
+        monthViewSettings: const MonthViewSettings(
+          appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
+          showAgenda: true,
+          ),
+          onTap: (calendarTapDetails) {
+            print(calendarTapDetails.targetElement);
+          },
+        onViewChanged: (ViewChangedDetails details) {
+          //print("Before:" + _dataSource.appointments.toString());
+          //print(details.visibleDates);
+          _loadAppointmentsForVisibleDates(details.visibleDates);
+        },
       ),
       floatingActionButton: FloatingActionButton(
         elevation: 8,
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => AppointmentCreationPage()),
-        ),
+        onPressed: () async {
+          await Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => AppointmentCreationPage()),
+          );
+          _loadAppointments();
+        },
         child: const Icon(Icons.add),
       ),
     );
@@ -62,6 +81,7 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           _selectedView = view;
           _calendarController.view = view;
+          //print("Günlük görünümdeki randevular: ${_dataSource}");
         });
       },
       child: Text(
@@ -75,15 +95,39 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildLoadMoreWidget(BuildContext context, LoadMoreCallback loadMoreAppointments) {
-    return FutureBuilder(
-      future: loadMoreAppointments(),
-      builder: (context, snapshot) {
-        return Container(
-          alignment: Alignment.center,
-          child: CircularProgressIndicator(),
-        );
-      },
-    );
+  Future<void> _loadAppointmentsForVisibleDates(List<DateTime> visibleDates) async {
+  if (visibleDates.isEmpty) return;
+
+  final DateTime start = visibleDates.first;
+  final DateTime end = _calculateEndDate(start);
+
+  try {
+    final List<PrayerTimeAppointment> appointments = 
+        await _databaseHelper.getAppointmentsForDateRange(start, end);
+    
+    setState(() {
+      _dataSource = EventDataSource(appointments);
+    });
+
+    // Hata ayıklama için
+    // print('Loaded appointments: ${appointments.length}');
+    // print('Date range: $start to $end');
+  } catch (e) {
+    print('Error loading appointments: $e');
+    // Hata durumunda kullanıcıya bilgi verebilirsiniz
+    // ScaffoldMessenger.of(context).showSnackBar(
+    //   SnackBar(content: Text('Randevular yüklenirken bir hata oluştu')),
+    // );
+  }
+}
+  DateTime _calculateEndDate(DateTime start) {
+    switch (_selectedView) {
+      case CalendarView.day:
+        return start.add(Duration(days: 1));
+      case CalendarView.week:
+        return start.add(Duration(days: 8));
+      default:
+        return start.add(Duration(days: 32));
+    }
   }
 }

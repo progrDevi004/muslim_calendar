@@ -174,23 +174,23 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "27.1.53"
+    version: "27.2.5"
   syncfusion_flutter_core:
     dependency: transitive
     description:
       name: syncfusion_flutter_core
-      sha256: becd190595cba56feac5ec17b805b35df9f006171c131c209f79b5c58fc780eb
+      sha256: "325f519ce4ad8edd81811c21b853d72018529e353584490824da0555156ba076"
       url: "https://pub.dev"
     source: hosted
-    version: "27.1.53"
+    version: "27.2.5"
   syncfusion_flutter_datepicker:
     dependency: transitive
     description:
       name: syncfusion_flutter_datepicker
-      sha256: "5638805bea1c70a6d46dea9d39ef67f0085176e1c15cf57f7036cf67c1568816"
+      sha256: "2177e49eb8a1c0fce7081e40f5613c986d00e5e63cbeb98a6012f65ca156bfc7"
       url: "https://pub.dev"
     source: hosted
-    version: "27.1.53"
+    version: "27.2.5"
   term_glyph:
     dependency: transitive
     description:
