@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:http/http.dart' as http;
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import '../widgets/prayer_time_appointment.dart';
 
@@ -45,13 +46,22 @@ class DatabaseHelper {
             duration INTEGER
           )
         ''');
+        await db.execute('''
+          CREATE TABLE prayer_times (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            location TEXT,
+            fajr TEXT,
+            dhuhr TEXT,
+            asr TEXT,
+            maghrib TEXT,
+            isha TEXT,
+            UNIQUE(date, location)
+          )
+        ''');
       },
-      version: 2,
+      version: 1,
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          await db.execute('ALTER TABLE appointments ADD COLUMN duration INTEGER');
-          await db.execute('ALTER TABLE appointments ADD COLUMN recurrenceExceptionDates TEXT');
-        }
       },
     );
   }
@@ -70,33 +80,7 @@ class DatabaseHelper {
   Future<List<PrayerTimeAppointment>> getAllAppointments() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('appointments');
-
-    return List.generate(maps.length, (i) {
-      return PrayerTimeAppointment(
-        id: maps[i]['id'],
-        startTime: DateTime.parse(maps[i]['startTime']),
-        endTime: DateTime.parse(maps[i]['endTime']),
-        subject: maps[i]['subject'],
-        color: Color(maps[i]['color']),
-        isAllDay: maps[i]['isAllDay'] == 1,
-        isRelatedToPrayerTimes: maps[i]['isRelatedToPrayerTimes'] == 1,
-        notes: maps[i]['notes'],
-        location: maps[i]['location'],
-        startTimeZone: maps[i]['startTimeZone'],
-        endTimeZone: maps[i]['endTimeZone'],
-        recurrenceRule: maps[i]['recurrenceRule'],
-        prayerTime: maps[i]['prayerTime'] != null 
-            ? PrayerTime.values[maps[i]['prayerTime']] 
-            : null,
-        timeRelation: maps[i]['timeRelation'] != null 
-            ? TimeRelation.values[maps[i]['timeRelation']] 
-            : null,
-        minutesBeforeAfter: maps[i]['minutesBeforeAfter'],
-        duration: maps[i]['duration'] != null 
-            ? Duration(minutes: maps[i]['duration']) 
-            : null,
-      );
-    });
+    return List.generate(maps.length, (i) => _createAppointment(maps[i]));
   }
 
   Future<PrayerTimeAppointment?> getAppointment(int id) async {
@@ -150,7 +134,6 @@ class DatabaseHelper {
   Future<List<PrayerTimeAppointment>> getAppointmentsForDateRange(DateTime start, DateTime end) async {
   final db = await database;
   List<PrayerTimeAppointment> allAppointments = [];
-
   // 1. Tekrarlamayan ve namaz vakitlerine bağlı olmayan randevular
   final List<Map<String, dynamic>> nonRepeatingNonPrayerMaps = await db.query(
     'appointments',
@@ -160,24 +143,211 @@ class DatabaseHelper {
 
   allAppointments.addAll(_mapAppointments(nonRepeatingNonPrayerMaps));
 
-  // 2. Tekrarlayan randevular (namaz vakitlerine bağlı olup olmadığına bakılmaksızın)
+  // 2. Tekrarlayan randevular (namaz vakitlerine bağlı olmayan)
   final List<Map<String, dynamic>> repeatingMaps = await db.query(
     'appointments',
-    where: 'recurrenceRule IS NOT NULL',
+    where: 'recurrenceRule IS NOT NULL AND isRelatedToPrayerTimes = 0',
   );
 
   allAppointments.addAll(_mapAppointments(repeatingMaps));
 
   // 3. Namaz vakitlerine bağlı randevular (tekrarlamayan)
-  final List<Map<String, dynamic>> prayerRelatedMaps = await db.query(
-    'appointments',
-    where: 'isRelatedToPrayerTimes = 1 AND recurrenceRule IS NULL',
-  );
-
-  allAppointments.addAll(_mapAppointments(prayerRelatedMaps));
+    final List<Map<String, dynamic>> prayerRelatedMaps = await db.query(
+      'appointments',
+      where: 'isRelatedToPrayerTimes = 1 AND recurrenceRule IS NULL AND startTime >= ? AND startTime <= ?',
+      whereArgs: [start.toIso8601String(), end.toIso8601String()],
+    );
+    for (var appointment in prayerRelatedMaps) {
+      var updatedAppointment = await _updatePrayerRelatedAppointment(appointment);
+      if (updatedAppointment != null) {
+        allAppointments.add(updatedAppointment);
+      }
+    }
+    print(allAppointments);
+    // 4. Namaz vakitlerine bağlı ve tekrarlayan randevular
+    // TODO: Bu kısım daha sonra eklenecek
 
   return allAppointments;
 }
+
+Future<PrayerTimeAppointment?> _updatePrayerRelatedAppointment(Map<String, dynamic> appointment) async {
+  final db = await database;
+  var prayerTimeHour = await _getPrayerTimeFromDatabase(appointment['startTime'], appointment['location'], PrayerTime.values[appointment['prayerTime']]);
+  print(prayerTimeHour);
+  if (prayerTimeHour == null) {
+    return null;
+  }
+  var prayerTimeHourbyMinutes = int.parse(prayerTimeHour);
+  DateTime startTime = DateTime.parse(appointment['startTime']).toLocal();
+  startTime = DateTime(startTime.year, startTime.month, startTime.day).add(Duration(minutes: prayerTimeHourbyMinutes));
+  startTime = _calculateStartTime(startTime, TimeRelation.values[appointment['timeRelation']], appointment['minutesBeforeAfter']);
+  DateTime endTime = startTime.add(Duration(minutes: appointment['duration']));
+  return PrayerTimeAppointment(
+    id: appointment['id'],
+    startTime: startTime,
+    endTime: endTime,
+    subject: appointment['subject'],
+    color: Color(appointment['color']),
+    isAllDay: appointment['isAllDay'] == 1,
+    isRelatedToPrayerTimes: true,
+    notes: appointment['notes'],
+    location: appointment['location'],
+    prayerTime: PrayerTime.values[appointment['prayerTime']],
+    timeRelation: TimeRelation.values[appointment['timeRelation']],
+    minutesBeforeAfter: appointment['minutesBeforeAfter'],
+    duration: Duration(minutes: appointment['duration']),
+  );
+}
+
+DateTime _calculateStartTime(DateTime prayerTime, TimeRelation timeRelation, int minutesBeforeAfter) {
+  switch (timeRelation) {
+    case TimeRelation.before:
+      return prayerTime.subtract(Duration(minutes: minutesBeforeAfter));
+    case TimeRelation.after:
+      return prayerTime.add(Duration(minutes: minutesBeforeAfter));
+    default:
+      return prayerTime; // Eğer bir ilişki belirtilmemişse, namaz vaktini olduğu gibi döndür
+  }
+}
+Future<String?> _getPrayerTimeFromDatabase(String startTime, String location, PrayerTime prayerTime) async {
+  final db = await database;
+  final DateTime dateTime = DateTime.parse(startTime).toLocal();
+  final String date = dateTime.toString().split(' ')[0];
+  final int year = dateTime.year;
+  final int month = dateTime.month;
+
+  // Veritabanından ilgili namaz vaktini sorgula
+  final List<Map<String, dynamic>> result = await db.query(
+    'prayer_times',
+    columns: [prayerTime.toString().split('.').last.toLowerCase()],
+    where: 'date = ? AND location = ?',
+    whereArgs: [date, location],
+  );
+  print(" RESULTTTTTTTTTTT" + result.toString() + date);
+
+  if (result.isNotEmpty && result.first.values.first != null) {
+    // Eğer veri bulunduysa, saat ve dakika olarak döndür
+    return result.first.values.first as String;
+  } else {
+    // Veri bulunamadıysa, API'den çek ve veritabanına kaydet
+    final prayerTimes = await _fetchPrayerTimesFromAPI(year, month, location);
+    //print(prayerTimes);
+    if (prayerTimes != null) {
+      await _savePrayerTimesToDatabase(prayerTimes, location);
+      
+      // Yeni eklenen veriden ilgili namaz vaktini al
+      final newResult = await db.query(
+        'prayer_times',
+        columns: [prayerTime.toString().split('.').last.toLowerCase()],
+        where: 'date = ? AND location = ?',
+        whereArgs: [date, location],
+      );
+      //print("newres" + newResult.toString());
+      if (newResult.isNotEmpty && newResult.first.values.first != null) {
+        return newResult.first.values.first as String;
+      }
+    }
+  }
+  
+  // Eğer hala veri bulunamadıysa null döndür
+  return null;
+}
+
+Future<Map<String, Map<String, String>>> _fetchPrayerTimesFromAPI(int year, int month, String location) async {
+  final url = 'https://api.aladhan.com/v1/calendarByAddress/$year/$month?address=$location';
+  final response = await http.get(Uri.parse(url));
+
+  if (response.statusCode == 200) {
+    final jsonData = json.decode(response.body);
+    final Map<String, Map<String, String>> prayerTimes = {};
+
+    for (var dayData in jsonData['data']) {
+      final date = dayData['date']['gregorian']['date'];
+      final timings = dayData['timings'];
+      
+      prayerTimes[date] = {
+        'fajr': timings['Fajr'],
+        'dhuhr': timings['Dhuhr'],
+        'asr': timings['Asr'],
+        'maghrib': timings['Maghrib'],
+        'isha': timings['Isha'],
+      };
+    }
+
+    return prayerTimes;
+  } else {
+    throw Exception('Failed to load prayer times from API');
+  }
+}
+
+
+int _timeToMinutes(String timeString) {
+  // Parantez içindeki kısmı kaldır
+  String cleanTime = timeString.split(' ')[0];
+  
+  // Saat ve dakikayı ayır
+  List<String> parts = cleanTime.split(':');
+  int hours = int.parse(parts[0]);
+  int minutes = int.parse(parts[1]);
+  
+  // Toplam dakikayı hesapla ve döndür
+  return hours * 60 + minutes;
+}
+
+String _formatDate(String inputDate) {
+  // Gelen tarih formatını parse et
+  final parts = inputDate.split('-');
+  if (parts.length == 3) {
+    // Yıl-Ay-Gün formatına dönüştür
+    return '${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}';
+  }
+  // Eğer format beklendiği gibi değilse, orijinal tarihi döndür
+  return inputDate;
+}
+Future<void> _savePrayerTimesToDatabase(Map<String, Map<String, String>> prayerTimes, String location) async {
+  final Database db = await database;
+  final Batch batch = db.batch();
+
+  prayerTimes.forEach((date, timings) {
+    batch.insert(
+      'prayer_times',
+      {
+        'date': _formatDate(date),
+        'location': location,
+        'fajr': _timeToMinutes(timings['fajr']!),
+        'dhuhr': _timeToMinutes(timings['dhuhr']!),
+        'asr': _timeToMinutes(timings['asr']!),
+        'maghrib': _timeToMinutes(timings['maghrib']!),
+        'isha': _timeToMinutes(timings['isha']!),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  });
+
+  await batch.commit(noResult: true);
+  //await _printAllPrayerTimes(db);
+}
+
+Future<void> _printAllPrayerTimes(Database db) async {
+  final List<Map<String, dynamic>> prayerTimes = await db.query('prayer_times');
+  print('Tüm Namaz Vakitleri:');
+  prayerTimes.forEach((row) {
+    print('Tarih: ${row['date']}, Konum: ${row['location']}');
+    print('  Fajr: ${(row['fajr'])}');
+    print('  Dhuhr: ${(row['dhuhr'])}');
+    print('  Asr: ${(row['asr'])}');
+    print('  Maghrib: ${(row['maghrib'])}');
+    print('  Isha: ${(row['isha'])}');
+    print('-------------------');
+  });
+}
+
+String _minutesToTime(int minutes) {
+  final hours = minutes ~/ 60;
+  final remainingMinutes = minutes % 60;
+  return '${hours.toString().padLeft(2, '0')}:${remainingMinutes.toString().padLeft(2, '0')}';
+}
+
 
 List<PrayerTimeAppointment> _mapAppointments(List<Map<String, dynamic>> maps) {
   return maps.map((map) => _createAppointment(map)).toList();

@@ -15,12 +15,14 @@ class _HomePageState extends State<HomePage> {
   late CalendarController _calendarController;
   late EventDataSource _dataSource;
   final DatabaseHelper _databaseHelper = DatabaseHelper();
+  late DateTime? _selectedDate;
 
   @override
   void initState() {
     super.initState();
     _calendarController = CalendarController();
     _dataSource = EventDataSource([]);
+    _selectedDate = null;
     //_loadAppointments();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
@@ -53,18 +55,29 @@ class _HomePageState extends State<HomePage> {
         controller: _calendarController,
         dataSource: _dataSource,
         showDatePickerButton: true,
+        onSelectionChanged: (calendarSelectionDetails) {
+          _selectedDate = calendarSelectionDetails.date;
+        },
+        timeSlotViewSettings: const TimeSlotViewSettings(timeIntervalHeight: 100,),
         monthViewSettings: const MonthViewSettings(
           appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
           showAgenda: true,
           ),
           onTap: (calendarTapDetails) async {
-            print(calendarTapDetails.targetElement);
             if(calendarTapDetails.targetElement == CalendarElement.appointment){
               int appointmentId = int.parse(((calendarTapDetails.appointments?.firstOrNull as Appointment?)?.id ?? '').toString());
                 await Navigator.of(context).push(
                   MaterialPageRoute(builder: (context) => AppointmentCreationPage(appointmentId: appointmentId,)),
                 );
               _loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
+            }
+            else if(calendarTapDetails.targetElement == CalendarElement.calendarCell){
+              if(calendarTapDetails.date == _selectedDate){
+                setState(() {
+                  _selectedView = CalendarView.day;
+                  _calendarController.view = CalendarView.day;
+                });
+              }
             }
           },
         onViewChanged: (ViewChangedDetails details) {
@@ -120,7 +133,7 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _dataSource = EventDataSource(appointments);
     });
-
+    print(appointments);
     // Hata ayıklama için
     // print('Loaded appointments: ${appointments.length}');
     // print('Date range: $start to $end');
