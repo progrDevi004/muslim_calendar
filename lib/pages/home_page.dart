@@ -23,10 +23,8 @@ class _HomePageState extends State<HomePage> {
     _calendarController = CalendarController();
     _dataSource = EventDataSource([]);
     _selectedDate = null;
+    _dataSource.loadAppointmentsFromDatabase();
     //_loadAppointments();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
-    });
   }
 
   Future<void> _loadAppointments() async {
@@ -69,7 +67,7 @@ class _HomePageState extends State<HomePage> {
                 await Navigator.of(context).push(
                   MaterialPageRoute(builder: (context) => AppointmentCreationPage(appointmentId: appointmentId,)),
                 );
-              _loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
+              //_loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
             }
             else if(calendarTapDetails.targetElement == CalendarElement.calendarCell){
               if(calendarTapDetails.date == _selectedDate){
@@ -81,9 +79,7 @@ class _HomePageState extends State<HomePage> {
             }
           },
         onViewChanged: (ViewChangedDetails details) {
-          //print("Before:" + _dataSource.appointments.toString());
-          //print(details.visibleDates);
-          _loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
+          //_loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
         },
       ),
       floatingActionButton: FloatingActionButton(
@@ -92,7 +88,7 @@ class _HomePageState extends State<HomePage> {
           await Navigator.of(context).push(
             MaterialPageRoute(builder: (context) => AppointmentCreationPage()),
           );
-          _loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
+          //_loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
         },
         child: const Icon(Icons.add),
       ),
@@ -107,7 +103,7 @@ class _HomePageState extends State<HomePage> {
           _calendarController.view = view;
         });
         // Görünüm değiştiğinde görünür tarihleri yeniden yükle
-        _loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
+        //_loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
       },
       child: Text(
         title,
@@ -122,29 +118,29 @@ class _HomePageState extends State<HomePage> {
 
 
   Future<void> _loadAppointmentsForVisibleDates(DateTime displayDate, CalendarView view) async {
-  DateTime start = displayDate;
-  DateTime end = _calculateEndDate(start, view);
+    DateTime start = displayDate;
+    DateTime end = _calculateEndDate(start, view);
 
 
-  try {
-    final List<PrayerTimeAppointment> appointments = 
-        await _databaseHelper.getAppointmentsForDateRange(start, end);
-    
-    setState(() {
-      _dataSource = EventDataSource(appointments);
-    });
-    print(appointments);
-    // Hata ayıklama için
-    // print('Loaded appointments: ${appointments.length}');
-    // print('Date range: $start to $end');
-  } catch (e) {
-    print('Error loading appointments: $e');
-    // Hata durumunda kullanıcıya bilgi verebilirsiniz
-    // ScaffoldMessenger.of(context).showSnackBar(
-    //   SnackBar(content: Text('Randevular yüklenirken bir hata oluştu')),
-    // );
+    try {
+      final List<PrayerTimeAppointment> appointments = 
+          await _databaseHelper.getAppointmentsForDateRange(start, end);
+      
+      setState(() {
+        _dataSource = EventDataSource(appointments);
+      });
+      print(appointments);
+      // Hata ayıklama için
+      // print('Loaded appointments: ${appointments.length}');
+      // print('Date range: $start to $end');
+    } catch (e) {
+      print('Error loading appointments: $e');
+      // Hata durumunda kullanıcıya bilgi verebilirsiniz
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(content: Text('Randevular yüklenirken bir hata oluştu')),
+      // );
+    }
   }
-}
   DateTime _calculateEndDate(DateTime start, CalendarView view) {
     switch (view) {
       case CalendarView.day:

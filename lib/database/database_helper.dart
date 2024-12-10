@@ -5,6 +5,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:http/http.dart' as http;
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:syncfusion_flutter_calendar/src/calendar/appointment_engine/recurrence_helper.dart';
 import '../widgets/prayer_time_appointment.dart';
 
 class DatabaseHelper {
@@ -79,9 +80,80 @@ class DatabaseHelper {
 
   Future<List<PrayerTimeAppointment>> getAllAppointments() async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('appointments');
-    return List.generate(maps.length, (i) => _createAppointment(maps[i]));
+    List<PrayerTimeAppointment> allAppointments = [];
+
+    // 1. Tekrarlamayan ve namaz vakitlerine bağlı olmayan randevular
+    final List<Map<String, dynamic>> nonRepeatingNonPrayerMaps = await db.query(
+      'appointments',
+      where: 'recurrenceRule IS NULL AND isRelatedToPrayerTimes = 0',
+    );
+
+    allAppointments.addAll(_mapAppointments(nonRepeatingNonPrayerMaps));
+
+    // 2. Tekrarlayan randevular (namaz vakitlerine bağlı olmayan)
+    final List<Map<String, dynamic>> repeatingMaps = await db.query(
+      'appointments',
+      where: 'recurrenceRule IS NOT NULL AND isRelatedToPrayerTimes = 0',
+    );
+
+    allAppointments.addAll(_mapAppointments(repeatingMaps));
+
+    // 3. Namaz vakitlerine bağlı randevular (tekrarlamayan)
+    final List<Map<String, dynamic>> prayerRelatedMaps = await db.query(
+      'appointments',
+      where: 'isRelatedToPrayerTimes = 1 AND recurrenceRule IS NULL',
+    );
+    for (var appointment in prayerRelatedMaps) {
+      var updatedAppointment = await _updatePrayerRelatedAppointment(appointment);
+      if (updatedAppointment != null) {
+        allAppointments.add(updatedAppointment);
+      }
+    }
+
+    // 4. Namaz vakitlerine bağlı ve tekrarlayan randevular
+  final List<Map<String, dynamic>> prayerRelatedRepeatingMaps = await db.query(
+    'appointments',
+    where: 'isRelatedToPrayerTimes = 1 AND recurrenceRule IS NOT NULL',
+  );
+
+  for (var appointment in prayerRelatedRepeatingMaps) {
+    List<PrayerTimeAppointment> expandedAppointments = await _expandRepeatingPrayerAppointmentLimited(appointment, 100);
+    allAppointments.addAll(expandedAppointments);
   }
+
+  return allAppointments;
+}
+
+Future<List<PrayerTimeAppointment>> _expandRepeatingPrayerAppointmentLimited(Map<String, dynamic> appointmentMap, int limit) async {
+  List<PrayerTimeAppointment> expandedAppointments = [];
+  
+  DateTime appointmentStart = DateTime.parse(appointmentMap['startTime']);
+  String recurrenceRule = appointmentMap['recurrenceRule'];
+  
+  // RecurrenceRule'u parse et
+  RecurrenceProperties recurrenceProperties = SfCalendar.parseRRule(recurrenceRule, appointmentStart);
+  
+  // Tekrar eden tarihleri hesapla (en fazla 100 tane)
+  List<DateTime> recurrenceDates = RecurrenceHelper.getRecurrenceDateTimeCollection(
+    recurrenceRule, 
+    appointmentStart,
+    specificStartDate: appointmentStart,
+    specificEndDate: appointmentStart.add(Duration(days: 365 * 10)), // 10 yıllık bir aralık
+  ).take(limit).toList();
+
+  for (DateTime date in recurrenceDates) {
+    var updatedAppointment = await _updatePrayerRelatedAppointment({
+      ...appointmentMap,
+      'startTime': date.toIso8601String(),
+    });
+    
+    if (updatedAppointment != null) {
+      expandedAppointments.add(updatedAppointment);
+    }
+  }
+
+  return expandedAppointments;
+}
 
   Future<PrayerTimeAppointment?> getAppointment(int id) async {
     final db = await database;
@@ -132,42 +204,91 @@ class DatabaseHelper {
   }
 
   Future<List<PrayerTimeAppointment>> getAppointmentsForDateRange(DateTime start, DateTime end) async {
-  final db = await database;
-  List<PrayerTimeAppointment> allAppointments = [];
-  // 1. Tekrarlamayan ve namaz vakitlerine bağlı olmayan randevular
-  final List<Map<String, dynamic>> nonRepeatingNonPrayerMaps = await db.query(
-    'appointments',
-    where: 'startTime >= ? AND startTime <= ? AND recurrenceRule IS NULL AND isRelatedToPrayerTimes = 0',
-    whereArgs: [start.toIso8601String(), end.toIso8601String()],
-  );
-
-  allAppointments.addAll(_mapAppointments(nonRepeatingNonPrayerMaps));
-
-  // 2. Tekrarlayan randevular (namaz vakitlerine bağlı olmayan)
-  final List<Map<String, dynamic>> repeatingMaps = await db.query(
-    'appointments',
-    where: 'recurrenceRule IS NOT NULL AND isRelatedToPrayerTimes = 0',
-  );
-
-  allAppointments.addAll(_mapAppointments(repeatingMaps));
-
-  // 3. Namaz vakitlerine bağlı randevular (tekrarlamayan)
-    final List<Map<String, dynamic>> prayerRelatedMaps = await db.query(
+    final db = await database;
+    List<PrayerTimeAppointment> allAppointments = [];
+    // 1. Tekrarlamayan ve namaz vakitlerine bağlı olmayan randevular
+    final List<Map<String, dynamic>> nonRepeatingNonPrayerMaps = await db.query(
       'appointments',
-      where: 'isRelatedToPrayerTimes = 1 AND recurrenceRule IS NULL AND startTime >= ? AND startTime <= ?',
+      where: 'startTime >= ? AND startTime <= ? AND recurrenceRule IS NULL AND isRelatedToPrayerTimes = 0',
       whereArgs: [start.toIso8601String(), end.toIso8601String()],
     );
-    for (var appointment in prayerRelatedMaps) {
-      var updatedAppointment = await _updatePrayerRelatedAppointment(appointment);
+
+    allAppointments.addAll(_mapAppointments(nonRepeatingNonPrayerMaps));
+
+    // 2. Tekrarlayan randevular (namaz vakitlerine bağlı olmayan)
+    final List<Map<String, dynamic>> repeatingMaps = await db.query(
+      'appointments',
+      where: 'recurrenceRule IS NOT NULL AND isRelatedToPrayerTimes = 0',
+    );
+
+    allAppointments.addAll(_mapAppointments(repeatingMaps));
+
+    // 3. Namaz vakitlerine bağlı randevular (tekrarlamayan)
+      final List<Map<String, dynamic>> prayerRelatedMaps = await db.query(
+        'appointments',
+        where: 'isRelatedToPrayerTimes = 1 AND recurrenceRule IS NULL AND startTime >= ? AND startTime <= ?',
+        whereArgs: [start.toIso8601String(), end.toIso8601String()],
+      );
+      for (var appointment in prayerRelatedMaps) {
+        var updatedAppointment = await _updatePrayerRelatedAppointment(appointment);
+        if (updatedAppointment != null) {
+          allAppointments.add(updatedAppointment);
+        }
+      }
+      print(allAppointments);
+      // 4. Namaz vakitlerine bağlı ve tekrarlayan randevular
+      final List<Map<String, dynamic>> prayerRelatedRepeatingMaps = await db.query(
+        'appointments',
+        where: 'isRelatedToPrayerTimes = 1 AND recurrenceRule IS NOT NULL',
+      );
+
+      for (var appointment in prayerRelatedRepeatingMaps) {
+        List<PrayerTimeAppointment> expandedAppointments = await _expandRepeatingPrayerAppointment(appointment, start, end);
+        allAppointments.addAll(expandedAppointments);
+      }
+    return allAppointments;
+  }
+
+ Future<List<PrayerTimeAppointment>> _expandRepeatingPrayerAppointment(Map<String, dynamic> appointmentMap, DateTime start, DateTime end) async {
+  List<PrayerTimeAppointment> expandedAppointments = [];
+  
+  DateTime appointmentStart = DateTime.parse(appointmentMap['startTime']);
+  String recurrenceRule = appointmentMap['recurrenceRule'];
+  
+  // Exception tarihlerini yükle
+  List<DateTime> exceptionDates = [];
+  if (appointmentMap['recurrenceExceptionDates'] != null) {
+    List<String> exceptionStrings = (json.decode(appointmentMap['recurrenceExceptionDates']) as List<dynamic>)
+    .map((item) => item.toString())
+    .toList();
+    exceptionDates = exceptionStrings.map((s) => DateTime.parse(s)).toList();
+  }
+
+  // Tekrar eden tarihleri hesapla
+  List<DateTime> recurrenceDates = RecurrenceHelper.getRecurrenceDateTimeCollection(
+    recurrenceRule, 
+    appointmentStart,
+    specificStartDate: start,
+    specificEndDate: end,
+  );
+  for (DateTime date in recurrenceDates) {
+    // Exception tarihlerini kontrol et
+    if (!exceptionDates.any((exDate) => 
+        exDate.year == date.year && 
+        exDate.month == date.month && 
+        exDate.day == date.day)) {
+      var updatedAppointment = await _updatePrayerRelatedAppointment({
+        ...appointmentMap,
+        'startTime': date.toIso8601String(),
+      });
+      
       if (updatedAppointment != null) {
-        allAppointments.add(updatedAppointment);
+        expandedAppointments.add(updatedAppointment);
       }
     }
-    print(allAppointments);
-    // 4. Namaz vakitlerine bağlı ve tekrarlayan randevular
-    // TODO: Bu kısım daha sonra eklenecek
+  }
 
-  return allAppointments;
+  return expandedAppointments;
 }
 
 Future<PrayerTimeAppointment?> _updatePrayerRelatedAppointment(Map<String, dynamic> appointment) async {

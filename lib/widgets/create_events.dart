@@ -4,6 +4,7 @@ import 'prayer_time_appointment.dart';
 import '../database/database_helper.dart';
 
 class EventDataSource extends CalendarDataSource {
+  final dbHelper = DatabaseHelper();
   EventDataSource(List<dynamic> source) {
     appointments = source;
   }
@@ -65,7 +66,6 @@ class EventDataSource extends CalendarDataSource {
 
   // Veritabanından tüm randevuları yükleyen fonksiyon
   Future<void> loadAppointmentsFromDatabase() async {
-    final dbHelper = DatabaseHelper();
     final loadedAppointments = await dbHelper.getAllAppointments();
     appointments!.clear();
     appointments!.addAll(loadedAppointments);
@@ -74,7 +74,6 @@ class EventDataSource extends CalendarDataSource {
 
   // Veritabanından belirli bir tarih aralığındaki randevuları yükleyen fonksiyon
   Future<void> loadAppointmentsForDateRange(DateTime start, DateTime end) async {
-    final dbHelper = DatabaseHelper();
     final loadedAppointments = await dbHelper.getAppointmentsForDateRange(start, end);
     appointments!.clear();
     appointments!.addAll(loadedAppointments);
@@ -83,7 +82,6 @@ class EventDataSource extends CalendarDataSource {
 
   // Bir randevuyu veritabanında güncelleyen ve listeyi güncelleyen fonksiyon
   Future<void> updateAndSaveAppointment(PrayerTimeAppointment appointment) async {
-    final dbHelper = DatabaseHelper();
     await dbHelper.updateAppointment(appointment);
     final index = appointments!.indexWhere((a) => a.id == appointment.id);
     if (index != -1) {
@@ -93,7 +91,6 @@ class EventDataSource extends CalendarDataSource {
 
   // Bir randevuyu veritabanından silen ve listeden kaldıran fonksiyon
   Future<void> deleteAndRemoveAppointment(int appointmentId) async {
-    final dbHelper = DatabaseHelper();
     await dbHelper.deleteAppointment(appointmentId);
     final index = appointments!.indexWhere((a) => a.id == appointmentId);
     if (index != -1) {
