@@ -235,7 +235,7 @@ Future<List<PrayerTimeAppointment>> _expandRepeatingPrayerAppointmentLimited(Map
           allAppointments.add(updatedAppointment);
         }
       }
-      print(allAppointments);
+      //print(allAppointments);
       // 4. Namaz vakitlerine bağlı ve tekrarlayan randevular
       final List<Map<String, dynamic>> prayerRelatedRepeatingMaps = await db.query(
         'appointments',
@@ -294,7 +294,7 @@ Future<List<PrayerTimeAppointment>> _expandRepeatingPrayerAppointmentLimited(Map
 Future<PrayerTimeAppointment?> _updatePrayerRelatedAppointment(Map<String, dynamic> appointment) async {
   final db = await database;
   var prayerTimeHour = await _getPrayerTimeFromDatabase(appointment['startTime'], appointment['location'], PrayerTime.values[appointment['prayerTime']]);
-  print(prayerTimeHour);
+  //print(prayerTimeHour);
   if (prayerTimeHour == null) {
     return null;
   }
@@ -344,7 +344,7 @@ Future<String?> _getPrayerTimeFromDatabase(String startTime, String location, Pr
     where: 'date = ? AND location = ?',
     whereArgs: [date, location],
   );
-  print(" RESULTTTTTTTTTTT" + result.toString() + date);
+  //print(" RESULTTTTTTTTTTT" + result.toString() + date);
 
   if (result.isNotEmpty && result.first.values.first != null) {
     // Eğer veri bulunduysa, saat ve dakika olarak döndür

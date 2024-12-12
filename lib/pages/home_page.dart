@@ -79,7 +79,7 @@ class _HomePageState extends State<HomePage> {
             }
           },
         onViewChanged: (ViewChangedDetails details) {
-          //_loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
+          _loadAppointmentsForVisibleDates(details.visibleDates.first, details.visibleDates.last);
         },
       ),
       floatingActionButton: FloatingActionButton(
@@ -117,9 +117,10 @@ class _HomePageState extends State<HomePage> {
   }
 
 
-  Future<void> _loadAppointmentsForVisibleDates(DateTime displayDate, CalendarView view) async {
+  Future<void> _loadAppointmentsForVisibleDates(DateTime displayDate, DateTime endDate) async {
     DateTime start = displayDate;
-    DateTime end = _calculateEndDate(start, view);
+    DateTime end = endDate.add(const Duration(days: 1));
+    print(endDate);
 
 
     try {
@@ -129,7 +130,7 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _dataSource = EventDataSource(appointments);
       });
-      print(appointments);
+      //print(appointments);
       // Hata ayıklama için
       // print('Loaded appointments: ${appointments.length}');
       // print('Date range: $start to $end');
