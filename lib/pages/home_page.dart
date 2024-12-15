@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:muslim_calendar/widgets/create_events.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
-import '../pages/appointment_creation_page.dart';
-import '../widgets/create_events.dart';
+import 'appointment_creation_page.dart';
 import '../database/database_helper.dart';
 import '../widgets/prayer_time_appointment.dart';
+import 'dart:async';
 
 class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
   @override
   _HomePageState createState() => _HomePageState();
 }
@@ -24,53 +27,79 @@ class _HomePageState extends State<HomePage> {
     _dataSource = EventDataSource([]);
     _selectedDate = null;
     _dataSource.loadAppointmentsFromDatabase();
-    //_loadAppointments();
-  }
-
-  Future<void> _loadAppointments() async {
-    List<PrayerTimeAppointment> appointments = await _databaseHelper.getAllAppointments();
-    setState(() {
-      _dataSource = EventDataSource(appointments);
-    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final viewOptions = {
+      CalendarView.month: 'Month',
+      CalendarView.week: 'Week',
+      CalendarView.day: 'Day',
+    };
+
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            _buildViewButton("Month", CalendarView.month),
-            _buildViewButton("Week", CalendarView.week),
-            _buildViewButton("Day", CalendarView.day),
-          ],
-        ),
+        centerTitle: true,
+        title:
+            Text('My Calendar', style: Theme.of(context).textTheme.titleLarge),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: SegmentedButton<CalendarView>(
+              showSelectedIcon: false,
+              segments: viewOptions.entries.map((entry) {
+                return ButtonSegment<CalendarView>(
+                  value: entry.key,
+                  label: Text(entry.value),
+                );
+              }).toList(),
+              selected: {_selectedView},
+              onSelectionChanged: (newSelection) {
+                setState(() {
+                  _selectedView = newSelection.first;
+                  _calendarController.view = _selectedView;
+                });
+              },
+            ),
+          ),
+        ],
       ),
-      body: SfCalendar(
-        headerStyle: CalendarHeaderStyle(backgroundColor: Colors.white),
-        view: _selectedView,
-        controller: _calendarController,
-        dataSource: _dataSource,
-        showDatePickerButton: true,
-        onSelectionChanged: (calendarSelectionDetails) {
-          _selectedDate = calendarSelectionDetails.date;
-        },
-        timeSlotViewSettings: const TimeSlotViewSettings(timeIntervalHeight: 100,),
-        monthViewSettings: const MonthViewSettings(
-          appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
-          showAgenda: true,
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: SfCalendar(
+          headerStyle:
+              const CalendarHeaderStyle(backgroundColor: Colors.transparent),
+          view: _selectedView,
+          controller: _calendarController,
+          dataSource: _dataSource,
+          showDatePickerButton: true,
+          onSelectionChanged: (calendarSelectionDetails) {
+            _selectedDate = calendarSelectionDetails.date;
+          },
+          timeSlotViewSettings: const TimeSlotViewSettings(
+            timeIntervalHeight: 60,
+          ),
+          monthViewSettings: const MonthViewSettings(
+            appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
+            showAgenda: true,
           ),
           onTap: (calendarTapDetails) async {
-            if(calendarTapDetails.targetElement == CalendarElement.appointment){
-              int appointmentId = int.parse(((calendarTapDetails.appointments?.firstOrNull as Appointment?)?.id ?? '').toString());
-                await Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => AppointmentCreationPage(appointmentId: appointmentId,)),
-                );
-              //_loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
-            }
-            else if(calendarTapDetails.targetElement == CalendarElement.calendarCell){
-              if(calendarTapDetails.date == _selectedDate){
+            if (calendarTapDetails.targetElement ==
+                CalendarElement.appointment) {
+              int appointmentId = int.parse(((calendarTapDetails
+                              .appointments?.firstOrNull as Appointment?)
+                          ?.id ??
+                      '')
+                  .toString());
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (context) => AppointmentCreationPage(
+                          appointmentId: appointmentId,
+                        )),
+              );
+            } else if (calendarTapDetails.targetElement ==
+                CalendarElement.calendarCell) {
+              if (calendarTapDetails.date == _selectedDate) {
                 setState(() {
                   _selectedView = CalendarView.day;
                   _calendarController.view = CalendarView.day;
@@ -78,82 +107,39 @@ class _HomePageState extends State<HomePage> {
               }
             }
           },
-        onViewChanged: (ViewChangedDetails details) {
-          _loadAppointmentsForVisibleDates(details.visibleDates.first, details.visibleDates.last);
-        },
+          onViewChanged: (ViewChangedDetails details) {
+            _loadAppointmentsForVisibleDates(
+                details.visibleDates.first, details.visibleDates.last);
+          },
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
-        elevation: 8,
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           await Navigator.of(context).push(
             MaterialPageRoute(builder: (context) => AppointmentCreationPage()),
           );
-          //_loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
         },
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('Add Event'),
       ),
     );
   }
 
-  Widget _buildViewButton(String title, CalendarView view) {
-    return TextButton(
-      onPressed: () {
-        setState(() {
-          _selectedView = view;
-          _calendarController.view = view;
-        });
-        // Görünüm değiştiğinde görünür tarihleri yeniden yükle
-        //_loadAppointmentsForVisibleDates(_calendarController.displayDate!, _calendarController.view!);
-      },
-      child: Text(
-        title,
-        style: TextStyle(
-          color: _selectedView == view
-              ? Colors.black
-              : Colors.black.withOpacity(0.7),
-        ),
-      ),
-    );
-  }
-
-
-  Future<void> _loadAppointmentsForVisibleDates(DateTime displayDate, DateTime endDate) async {
-    DateTime start = displayDate;
-    DateTime end = endDate.add(const Duration(days: 1));
-    print(endDate);
-
-
+  Future<void> _loadAppointmentsForVisibleDates(
+      DateTime start, DateTime end) async {
+    DateTime endDate = end.add(const Duration(days: 1));
     try {
-      final List<PrayerTimeAppointment> appointments = 
-          await _databaseHelper.getAppointmentsForDateRange(start, end);
-      
+      final List<PrayerTimeAppointment> appointments =
+          await _databaseHelper.getAppointmentsForDateRange(start, endDate);
+
       setState(() {
-        _dataSource = EventDataSource(appointments);
+        _dataSource.appointments!.clear();
+        _dataSource.appointments!.addAll(appointments);
+        _dataSource.notifyListeners(
+            CalendarDataSourceAction.reset, appointments);
       });
-      //print(appointments);
-      // Hata ayıklama için
-      // print('Loaded appointments: ${appointments.length}');
-      // print('Date range: $start to $end');
     } catch (e) {
       print('Error loading appointments: $e');
-      // Hata durumunda kullanıcıya bilgi verebilirsiniz
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   SnackBar(content: Text('Randevular yüklenirken bir hata oluştu')),
-      // );
-    }
-  }
-  DateTime _calculateEndDate(DateTime start, CalendarView view) {
-    switch (view) {
-      case CalendarView.day:
-        return start.add(Duration(days: 1));
-      case CalendarView.week:
-        return start.add(Duration(days: 7));
-      case CalendarView.workWeek:
-        return start.add(Duration(days: 5));
-      case CalendarView.month:
-        return DateTime(start.year, start.month + 1, 0);
-      default:
-        return start.add(Duration(days: 30));
     }
   }
 }

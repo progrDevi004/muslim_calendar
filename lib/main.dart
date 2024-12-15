@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
-
 import 'pages/home_page.dart';
 
 void main() {
@@ -10,23 +9,36 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    final seedColor = const Color(0xFF007A33);
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        colorScheme: const ColorScheme(
-          brightness: Brightness.light, // Helles Theme
-          primary: Color(0xFF007A33), // Hauptfarbe (Grün)
-          onPrimary: Colors.white, // Textfarbe auf Grün
-          secondary: Color(0xFF4CAF50), // Sekundärfarbe (helleres Grün)
-          onSecondary: Colors.white, // Textfarbe auf Sekundärfarbe
-          surface: Color.fromARGB(
-              255, 255, 255, 255), // Oberflächenfarbe (z. B. Karten)
-          onSurface: Colors.black, // Textfarbe auf Oberflächen
-          error: Colors.red, // Fehlerfarbe
-          onError: Colors.white, // Textfarbe auf Fehlerfarbe
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: seedColor),
+        inputDecorationTheme: const InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+          filled: true,
+          fillColor: Color.fromARGB(255, 245, 245, 245),
+        ),
+        switchTheme: SwitchThemeData(
+          thumbColor: MaterialStateProperty.all(seedColor),
+          trackColor: MaterialStateProperty.all(seedColor.withOpacity(0.5)),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            shape: const StadiumBorder(),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: seedColor,
+            textStyle: const TextStyle(fontWeight: FontWeight.w600),
+          ),
         ),
       ),
       home: const MyHomePage(title: 'Flutter Demo Home Page'),
