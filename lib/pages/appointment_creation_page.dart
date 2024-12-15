@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:provider/provider.dart';
 import '../widgets/prayer_time_appointment.dart';
 import '../database/database_helper.dart';
+import '../localization/app_localizations.dart';
 
 class AppointmentCreationPage extends StatefulWidget {
   final int? appointmentId;
@@ -78,10 +80,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             }
 
             if (appointment.recurrenceRule != null) {
-              _isRecurring = true;
               final recurrenceProperties = SfCalendar.parseRRule(
                   appointment.recurrenceRule!, appointment.startTime);
-
+              _isRecurring = true;
               _recurrenceType = recurrenceProperties.recurrenceType;
               _recurrenceInterval = recurrenceProperties.interval;
               _recurrenceRange = recurrenceProperties.recurrenceRange;
@@ -129,12 +130,13 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   }
 
   void _pickColor(BuildContext context) {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    Color tempColor = _color;
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        Color tempColor = _color;
         return AlertDialog(
-          title: const Text('Pick a color!'),
+          title: Text(loc.select),
           content: SingleChildScrollView(
             child: BlockPicker(
               pickerColor: _color,
@@ -145,11 +147,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           ),
           actions: <Widget>[
             TextButton(
-              child: const Text('Cancel'),
+              child: Text(loc.cancel),
               onPressed: () => Navigator.of(context).pop(),
             ),
             FilledButton(
-              child: const Text('Select'),
+              child: Text(loc.select),
               onPressed: () {
                 setState(() {
                   _color = tempColor;
@@ -188,9 +190,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   }
 
   Future<void> _deleteAppointment() async {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
     if (widget.appointmentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No appointment to delete.')),
+        SnackBar(content: Text('No appointment to delete.')),
       );
       return;
     }
@@ -199,16 +202,15 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: const Text('Delete Appointment'),
-              content: const Text(
-                  'Are you sure you want to delete this appointment?'),
+              title: Text(loc.deleteAppointmentTitle),
+              content: Text(loc.deleteAppointmentConfirmation),
               actions: <Widget>[
                 TextButton(
-                  child: const Text('Cancel'),
+                  child: Text(loc.cancel),
                   onPressed: () => Navigator.of(context).pop(false),
                 ),
                 FilledButton(
-                  child: const Text('Delete'),
+                  child: Text(loc.delete),
                   onPressed: () => Navigator.of(context).pop(true),
                 ),
               ],
@@ -222,19 +224,20 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         final db = DatabaseHelper();
         await db.deleteAppointment(widget.appointmentId!);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Appointment deleted successfully.')),
+          SnackBar(content: Text('Appointment deleted successfully.')),
         );
         Navigator.of(context).pop(true);
       } catch (e) {
         print('Error deleting appointment: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error deleting appointment.')),
+          SnackBar(content: Text('Error deleting appointment.')),
         );
       }
     }
   }
 
   void _saveAppointment() async {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
     if (_formKey.currentState!.validate()) {
       final location = _isRelatedToPrayerTimes &&
               _selectedCity != null &&
@@ -324,6 +327,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = Provider.of<AppLocalizations>(context);
+
     final headlineStyle = Theme.of(context)
         .textTheme
         .titleMedium
@@ -332,8 +337,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.appointmentId == null
-            ? 'Create Appointment'
-            : 'Edit Appointment'),
+            ? loc.createAppointment
+            : loc.editAppointment),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -342,24 +347,23 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('General', style: headlineStyle),
+              Text(loc.general, style: headlineStyle),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(labelText: 'Title'),
-                validator: (value) => (value == null || value.isEmpty)
-                    ? 'Please enter a title'
-                    : null,
+                decoration: InputDecoration(labelText: loc.titleLabel),
+                validator: (value) =>
+                    (value == null || value.isEmpty) ? loc.titleLabel : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
+                decoration: InputDecoration(labelText: loc.description),
               ),
               const SizedBox(height: 12),
               SwitchListTile(
-                title: const Text('All Day'),
-                subtitle: const Text('Event lasts the whole day'),
+                title: Text(loc.allDay),
+                subtitle: Text(loc.allDaySubtitle),
                 value: _isAllDay,
                 onChanged: !_isRelatedToPrayerTimes
                     ? (bool value) {
@@ -374,11 +378,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                     : null,
               ),
               const SizedBox(height: 24),
-              Text('Prayer Time Settings', style: headlineStyle),
+              Text(loc.prayerTimeSettings, style: headlineStyle),
               SwitchListTile(
-                title: const Text('Related to Prayer Times'),
-                subtitle:
-                    const Text('Event time depends on daily prayer times'),
+                title: Text(loc.relatedToPrayerTimes),
+                subtitle: Text(loc.relatedToPrayerTimesSubtitle),
                 value: _isRelatedToPrayerTimes,
                 onChanged: !_isAllDay
                     ? (bool value) {
@@ -394,10 +397,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               ),
               if (_isRelatedToPrayerTimes) ...[
                 ListTile(
-                  title: const Text('Select Date'),
+                  title: Text(loc.selectDate),
                   subtitle: Text(_startTime != null
                       ? '${_startTime!.day}/${_startTime!.month}/${_startTime!.year}'
-                      : 'Select a date'),
+                      : loc.selectDate),
                   onTap: () async {
                     final DateTime? picked = await showDatePicker(
                       context: context,
@@ -416,8 +419,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 ),
                 DropdownButtonFormField<PrayerTime>(
                   value: _selectedPrayerTime,
-                  hint: const Text('Select Prayer Time'),
-                  decoration: const InputDecoration(labelText: 'Prayer Time'),
+                  hint: Text(loc.selectPrayerTime),
+                  decoration: InputDecoration(labelText: loc.prayerTime),
                   onChanged: (value) {
                     setState(() {
                       _selectedPrayerTime = value;
@@ -433,7 +436,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<TimeRelation>(
                   value: _selectedTimeRelation,
-                  decoration: const InputDecoration(labelText: 'Time Relation'),
+                  decoration: InputDecoration(labelText: loc.timeRelation),
                   items: TimeRelation.values.map((timeRelation) {
                     return DropdownMenuItem<TimeRelation>(
                       value: timeRelation,
@@ -451,7 +454,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   initialValue: _minutesBeforeAfter?.toString(),
                   keyboardType: TextInputType.number,
                   decoration:
-                      const InputDecoration(labelText: 'Minutes Before/After'),
+                      InputDecoration(labelText: loc.minutesBeforeAfter),
                   onChanged: (value) {
                     _minutesBeforeAfter = int.tryParse(value);
                   },
@@ -460,8 +463,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 TextFormField(
                   initialValue: _duration?.inMinutes.toString(),
                   keyboardType: TextInputType.number,
-                  decoration:
-                      const InputDecoration(labelText: 'Duration (minutes)'),
+                  decoration: InputDecoration(labelText: loc.durationMinutes),
                   onChanged: (value) {
                     _duration = Duration(minutes: int.tryParse(value) ?? 30);
                   },
@@ -469,8 +471,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   value: _selectedCountry,
-                  hint: const Text('Select Country'),
-                  decoration: const InputDecoration(labelText: 'Country'),
+                  hint: Text(loc.selectCountry),
+                  decoration: InputDecoration(labelText: loc.country),
                   onChanged: (value) {
                     setState(() {
                       _selectedCountry = value;
@@ -488,8 +490,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 if (_selectedCountry != null)
                   DropdownButtonFormField<String>(
                     value: _selectedCity,
-                    hint: const Text('Select City'),
-                    decoration: const InputDecoration(labelText: 'City'),
+                    hint: Text(loc.selectCity),
+                    decoration: InputDecoration(labelText: loc.city),
                     onChanged: (value) {
                       setState(() {
                         _selectedCity = value;
@@ -504,13 +506,13 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   ),
               ] else ...[
                 const SizedBox(height: 24),
-                Text('Time Settings', style: headlineStyle),
+                Text(loc.timeSettings, style: headlineStyle),
                 const SizedBox(height: 12),
                 ListTile(
-                  title: const Text('Start Time'),
+                  title: Text(loc.startTime),
                   subtitle: Text(_startTime != null
                       ? _startTime.toString()
-                      : 'Select Start Time'),
+                      : loc.selectStartTime),
                   onTap: () async {
                     DateTime? selectedDate = await showDatePicker(
                       context: context,
@@ -546,10 +548,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 ),
                 if (!_isAllDay)
                   ListTile(
-                    title: const Text('End Time'),
+                    title: Text(loc.endTime),
                     subtitle: Text(_endTime != null
                         ? _endTime.toString()
-                        : 'Select End Time'),
+                        : loc.selectEndTime),
                     onTap: () async {
                       DateTime? selectedDate = await showDatePicker(
                         context: context,
@@ -579,9 +581,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   ),
               ],
               const SizedBox(height: 24),
-              Text('Recurrence', style: headlineStyle),
+              Text(loc.recurrence, style: headlineStyle),
               SwitchListTile(
-                title: const Text('Recurring Event'),
+                title: Text(loc.recurringEvent),
                 value: _isRecurring,
                 onChanged: (value) {
                   setState(() {
@@ -592,8 +594,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               if (_isRecurring) ...[
                 DropdownButtonFormField<RecurrenceType>(
                   value: _recurrenceType,
-                  decoration:
-                      const InputDecoration(labelText: 'Recurrence Type'),
+                  decoration: InputDecoration(labelText: loc.recurrenceType),
                   onChanged: (value) {
                     setState(() {
                       _recurrenceType = value!;
@@ -608,22 +609,23 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 ),
                 if (_recurrenceType == RecurrenceType.weekly) ...[
                   const SizedBox(height: 12),
-                  Text('Recurrence Days',
+                  Text(loc.recurrenceDays,
                       style: Theme.of(context).textTheme.labelLarge),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8.0,
                     children: List.generate(7, (index) {
+                      final dayNames = [
+                        'MON',
+                        'TUE',
+                        'WED',
+                        'THU',
+                        'FRI',
+                        'SAT',
+                        'SUN'
+                      ];
                       return FilterChip(
-                        label: Text([
-                          'MON',
-                          'TUE',
-                          'WED',
-                          'THU',
-                          'FRI',
-                          'SAT',
-                          'SUN'
-                        ][index]),
+                        label: Text(dayNames[index]),
                         selected: _selectedWeekDays[index],
                         shape: const StadiumBorder(),
                         onSelected: (bool selected) {
@@ -640,7 +642,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   initialValue: _recurrenceInterval.toString(),
                   keyboardType: TextInputType.number,
                   decoration:
-                      const InputDecoration(labelText: 'Recurrence Interval'),
+                      InputDecoration(labelText: loc.recurrenceInterval),
                   onChanged: (value) {
                     _recurrenceInterval = int.tryParse(value) ?? 1;
                   },
@@ -648,8 +650,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<RecurrenceRange>(
                   value: _recurrenceRange,
-                  decoration:
-                      const InputDecoration(labelText: 'Recurrence Range'),
+                  decoration: InputDecoration(labelText: loc.recurrenceRange),
                   onChanged: (value) {
                     setState(() {
                       _recurrenceRange = value!;
@@ -667,8 +668,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   TextFormField(
                     initialValue: _recurrenceCount?.toString(),
                     keyboardType: TextInputType.number,
-                    decoration:
-                        const InputDecoration(labelText: 'Recurrence Count'),
+                    decoration: InputDecoration(labelText: loc.recurrenceCount),
                     onChanged: (value) {
                       _recurrenceCount = int.tryParse(value);
                     },
@@ -677,9 +677,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 if (_recurrenceRange == RecurrenceRange.endDate) ...[
                   const SizedBox(height: 12),
                   ListTile(
-                    title: const Text('Recurrence End Date'),
+                    title: Text(loc.recurrenceEndDate),
                     subtitle: Text(
-                        _recurrenceEndDate?.toString() ?? 'Select End Date'),
+                        _recurrenceEndDate?.toString() ?? loc.selectEndDate),
                     onTap: () async {
                       DateTime? selectedDate = await showDatePicker(
                         context: context,
@@ -698,7 +698,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 const SizedBox(height: 12),
                 FilledButton(
                   onPressed: _addExceptionDate,
-                  child: const Text('Add Exception Date'),
+                  child: Text(loc.addExceptionDate),
                 ),
                 if (_exceptionDates.isNotEmpty)
                   Column(
@@ -718,12 +718,12 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   ),
               ],
               const SizedBox(height: 24),
-              Text('Color', style: headlineStyle),
+              Text(loc.appointmentColor, style: headlineStyle),
               ListTile(
-                title: const Text('Appointment Color'),
+                title: Text(loc.appointmentColor),
                 trailing: Container(
-                  width: 24,
-                  height: 24,
+                  width: 20,
+                  height: 20,
                   decoration: BoxDecoration(
                     color: _color,
                     shape: BoxShape.circle,
@@ -737,13 +737,13 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 children: [
                   FilledButton(
                     onPressed: _saveAppointment,
-                    child: const Text('Save'),
+                    child: Text(loc.save),
                   ),
                   if (widget.appointmentId != null) ...[
                     const SizedBox(width: 10),
                     OutlinedButton(
                       onPressed: _deleteAppointment,
-                      child: const Text('Delete'),
+                      child: Text(loc.delete),
                     ),
                   ],
                 ],

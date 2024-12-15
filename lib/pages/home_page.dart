@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:muslim_calendar/widgets/create_events.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:provider/provider.dart';
+import '../localization/app_localizations.dart';
 import 'appointment_creation_page.dart';
 import '../database/database_helper.dart';
 import '../widgets/prayer_time_appointment.dart';
-import 'dart:async';
+import '../widgets/create_events.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,7 +19,9 @@ class _HomePageState extends State<HomePage> {
   late CalendarController _calendarController;
   late EventDataSource _dataSource;
   final DatabaseHelper _databaseHelper = DatabaseHelper();
-  late DateTime? _selectedDate;
+  DateTime? _selectedDate;
+
+  int _selectedNavIndex = 0; // 0 = Month, 1 = Week, 2 = Day
 
   @override
   void initState() {
@@ -26,49 +29,63 @@ class _HomePageState extends State<HomePage> {
     _calendarController = CalendarController();
     _dataSource = EventDataSource([]);
     _selectedDate = null;
-    _dataSource.loadAppointmentsFromDatabase();
+    _updateCalendarViewFromNavIndex();
+    _loadAllAppointments();
+  }
+
+  void _updateCalendarViewFromNavIndex() {
+    switch (_selectedNavIndex) {
+      case 0:
+        _selectedView = CalendarView.month;
+        break;
+      case 1:
+        _selectedView = CalendarView.week;
+        break;
+      case 2:
+        _selectedView = CalendarView.day;
+        break;
+    }
+    _calendarController.view = _selectedView;
+    setState(() {});
+  }
+
+  Future<void> _loadAllAppointments() async {
+    try {
+      final List<PrayerTimeAppointment> appointments =
+          await _databaseHelper.getAllAppointments();
+      setState(() {
+        _dataSource = EventDataSource(appointments);
+      });
+    } catch (e) {
+      print('Error loading all appointments: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final viewOptions = {
-      CalendarView.month: 'Month',
-      CalendarView.week: 'Week',
-      CalendarView.day: 'Day',
-    };
+    final loc = Provider.of<AppLocalizations>(context);
 
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title:
-            Text('My Calendar', style: Theme.of(context).textTheme.titleLarge),
+        title: Text(loc.myCalendar),
         actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: SegmentedButton<CalendarView>(
-              showSelectedIcon: false,
-              segments: viewOptions.entries.map((entry) {
-                return ButtonSegment<CalendarView>(
-                  value: entry.key,
-                  label: Text(entry.value),
-                );
-              }).toList(),
-              selected: {_selectedView},
-              onSelectionChanged: (newSelection) {
-                setState(() {
-                  _selectedView = newSelection.first;
-                  _calendarController.view = _selectedView;
-                });
-              },
-            ),
+          IconButton(
+            icon: const Icon(Icons.language),
+            onPressed: () {
+              _showLanguageSelection(context);
+            },
           ),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
         child: SfCalendar(
-          headerStyle:
-              const CalendarHeaderStyle(backgroundColor: Colors.transparent),
+          headerStyle: const CalendarHeaderStyle(
+            backgroundColor: Colors.transparent,
+            textAlign: TextAlign.center,
+            textStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+          ),
           view: _selectedView,
           controller: _calendarController,
           dataSource: _dataSource,
@@ -76,13 +93,15 @@ class _HomePageState extends State<HomePage> {
           onSelectionChanged: (calendarSelectionDetails) {
             _selectedDate = calendarSelectionDetails.date;
           },
-          timeSlotViewSettings: const TimeSlotViewSettings(
-            timeIntervalHeight: 60,
-          ),
+          // Monatsansicht: Nur Punkte (Indikatoren) für Termine
+          // Gleichzeitig showAgenda: true, um darunter die Agenda mit Text anzuzeigen.
           monthViewSettings: const MonthViewSettings(
-            appointmentDisplayMode: MonthAppointmentDisplayMode.appointment,
+            appointmentDisplayMode: MonthAppointmentDisplayMode.indicator,
             showAgenda: true,
           ),
+          // Kein appointmentBuilder nötig. Standardmäßig:
+          // - Monatsansicht: Punkte im Kalender, Text unten in der Agenda
+          // - Wochen- & Tagesansicht: Balken mit Text
           onTap: (calendarTapDetails) async {
             if (calendarTapDetails.targetElement ==
                 CalendarElement.appointment) {
@@ -97,49 +116,72 @@ class _HomePageState extends State<HomePage> {
                           appointmentId: appointmentId,
                         )),
               );
+              _loadAllAppointments();
             } else if (calendarTapDetails.targetElement ==
                 CalendarElement.calendarCell) {
               if (calendarTapDetails.date == _selectedDate) {
                 setState(() {
-                  _selectedView = CalendarView.day;
-                  _calendarController.view = CalendarView.day;
+                  _selectedNavIndex = 2; // Day View
+                  _updateCalendarViewFromNavIndex();
                 });
               }
             }
           },
-          onViewChanged: (ViewChangedDetails details) {
-            _loadAppointmentsForVisibleDates(
-                details.visibleDates.first, details.visibleDates.last);
-          },
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await Navigator.of(context).push(
             MaterialPageRoute(builder: (context) => AppointmentCreationPage()),
           );
+          _loadAllAppointments();
         },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Event'),
+        child: const Icon(Icons.add),
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedNavIndex,
+        onDestinationSelected: (int index) {
+          _selectedNavIndex = index;
+          _updateCalendarViewFromNavIndex();
+        },
+        destinations: [
+          NavigationDestination(
+            icon: const Icon(Icons.calendar_month),
+            label: loc.month,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.view_week),
+            label: loc.week,
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.view_day),
+            label: loc.day,
+          ),
+        ],
       ),
     );
   }
 
-  Future<void> _loadAppointmentsForVisibleDates(
-      DateTime start, DateTime end) async {
-    DateTime endDate = end.add(const Duration(days: 1));
-    try {
-      final List<PrayerTimeAppointment> appointments =
-          await _databaseHelper.getAppointmentsForDateRange(start, endDate);
-
-      setState(() {
-        _dataSource.appointments!.clear();
-        _dataSource.appointments!.addAll(appointments);
-        _dataSource.notifyListeners(
-            CalendarDataSourceAction.reset, appointments);
-      });
-    } catch (e) {
-      print('Error loading appointments: $e');
-    }
+  void _showLanguageSelection(BuildContext context) {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: AppLanguage.values.map((language) {
+              return ListTile(
+                title: Text(loc.getLanguageName(language)),
+                onTap: () {
+                  loc.setLanguage(language);
+                  Navigator.pop(context);
+                },
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
   }
 }
