@@ -1,4 +1,5 @@
-//ui/pages/home_page.dart
+// lib/ui/pages/home_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
@@ -9,7 +10,8 @@ import 'package:muslim_calendar/data/services/recurrence_service.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
 import 'package:muslim_calendar/ui/widgets/create_events.dart';
 import 'package:muslim_calendar/ui/widgets/prayer_time_appointment_adapter.dart';
-import 'appointment_creation_page.dart';
+import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
+import 'package:muslim_calendar/ui/pages/settings_page.dart'; // <--- NEU
 import 'package:muslim_calendar/localization/app_localizations.dart';
 
 class HomePage extends StatefulWidget {
@@ -88,10 +90,21 @@ class _HomePageState extends State<HomePage> {
         centerTitle: true,
         title: Text(loc.myCalendar),
         actions: [
+          // Spracheinstellung (falls vorhanden)
           IconButton(
             icon: const Icon(Icons.language),
             onPressed: () {
               _showLanguageSelection(context);
+            },
+          ),
+          // NEU: Icon für Einstellungen
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const SettingsPage()),
+              );
+              // Evtl. reload logic, falls sich Einstellungen auf HomePage auswirken
             },
           ),
         ],
@@ -142,9 +155,13 @@ class _HomePageState extends State<HomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
+          // Erstellen mit optional übergebenem Datum
           await Navigator.of(context).push(
             MaterialPageRoute(
-                builder: (context) => const AppointmentCreationPage()),
+              builder: (context) => AppointmentCreationPage(
+                selectedDate: _selectedDate,
+              ),
+            ),
           );
           _loadAllAppointments();
         },

@@ -1,4 +1,7 @@
+// lib/localization/app_localizations.dart
+
 import 'package:flutter/material.dart';
+import 'package:syncfusion_flutter_calendar/calendar.dart';
 
 enum AppLanguage { english, german, turkish, arabic }
 
@@ -25,6 +28,82 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
+  // ------------------------------
+  // Allgemeine Begriffe
+  // ------------------------------
+  String get settings {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Einstellungen';
+      case AppLanguage.turkish:
+        return 'Ayarlar';
+      case AppLanguage.arabic:
+        return 'الإعدادات';
+      case AppLanguage.english:
+      default:
+        return 'Settings';
+    }
+  }
+
+  String get myCalendar {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Mein Kalender';
+      case AppLanguage.turkish:
+        return 'Takvimim';
+      case AppLanguage.arabic:
+        return 'تقويمي';
+      case AppLanguage.english:
+      default:
+        return 'My Calendar';
+    }
+  }
+
+  String get month {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Monat';
+      case AppLanguage.turkish:
+        return 'Ay';
+      case AppLanguage.arabic:
+        return 'شهر';
+      case AppLanguage.english:
+      default:
+        return 'Month';
+    }
+  }
+
+  String get week {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Woche';
+      case AppLanguage.turkish:
+        return 'Hafta';
+      case AppLanguage.arabic:
+        return 'أسبوع';
+      case AppLanguage.english:
+      default:
+        return 'Week';
+    }
+  }
+
+  String get day {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Tag';
+      case AppLanguage.turkish:
+        return 'Gün';
+      case AppLanguage.arabic:
+        return 'يوم';
+      case AppLanguage.english:
+      default:
+        return 'Day';
+    }
+  }
+
+  // ------------------------------
+  // Termin-Erstellung
+  // ------------------------------
   String get createAppointment {
     switch (_currentLanguage) {
       case AppLanguage.german:
@@ -613,59 +692,243 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
-  String get myCalendar {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Mein Kalender';
-      case AppLanguage.turkish:
-        return 'Takvimim';
-      case AppLanguage.arabic:
-        return 'تقويمي';
-      case AppLanguage.english:
-      default:
-        return 'My Calendar';
+  // ------------------------------
+  // Wiederholungs-Logik (für Dropdown)
+  // ------------------------------
+  String getRecurrenceTypeLabel(RecurrenceType type) {
+    switch (type) {
+      case RecurrenceType.daily:
+        return _currentLanguage == AppLanguage.german
+            ? 'Täglich'
+            : _currentLanguage == AppLanguage.turkish
+                ? 'Günlük'
+                : _currentLanguage == AppLanguage.arabic
+                    ? 'يومي'
+                    : 'Daily';
+      case RecurrenceType.weekly:
+        return _currentLanguage == AppLanguage.german
+            ? 'Wöchentlich'
+            : _currentLanguage == AppLanguage.turkish
+                ? 'Haftalık'
+                : _currentLanguage == AppLanguage.arabic
+                    ? 'أسبوعي'
+                    : 'Weekly';
+      case RecurrenceType.monthly:
+        return _currentLanguage == AppLanguage.german
+            ? 'Monatlich'
+            : _currentLanguage == AppLanguage.turkish
+                ? 'Aylık'
+                : _currentLanguage == AppLanguage.arabic
+                    ? 'شهري'
+                    : 'Monthly';
+      case RecurrenceType.yearly:
+        return _currentLanguage == AppLanguage.german
+            ? 'Jährlich'
+            : _currentLanguage == AppLanguage.turkish
+                ? 'Yıllık'
+                : _currentLanguage == AppLanguage.arabic
+                    ? 'سنوي'
+                    : 'Yearly';
     }
   }
 
-  String get month {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Monat';
-      case AppLanguage.turkish:
-        return 'Ay';
-      case AppLanguage.arabic:
-        return 'شهر';
-      case AppLanguage.english:
-      default:
-        return 'Month';
+  String getRecurrenceRangeLabel(RecurrenceRange range) {
+    switch (range) {
+      case RecurrenceRange.noEndDate:
+        return _currentLanguage == AppLanguage.german
+            ? 'Ohne Enddatum'
+            : _currentLanguage == AppLanguage.turkish
+                ? 'Bitiş Tarihi Yok'
+                : _currentLanguage == AppLanguage.arabic
+                    ? 'بدون تاريخ انتهاء'
+                    : 'No End Date';
+      case RecurrenceRange.endDate:
+        return _currentLanguage == AppLanguage.german
+            ? 'Endet an bestimmtem Tag'
+            : _currentLanguage == AppLanguage.turkish
+                ? 'Belirli bir tarihte sona erer'
+                : _currentLanguage == AppLanguage.arabic
+                    ? 'ينتهي بتاريخ معين'
+                    : 'End On Specific Day';
+      case RecurrenceRange.count:
+        return _currentLanguage == AppLanguage.german
+            ? 'Endet nach Anzahl'
+            : _currentLanguage == AppLanguage.turkish
+                ? 'Belirli bir sayıda sona erer'
+                : _currentLanguage == AppLanguage.arabic
+                    ? 'ينتهي بعد عدد محدد'
+                    : 'End After Count';
     }
   }
 
-  String get week {
+  String get recurrenceOptionNoEndDate {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return 'Woche';
+        return 'Ohne Enddatum';
       case AppLanguage.turkish:
-        return 'Hafta';
+        return 'Bitiş Tarihi Yok';
       case AppLanguage.arabic:
-        return 'أسبوع';
+        return 'بدون تاريخ انتهاء';
       case AppLanguage.english:
       default:
-        return 'Week';
+        return 'No End Date';
     }
   }
 
-  String get day {
+  String get recurrenceOptionEndDate {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return 'Tag';
+        return 'Endet an bestimmtem Tag';
       case AppLanguage.turkish:
-        return 'Gün';
+        return 'Belirli bir tarihte sona erer';
       case AppLanguage.arabic:
-        return 'يوم';
+        return 'ينتهي بتاريخ معين';
       case AppLanguage.english:
       default:
-        return 'Day';
+        return 'Specific End Date';
+    }
+  }
+
+  String get recurrenceOptionCount {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Endet nach Anzahl';
+      case AppLanguage.turkish:
+        return 'Belirli bir sayıda sona erer';
+      case AppLanguage.arabic:
+        return 'ينتهي بعد عدد محدد';
+      case AppLanguage.english:
+      default:
+        return 'End After Count';
+    }
+  }
+
+  // ------------------------------
+  // Einstellungen / Settings
+  // ------------------------------
+  String get locationSettings {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Standort-Einstellungen';
+      case AppLanguage.turkish:
+        return 'Konum Ayarları';
+      case AppLanguage.arabic:
+        return 'إعدادات الموقع';
+      case AppLanguage.english:
+      default:
+        return 'Location Settings';
+    }
+  }
+
+  String get automaticLocation {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Automatischer Standort';
+      case AppLanguage.turkish:
+        return 'Otomatik Konum';
+      case AppLanguage.arabic:
+        return 'الموقع التلقائي';
+      case AppLanguage.english:
+      default:
+        return 'Automatic Location';
+    }
+  }
+
+  String get automaticLocationSubtitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Bestimmt Ihren Standort per GPS';
+      case AppLanguage.turkish:
+        return 'Konumu GPS üzerinden belirler';
+      case AppLanguage.arabic:
+        return 'يحدد موقعك عبر نظام تحديد المواقع العالمي (GPS)';
+      case AppLanguage.english:
+      default:
+        return 'Determines your location via GPS';
+    }
+  }
+
+  String get notificationSettings {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Benachrichtigungs-Einstellungen';
+      case AppLanguage.turkish:
+        return 'Bildirim Ayarları';
+      case AppLanguage.arabic:
+        return 'إعدادات الإشعارات';
+      case AppLanguage.english:
+      default:
+        return 'Notification Settings';
+    }
+  }
+
+  String get enableNotifications {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Benachrichtigungen aktivieren';
+      case AppLanguage.turkish:
+        return 'Bildirimleri Etkinleştir';
+      case AppLanguage.arabic:
+        return 'تفعيل الإشعارات';
+      case AppLanguage.english:
+      default:
+        return 'Enable Notifications';
+    }
+  }
+
+  String get enableNotificationsSubtitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Erhalten Sie Mitteilungen zu Terminen und Gebetszeiten';
+      case AppLanguage.turkish:
+        return 'Randevular ve namaz vakitleriyle ilgili bildirimler alın';
+      case AppLanguage.arabic:
+        return 'تلقي إشعارات بالمواعيد وأوقات الصلاة';
+      case AppLanguage.english:
+      default:
+        return 'Receive alerts for appointments and prayer times';
+    }
+  }
+
+  String get displaySettings {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Anzeige-Einstellungen';
+      case AppLanguage.turkish:
+        return 'Görüntü Ayarları';
+      case AppLanguage.arabic:
+        return 'إعدادات العرض';
+      case AppLanguage.english:
+      default:
+        return 'Display Settings';
+    }
+  }
+
+  String get darkMode {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Dunkler Modus';
+      case AppLanguage.turkish:
+        return 'Karanlık Mod';
+      case AppLanguage.arabic:
+        return 'الوضع الداكن';
+      case AppLanguage.english:
+      default:
+        return 'Dark Mode';
+    }
+  }
+
+  String get darkModeSubtitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Aktivieren Sie das dunkle Design';
+      case AppLanguage.turkish:
+        return 'Koyu temayı etkinleştirin';
+      case AppLanguage.arabic:
+        return 'تفعيل المظهر الداكن';
+      case AppLanguage.english:
+      default:
+        return 'Enable dark theme';
     }
   }
 }

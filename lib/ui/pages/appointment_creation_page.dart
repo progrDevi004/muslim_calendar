@@ -1,10 +1,12 @@
-//ui/pages/appointment_creation_page.dart
+// lib/ui/pages/appointment_creation_page.dart
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
 import 'package:muslim_calendar/models/enums.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
@@ -12,8 +14,13 @@ import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
 
 class AppointmentCreationPage extends StatefulWidget {
   final int? appointmentId;
-  const AppointmentCreationPage({this.appointmentId, Key? key})
-      : super(key: key);
+  final DateTime? selectedDate;
+
+  const AppointmentCreationPage({
+    this.appointmentId,
+    this.selectedDate,
+    Key? key,
+  }) : super(key: key);
 
   @override
   _AppointmentCreationPageState createState() =>
@@ -22,19 +29,33 @@ class AppointmentCreationPage extends StatefulWidget {
 
 class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   final _formKey = GlobalKey<FormState>();
+
+  /// Pflichtfelder
   late TextEditingController _titleController;
+
+  /// Optionale Felder
   late TextEditingController _descriptionController;
+
+  /// Gebetszeiten & Standard-Einstellungen
   bool _isAllDay = false;
   bool _isRelatedToPrayerTimes = false;
   PrayerTime? _selectedPrayerTime;
   TimeRelation? _selectedTimeRelation;
   int? _minutesBeforeAfter;
   Duration? _duration;
+
+  /// Datum/Uhrzeit
   DateTime? _startTime;
   DateTime? _endTime;
+
+  /// Location (Voreinstellung aus SharedPreferences)
+  String? _defaultCountry;
+  String? _defaultCity;
   String? _selectedCountry;
   String? _selectedCity;
   Map<String, List<String>> _countryCityData = {};
+
+  /// Wiederkehrende Termine
   bool _isRecurring = false;
   RecurrenceType _recurrenceType = RecurrenceType.daily;
   int _recurrenceInterval = 1;
@@ -44,6 +65,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   List<DateTime> _exceptionDates = [];
   Color _color = Colors.blue;
 
+  /// Wochentage bei wöchentlicher Wiederholung
   List<bool> _selectedWeekDays = List.filled(7, false);
 
   final AppointmentRepository _appointmentRepo = AppointmentRepository();
@@ -64,6 +86,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             await _appointmentRepo.getAppointment(widget.appointmentId!);
         if (appointment != null) {
           setState(() {
+            // Felder befüllen
             _titleController.text = appointment.subject;
             _descriptionController.text = appointment.notes ?? '';
             _isAllDay = appointment.isAllDay;
@@ -76,6 +99,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             _endTime = appointment.endTime ??
                 _startTime!.add(const Duration(minutes: 30));
             _color = appointment.color;
+
+            // Ort
             if (appointment.location != null) {
               final parts = appointment.location!.split(',');
               if (parts.length == 2) {
@@ -84,22 +109,23 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               }
             }
 
+            // Wiederkehrend
             if (appointment.recurrenceRule != null) {
               final recurrenceProperties = SfCalendar.parseRRule(
-                  appointment.recurrenceRule!,
-                  appointment.startTime ?? DateTime.now());
+                appointment.recurrenceRule!,
+                appointment.startTime ?? DateTime.now(),
+              );
+
               _isRecurring = true;
               _recurrenceType = recurrenceProperties.recurrenceType;
               _recurrenceInterval = recurrenceProperties.interval;
               _recurrenceRange = recurrenceProperties.recurrenceRange;
               _recurrenceCount = recurrenceProperties.recurrenceCount;
               _recurrenceEndDate = recurrenceProperties.endDate;
+
               if (_recurrenceType == RecurrenceType.weekly) {
                 _selectedWeekDays = List.filled(7, false);
                 for (var wd in recurrenceProperties.weekDays) {
-                  // Mappe Wochentage
-                  // Monday=0 ... Sunday=6
-                  // So wie oben definiert
                   if (wd == WeekDays.monday) _selectedWeekDays[0] = true;
                   if (wd == WeekDays.tuesday) _selectedWeekDays[1] = true;
                   if (wd == WeekDays.wednesday) _selectedWeekDays[2] = true;
@@ -119,8 +145,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         );
       }
     } else {
+      // Neuer Termin
       setState(() {
-        _startTime = DateTime.now();
+        _startTime = widget.selectedDate ?? DateTime.now();
         _endTime = _startTime!.add(const Duration(minutes: 30));
         _duration = const Duration(minutes: 30);
       });
@@ -135,63 +162,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       _countryCityData = data.map((key, value) =>
           MapEntry<String, List<String>>(key, List<String>.from(value)));
     });
-  }
-
-  void _pickColor(BuildContext context) {
-    Color tempColor = _color;
-    final loc = Provider.of<AppLocalizations>(context, listen: false);
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(loc.select),
-          content: SingleChildScrollView(
-            child: BlockPicker(
-              pickerColor: _color,
-              onColorChanged: (Color color) {
-                tempColor = color;
-              },
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text(loc.cancel),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            FilledButton(
-              child: Text(loc.select),
-              onPressed: () {
-                setState(() {
-                  _color = tempColor;
-                });
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _addExceptionDate() async {
-    final loc = Provider.of<AppLocalizations>(context, listen: false);
-    DateTime? selectedDate = await showDatePicker(
-      context: context,
-      initialDate: _startTime ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      helpText: loc.addExceptionDate,
-    );
-    if (selectedDate != null) {
-      setState(() {
-        _exceptionDates.add(selectedDate);
-      });
-    }
-  }
-
-  String _getBYDAYString() {
-    // Wir nutzen das Setzen in der RecurrenceProperties unten
-    return ''; // Diese Methode wird nicht mehr direkt verwendet, aber lassen wir sie leer stehen.
   }
 
   Future<void> _deleteAppointment() async {
@@ -262,6 +232,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           recurrenceRange: _recurrenceRange,
         );
 
+        // Wöchentlich
         if (_recurrenceType == RecurrenceType.weekly) {
           recurrence.weekDays.clear();
           if (_selectedWeekDays[0]) recurrence.weekDays.add(WeekDays.monday);
@@ -272,17 +243,22 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           if (_selectedWeekDays[5]) recurrence.weekDays.add(WeekDays.saturday);
           if (_selectedWeekDays[6]) recurrence.weekDays.add(WeekDays.sunday);
         } else if (_recurrenceType == RecurrenceType.monthly) {
+          // Tag des Monats übernehmen
           recurrence.dayOfMonth = _startTime!.day;
         } else if (_recurrenceType == RecurrenceType.yearly) {
+          // Monat und Tag übernehmen
           recurrence.month = _startTime!.month;
           recurrence.dayOfMonth = _startTime!.day;
         }
 
+        // Range
         if (_recurrenceRange == RecurrenceRange.count) {
           recurrence.recurrenceCount = _recurrenceCount ?? 1;
         } else if (_recurrenceRange == RecurrenceRange.endDate) {
           recurrence.endDate = _recurrenceEndDate;
         }
+
+        // RRule generieren
         recurrenceRule =
             SfCalendar.generateRRule(recurrence, _startTime!, _endTime!);
       }
@@ -317,6 +293,23 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       }
 
       Navigator.pop(context);
+    }
+  }
+
+  /// Das Hinzufügen einer Exception
+  void _addExceptionDate() async {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    DateTime? selectedDate = await showDatePicker(
+      context: context,
+      initialDate: _startTime ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      helpText: loc.addExceptionDate,
+    );
+    if (selectedDate != null) {
+      setState(() {
+        _exceptionDates.add(selectedDate);
+      });
     }
   }
 
@@ -436,13 +429,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                     final picked =
                         await _pickDate(_startTime ?? DateTime.now());
                     if (picked != null) {
-                      final timePicked = await _pickTime(picked);
-                      if (timePicked != null) {
-                        setState(() {
-                          _startTime = timePicked;
-                          _endTime = _startTime!.add(const Duration(hours: 1));
-                        });
-                      }
+                      setState(() {
+                        _startTime = DateTime(picked.year, picked.month,
+                            picked.day); // Zeit = 00:00
+                        _endTime = _startTime!.add(const Duration(hours: 1));
+                      });
                     }
                   },
                 ),
@@ -604,6 +595,14 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   onChanged: (value) {
                     setState(() {
                       _recurrenceType = value!;
+                      // Sobald wöchentlich gewählt, den Wochentag des Startdatums markieren
+                      if (_recurrenceType == RecurrenceType.weekly) {
+                        _selectedWeekDays = List.filled(7, false);
+                        if (_startTime != null) {
+                          final index = (_startTime!.weekday - 1) % 7;
+                          _selectedWeekDays[index] = true;
+                        }
+                      }
                     });
                   },
                   items: RecurrenceType.values.map((type) {
@@ -758,6 +757,42 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           ),
         ),
       ),
+    );
+  }
+
+  void _pickColor(BuildContext context) {
+    Color tempColor = _color;
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(loc.select),
+          content: SingleChildScrollView(
+            child: BlockPicker(
+              pickerColor: _color,
+              onColorChanged: (Color color) {
+                tempColor = color;
+              },
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text(loc.cancel),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            FilledButton(
+              child: Text(loc.select),
+              onPressed: () {
+                setState(() {
+                  _color = tempColor;
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }
