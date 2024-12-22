@@ -1,17 +1,19 @@
+//ui/pages/appointment_creation_page.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
-import '../widgets/prayer_time_appointment.dart';
-import '../database/database_helper.dart';
-import '../localization/app_localizations.dart';
+import 'package:muslim_calendar/models/appointment_model.dart';
+import 'package:muslim_calendar/models/enums.dart';
+import 'package:muslim_calendar/localization/app_localizations.dart';
+import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
 
 class AppointmentCreationPage extends StatefulWidget {
   final int? appointmentId;
-
-  AppointmentCreationPage({this.appointmentId});
+  const AppointmentCreationPage({this.appointmentId, Key? key})
+      : super(key: key);
 
   @override
   _AppointmentCreationPageState createState() =>
@@ -41,7 +43,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   DateTime? _recurrenceEndDate;
   List<DateTime> _exceptionDates = [];
   Color _color = Colors.blue;
+
   List<bool> _selectedWeekDays = List.filled(7, false);
+
+  final AppointmentRepository _appointmentRepo = AppointmentRepository();
 
   @override
   void initState() {
@@ -54,56 +59,59 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
   Future<void> _loadAppointmentData() async {
     if (widget.appointmentId != null) {
-      final db = DatabaseHelper();
       try {
-        final appointment = await db.getAppointment(widget.appointmentId!);
+        final appointment =
+            await _appointmentRepo.getAppointment(widget.appointmentId!);
         if (appointment != null) {
           setState(() {
             _titleController.text = appointment.subject;
             _descriptionController.text = appointment.notes ?? '';
             _isAllDay = appointment.isAllDay;
-            _isRelatedToPrayerTimes = appointment.isRelatedToPrayerTimes!;
+            _isRelatedToPrayerTimes = appointment.isRelatedToPrayerTimes;
             _selectedPrayerTime = appointment.prayerTime;
             _selectedTimeRelation = appointment.timeRelation;
             _minutesBeforeAfter = appointment.minutesBeforeAfter;
             _duration = appointment.duration ?? const Duration(minutes: 30);
-            _startTime = appointment.startTime;
-            _endTime = appointment.endTime;
+            _startTime = appointment.startTime ?? DateTime.now();
+            _endTime = appointment.endTime ??
+                _startTime!.add(const Duration(minutes: 30));
             _color = appointment.color;
-
             if (appointment.location != null) {
-              final locationParts = appointment.location!.split(',');
-              if (locationParts.length == 2) {
-                _selectedCity = locationParts[0].trim();
-                _selectedCountry = locationParts[1].trim();
+              final parts = appointment.location!.split(',');
+              if (parts.length == 2) {
+                _selectedCity = parts[0].trim();
+                _selectedCountry = parts[1].trim();
               }
             }
 
             if (appointment.recurrenceRule != null) {
               final recurrenceProperties = SfCalendar.parseRRule(
-                  appointment.recurrenceRule!, appointment.startTime);
+                  appointment.recurrenceRule!,
+                  appointment.startTime ?? DateTime.now());
               _isRecurring = true;
               _recurrenceType = recurrenceProperties.recurrenceType;
               _recurrenceInterval = recurrenceProperties.interval;
               _recurrenceRange = recurrenceProperties.recurrenceRange;
               _recurrenceCount = recurrenceProperties.recurrenceCount;
               _recurrenceEndDate = recurrenceProperties.endDate;
-
               if (_recurrenceType == RecurrenceType.weekly) {
                 _selectedWeekDays = List.filled(7, false);
-                recurrenceProperties.weekDays.forEach((weekDay) {
-                  _selectedWeekDays[(weekDay.index + 6) % 7] = true;
-                });
+                for (var wd in recurrenceProperties.weekDays) {
+                  // Mappe Wochentage
+                  // Monday=0 ... Sunday=6
+                  // So wie oben definiert
+                  if (wd == WeekDays.monday) _selectedWeekDays[0] = true;
+                  if (wd == WeekDays.tuesday) _selectedWeekDays[1] = true;
+                  if (wd == WeekDays.wednesday) _selectedWeekDays[2] = true;
+                  if (wd == WeekDays.thursday) _selectedWeekDays[3] = true;
+                  if (wd == WeekDays.friday) _selectedWeekDays[4] = true;
+                  if (wd == WeekDays.saturday) _selectedWeekDays[5] = true;
+                  if (wd == WeekDays.sunday) _selectedWeekDays[6] = true;
+                }
               }
             }
-
             _exceptionDates = appointment.recurrenceExceptionDates ?? [];
           });
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Appointment not found. Creating a new one.')),
-          );
         }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -130,8 +138,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   }
 
   void _pickColor(BuildContext context) {
-    final loc = Provider.of<AppLocalizations>(context, listen: false);
     Color tempColor = _color;
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -166,11 +174,13 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   }
 
   void _addExceptionDate() async {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
     DateTime? selectedDate = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: _startTime ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      helpText: loc.addExceptionDate,
     );
     if (selectedDate != null) {
       setState(() {
@@ -180,13 +190,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   }
 
   String _getBYDAYString() {
-    List<String> days = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
-    return days
-        .asMap()
-        .entries
-        .where((entry) => _selectedWeekDays[entry.key])
-        .map((entry) => entry.value)
-        .join(',');
+    // Wir nutzen das Setzen in der RecurrenceProperties unten
+    return ''; // Diese Methode wird nicht mehr direkt verwendet, aber lassen wir sie leer stehen.
   }
 
   Future<void> _deleteAppointment() async {
@@ -221,8 +226,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
     if (confirmDelete) {
       try {
-        final db = DatabaseHelper();
-        await db.deleteAppointment(widget.appointmentId!);
+        await _appointmentRepo.deleteAppointment(widget.appointmentId!);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Appointment deleted successfully.')),
         );
@@ -237,13 +241,17 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   }
 
   void _saveAppointment() async {
-    final loc = Provider.of<AppLocalizations>(context, listen: false);
     if (_formKey.currentState!.validate()) {
-      final location = _isRelatedToPrayerTimes &&
+      final loc = Provider.of<AppLocalizations>(context, listen: false);
+      final location = (_isRelatedToPrayerTimes &&
               _selectedCity != null &&
-              _selectedCountry != null
+              _selectedCountry != null)
           ? '$_selectedCity,$_selectedCountry'
-          : null;
+          : (!_isRelatedToPrayerTimes &&
+                  _selectedCity != null &&
+                  _selectedCountry != null)
+              ? '$_selectedCity,$_selectedCountry'
+              : null;
 
       String? recurrenceRule;
       if (_isRecurring) {
@@ -255,29 +263,14 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         );
 
         if (_recurrenceType == RecurrenceType.weekly) {
-          String byday = _getBYDAYString();
-          if (byday.isNotEmpty) {
-            recurrence.weekDays = byday.split(',').map((day) {
-              switch (day) {
-                case 'MO':
-                  return WeekDays.monday;
-                case 'TU':
-                  return WeekDays.tuesday;
-                case 'WE':
-                  return WeekDays.wednesday;
-                case 'TH':
-                  return WeekDays.thursday;
-                case 'FR':
-                  return WeekDays.friday;
-                case 'SA':
-                  return WeekDays.saturday;
-                case 'SU':
-                  return WeekDays.sunday;
-                default:
-                  throw Exception('Invalid day');
-              }
-            }).toList();
-          }
+          recurrence.weekDays.clear();
+          if (_selectedWeekDays[0]) recurrence.weekDays.add(WeekDays.monday);
+          if (_selectedWeekDays[1]) recurrence.weekDays.add(WeekDays.tuesday);
+          if (_selectedWeekDays[2]) recurrence.weekDays.add(WeekDays.wednesday);
+          if (_selectedWeekDays[3]) recurrence.weekDays.add(WeekDays.thursday);
+          if (_selectedWeekDays[4]) recurrence.weekDays.add(WeekDays.friday);
+          if (_selectedWeekDays[5]) recurrence.weekDays.add(WeekDays.saturday);
+          if (_selectedWeekDays[6]) recurrence.weekDays.add(WeekDays.sunday);
         } else if (_recurrenceType == RecurrenceType.monthly) {
           recurrence.dayOfMonth = _startTime!.day;
         } else if (_recurrenceType == RecurrenceType.yearly) {
@@ -286,7 +279,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         }
 
         if (_recurrenceRange == RecurrenceRange.count) {
-          recurrence.recurrenceCount = _recurrenceCount!;
+          recurrence.recurrenceCount = _recurrenceCount ?? 1;
         } else if (_recurrenceRange == RecurrenceRange.endDate) {
           recurrence.endDate = _recurrenceEndDate;
         }
@@ -294,7 +287,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             SfCalendar.generateRRule(recurrence, _startTime!, _endTime!);
       }
 
-      final appointment = PrayerTimeAppointment(
+      final appointment = AppointmentModel(
         id: widget.appointmentId,
         prayerTime: _isRelatedToPrayerTimes ? _selectedPrayerTime : null,
         timeRelation: _isRelatedToPrayerTimes ? _selectedTimeRelation : null,
@@ -303,26 +296,64 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         isRelatedToPrayerTimes: _isRelatedToPrayerTimes,
         duration: _isRelatedToPrayerTimes ? _duration : null,
         isAllDay: _isAllDay,
-        startTime: _isRelatedToPrayerTimes ? _startTime : _startTime,
-        endTime:
-            _isRelatedToPrayerTimes ? _startTime?.add(_duration!) : _endTime,
+        startTime: _startTime,
+        endTime: (_isRelatedToPrayerTimes && _duration != null)
+            ? _startTime?.add(_duration!)
+            : _endTime,
         subject: _titleController.text,
-        notes: _descriptionController.text,
+        notes: _descriptionController.text.isEmpty
+            ? null
+            : _descriptionController.text,
         location: location,
         recurrenceRule: recurrenceRule,
         recurrenceExceptionDates:
             _exceptionDates.isNotEmpty ? _exceptionDates : null,
         color: _color,
       );
-      final db = DatabaseHelper();
       if (widget.appointmentId == null) {
-        await db.insertAppointment(appointment);
+        await _appointmentRepo.insertAppointment(appointment);
       } else {
-        await db.updateAppointment(appointment);
+        await _appointmentRepo.updateAppointment(appointment);
       }
 
       Navigator.pop(context);
     }
+  }
+
+  String _formatTime(DateTime? dt) {
+    if (dt == null) return '--:--';
+    final hours = dt.hour.toString().padLeft(2, '0');
+    final minutes = dt.minute.toString().padLeft(2, '0');
+    return '$hours:$minutes';
+  }
+
+  Future<DateTime?> _pickDate(DateTime initial) async {
+    return await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+  }
+
+  Future<DateTime?> _pickTime(DateTime initial) async {
+    TimeOfDay? timeOfDay = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: initial.hour, minute: initial.minute),
+    );
+    if (timeOfDay != null) {
+      return DateTime(
+        initial.year,
+        initial.month,
+        initial.day,
+        timeOfDay.hour,
+        timeOfDay.minute,
+        initial.second,
+        initial.millisecond,
+        initial.microsecond,
+      );
+    }
+    return null;
   }
 
   @override
@@ -351,7 +382,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _titleController,
-                decoration: InputDecoration(labelText: loc.titleLabel),
+                decoration: InputDecoration(labelText: '${loc.titleLabel} *'),
                 validator: (value) =>
                     (value == null || value.isEmpty) ? loc.titleLabel : null,
               ),
@@ -369,7 +400,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                     ? (bool value) {
                         setState(() {
                           _isAllDay = value;
-                          if (value) {
+                          if (value && _startTime != null) {
                             _endTime =
                                 _startTime!.add(const Duration(hours: 1));
                           }
@@ -387,7 +418,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                     ? (bool value) {
                         setState(() {
                           _isRelatedToPrayerTimes = value;
-                          if (value) {
+                          if (value && _startTime != null) {
                             _endTime =
                                 _startTime!.add(const Duration(hours: 1));
                           }
@@ -402,18 +433,16 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                       ? '${_startTime!.day}/${_startTime!.month}/${_startTime!.year}'
                       : loc.selectDate),
                   onTap: () async {
-                    final DateTime? picked = await showDatePicker(
-                      context: context,
-                      initialDate: _startTime ?? DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                    );
-                    if (picked != null && picked != _startTime) {
-                      setState(() {
-                        _startTime =
-                            DateTime(picked.year, picked.month, picked.day);
-                        _endTime = _startTime!.add(const Duration(hours: 1));
-                      });
+                    final picked =
+                        await _pickDate(_startTime ?? DateTime.now());
+                    if (picked != null) {
+                      final timePicked = await _pickTime(picked);
+                      if (timePicked != null) {
+                        setState(() {
+                          _startTime = timePicked;
+                          _endTime = _startTime!.add(const Duration(hours: 1));
+                        });
+                      }
                     }
                   },
                 ),
@@ -510,70 +539,47 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 const SizedBox(height: 12),
                 ListTile(
                   title: Text(loc.startTime),
-                  subtitle: Text(_startTime != null
-                      ? _startTime.toString()
+                  subtitle: Text((_startTime != null)
+                      ? '${_startTime!.day}/${_startTime!.month}/${_startTime!.year} ${_formatTime(_startTime)}'
                       : loc.selectStartTime),
                   onTap: () async {
-                    DateTime? selectedDate = await showDatePicker(
-                      context: context,
-                      initialDate: _startTime ?? DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                    );
-                    if (selectedDate != null) {
-                      if (!_isAllDay) {
-                        TimeOfDay? selectedTime = await showTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.fromDateTime(
-                              _startTime ?? DateTime.now()),
-                        );
-                        if (selectedTime != null) {
-                          selectedDate = DateTime(
-                            selectedDate.year,
-                            selectedDate.month,
-                            selectedDate.day,
-                            selectedTime.hour,
-                            selectedTime.minute,
-                          );
-                        }
+                    final picked =
+                        await _pickDate(_startTime ?? DateTime.now());
+                    if (picked != null) {
+                      final timePicked = await _pickTime(picked);
+                      if (timePicked != null) {
+                        setState(() {
+                          _startTime = timePicked;
+                          if (_isAllDay) {
+                            _endTime =
+                                _startTime!.add(const Duration(hours: 1));
+                          } else {
+                            _endTime ??=
+                                _startTime!.add(const Duration(minutes: 30));
+                          }
+                        });
                       }
-                      setState(() {
-                        _startTime = selectedDate;
-                        if (_isAllDay) {
-                          _endTime = _startTime!.add(const Duration(hours: 1));
-                        }
-                      });
                     }
                   },
                 ),
                 if (!_isAllDay)
                   ListTile(
                     title: Text(loc.endTime),
-                    subtitle: Text(_endTime != null
-                        ? _endTime.toString()
+                    subtitle: Text((_endTime != null)
+                        ? '${_endTime!.day}/${_endTime!.month}/${_endTime!.year} ${_formatTime(_endTime)}'
                         : loc.selectEndTime),
                     onTap: () async {
-                      DateTime? selectedDate = await showDatePicker(
-                        context: context,
-                        initialDate: _endTime ?? DateTime.now(),
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2100),
-                      );
-                      if (selectedDate != null) {
-                        TimeOfDay? selectedTime = await showTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.fromDateTime(
-                              _endTime ?? DateTime.now()),
-                        );
-                        if (selectedTime != null) {
+                      if (_startTime == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(loc.selectStartTime)));
+                        return;
+                      }
+                      final picked = await _pickDate(_endTime ?? _startTime!);
+                      if (picked != null) {
+                        final timePicked = await _pickTime(picked);
+                        if (timePicked != null) {
                           setState(() {
-                            _endTime = DateTime(
-                              selectedDate.year,
-                              selectedDate.month,
-                              selectedDate.day,
-                              selectedTime.hour,
-                              selectedTime.minute,
-                            );
+                            _endTime = timePicked;
                           });
                         }
                       }
@@ -704,7 +710,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   Column(
                     children: _exceptionDates
                         .map((date) => ListTile(
-                              title: Text(date.toString()),
+                              title: Text(date.toIso8601String()),
                               trailing: IconButton(
                                 icon: const Icon(Icons.delete),
                                 onPressed: () {

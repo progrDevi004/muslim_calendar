@@ -1,7 +1,8 @@
+//main.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'localization/app_localizations.dart';
-import 'pages/home_page.dart';
+import 'ui/pages/home_page.dart';
 
 void main() {
   runApp(
@@ -17,15 +18,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Google-typische Primärfarbe: Blau (#4285F4)
-    final seedColor = const Color(0xFF4285F4);
+    const seedColor = Color(0xFF4285F4);
 
     return MaterialApp(
       title: 'Muslim Calendar',
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: seedColor),
-        appBarTheme: AppBarTheme(
+        appBarTheme: const AppBarTheme(
           backgroundColor: Colors.white,
           foregroundColor: Colors.black87,
           elevation: 0,
@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
             fontWeight: FontWeight.w600,
             fontSize: 20,
           ),
-          iconTheme: const IconThemeData(color: Colors.black87),
+          iconTheme: IconThemeData(color: Colors.black87),
         ),
         scaffoldBackgroundColor: Colors.white,
         inputDecorationTheme: const InputDecorationTheme(
@@ -44,8 +44,8 @@ class MyApp extends StatelessWidget {
           fillColor: Color.fromARGB(255, 245, 245, 245),
         ),
         switchTheme: SwitchThemeData(
-          thumbColor: MaterialStateProperty.all(seedColor),
-          trackColor: MaterialStateProperty.all(seedColor.withOpacity(0.5)),
+          thumbColor: WidgetStateProperty.all(seedColor),
+          trackColor: WidgetStateProperty.all(seedColor.withOpacity(0.5)),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -66,18 +66,16 @@ class MyApp extends StatelessWidget {
           indicatorColor: seedColor.withOpacity(0.1),
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           elevation: 0,
-          iconTheme: MaterialStateProperty.resolveWith((states) =>
-              IconThemeData(
-                  color: states.contains(MaterialState.selected)
-                      ? seedColor
-                      : Colors.black54)),
-          labelTextStyle:
-              MaterialStateProperty.resolveWith((states) => TextStyle(
-                    color: states.contains(MaterialState.selected)
-                        ? seedColor
-                        : Colors.black54,
-                    fontWeight: FontWeight.w500,
-                  )),
+          iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+              color: states.contains(WidgetState.selected)
+                  ? seedColor
+                  : Colors.black54)),
+          labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+                color: states.contains(WidgetState.selected)
+                    ? seedColor
+                    : Colors.black54,
+                fontWeight: FontWeight.w500,
+              )),
         ),
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(

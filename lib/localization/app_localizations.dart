@@ -4,7 +4,6 @@ enum AppLanguage { english, german, turkish, arabic }
 
 class AppLocalizations extends ChangeNotifier {
   AppLanguage _currentLanguage = AppLanguage.english;
-
   AppLanguage get currentLanguage => _currentLanguage;
 
   void setLanguage(AppLanguage language) {

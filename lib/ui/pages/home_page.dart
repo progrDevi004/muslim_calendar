@@ -1,34 +1,41 @@
+//ui/pages/home_page.dart
 import 'package:flutter/material.dart';
-import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:provider/provider.dart';
-import '../localization/app_localizations.dart';
+import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
+import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
+import 'package:muslim_calendar/data/services/prayer_time_service.dart';
+import 'package:muslim_calendar/data/services/recurrence_service.dart';
+import 'package:muslim_calendar/models/appointment_model.dart';
+import 'package:muslim_calendar/ui/widgets/create_events.dart';
+import 'package:muslim_calendar/ui/widgets/prayer_time_appointment_adapter.dart';
 import 'appointment_creation_page.dart';
-import '../database/database_helper.dart';
-import '../widgets/prayer_time_appointment.dart';
-import '../widgets/create_events.dart';
+import 'package:muslim_calendar/localization/app_localizations.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
-  _HomePageState createState() => _HomePageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
   CalendarView _selectedView = CalendarView.month;
   late CalendarController _calendarController;
-  late EventDataSource _dataSource;
-  final DatabaseHelper _databaseHelper = DatabaseHelper();
+  EventDataSource? _dataSource;
+  final AppointmentRepository _appointmentRepo = AppointmentRepository();
+  final PrayerTimeRepository _prayerTimeRepo = PrayerTimeRepository();
+  final PrayerTimeAppointmentAdapter _adapter = PrayerTimeAppointmentAdapter(
+    prayerTimeService: PrayerTimeService(PrayerTimeRepository()),
+    recurrenceService: RecurrenceService(),
+  );
   DateTime? _selectedDate;
-
-  int _selectedNavIndex = 0; // 0 = Month, 1 = Week, 2 = Day
+  int _selectedNavIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _calendarController = CalendarController();
-    _dataSource = EventDataSource([]);
-    _selectedDate = null;
     _updateCalendarViewFromNavIndex();
     _loadAllAppointments();
   }
@@ -51,10 +58,21 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadAllAppointments() async {
     try {
-      final List<PrayerTimeAppointment> appointments =
-          await _databaseHelper.getAllAppointments();
+      final List<AppointmentModel> models =
+          await _appointmentRepo.getAllAppointments();
+      final now = DateTime.now();
+      final startRange = DateTime(now.year, now.month - 1, 1);
+      final endRange = DateTime(now.year, now.month + 2, 1);
+
+      List<Appointment> allAppointments = [];
+      for (var m in models) {
+        final apps =
+            await _adapter.getAppointmentsForRange(m, startRange, endRange);
+        allAppointments.addAll(apps);
+      }
+
       setState(() {
-        _dataSource = EventDataSource(appointments);
+        _dataSource = EventDataSource(allAppointments);
       });
     } catch (e) {
       print('Error loading all appointments: $e');
@@ -93,28 +111,21 @@ class _HomePageState extends State<HomePage> {
           onSelectionChanged: (calendarSelectionDetails) {
             _selectedDate = calendarSelectionDetails.date;
           },
-          // Monatsansicht: Nur Punkte (Indikatoren) für Termine
-          // Gleichzeitig showAgenda: true, um darunter die Agenda mit Text anzuzeigen.
           monthViewSettings: const MonthViewSettings(
             appointmentDisplayMode: MonthAppointmentDisplayMode.indicator,
             showAgenda: true,
           ),
-          // Kein appointmentBuilder nötig. Standardmäßig:
-          // - Monatsansicht: Punkte im Kalender, Text unten in der Agenda
-          // - Wochen- & Tagesansicht: Balken mit Text
           onTap: (calendarTapDetails) async {
             if (calendarTapDetails.targetElement ==
                 CalendarElement.appointment) {
-              int appointmentId = int.parse(((calendarTapDetails
-                              .appointments?.firstOrNull as Appointment?)
-                          ?.id ??
-                      '')
-                  .toString());
+              int appointmentId = int.parse(
+                  (calendarTapDetails.appointments?.first.id ?? '').toString());
               await Navigator.of(context).push(
                 MaterialPageRoute(
-                    builder: (context) => AppointmentCreationPage(
-                          appointmentId: appointmentId,
-                        )),
+                  builder: (context) => AppointmentCreationPage(
+                    appointmentId: appointmentId,
+                  ),
+                ),
               );
               _loadAllAppointments();
             } else if (calendarTapDetails.targetElement ==
@@ -132,7 +143,8 @@ class _HomePageState extends State<HomePage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => AppointmentCreationPage()),
+            MaterialPageRoute(
+                builder: (context) => const AppointmentCreationPage()),
           );
           _loadAllAppointments();
         },
