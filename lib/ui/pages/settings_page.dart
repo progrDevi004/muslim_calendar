@@ -1,5 +1,3 @@
-// lib/ui/pages/settings_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -100,6 +98,8 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: 8),
           SwitchListTile(
+            activeColor: Colors.green,
+            activeTrackColor: Colors.greenAccent,
             title: Text(loc.automaticLocation),
             subtitle: Text(loc.automaticLocationSubtitle),
             value: _locationMode == LocationMode.automatic,
@@ -161,6 +161,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
           ),
           SwitchListTile(
+            activeColor: Colors.green,
+            activeTrackColor: Colors.greenAccent,
             title: Text(loc.enableNotifications),
             subtitle: Text(loc.enableNotificationsSubtitle),
             value: _notificationsEnabled,
@@ -180,6 +182,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
           ),
           SwitchListTile(
+            activeColor: Colors.green,
+            activeTrackColor: Colors.greenAccent,
             title: Text(loc.darkMode),
             subtitle: Text(loc.darkModeSubtitle),
             value: _darkModeEnabled,

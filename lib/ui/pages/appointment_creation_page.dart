@@ -1,5 +1,3 @@
-// lib/ui/pages/appointment_creation_page.dart
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -126,10 +124,19 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       // 6) Wiederholungstyp = Weekly
       _recurrenceType = RecurrenceType.weekly;
 
-      // Start/End
+      // >>> FIX: Wochentag basierend auf Startzeit sofort markieren <<<
       final now = DateTime.now();
       _startTime = widget.selectedDate ?? now;
       _endTime = _startTime!.add(const Duration(minutes: 30));
+
+      if (_recurrenceType == RecurrenceType.weekly) {
+        _selectedWeekDays = List.filled(7, false);
+        if (_startTime != null) {
+          final index = (_startTime!.weekday - 1) % 7;
+          _selectedWeekDays[index] = true;
+        }
+      }
+
       setState(() {});
     }
   }
@@ -344,9 +351,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             ? _startTime?.add(_duration!)
             : _endTime,
         subject: _titleController.text,
-        notes: _descriptionController.text.isEmpty
-            ? null
-            : _descriptionController.text,
+        notes: _descriptionController.text.isNotEmpty
+            ? _descriptionController.text
+            : null,
         location: location,
         recurrenceRule: recurrenceRule,
         recurrenceExceptionDates:
@@ -467,24 +474,25 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                         final picked =
                             await _pickDate(_startTime ?? DateTime.now());
                         if (picked != null) {
-                          final timePicked = await _pickTime(picked);
-                          if (timePicked != null) {
-                            setState(() {
-                              _startTime = timePicked;
-                              if (_isAllDay) {
-                                _endTime =
-                                    _startTime!.add(const Duration(hours: 1));
-                              } else {
-                                _endTime ??= _startTime!
-                                    .add(const Duration(minutes: 30));
-                              }
-                            });
-                          }
+                          final timePicked = _isAllDay
+                              ? picked
+                              : await _pickTime(picked) ?? picked;
+                          setState(() {
+                            _startTime = timePicked;
+                            if (_isAllDay) {
+                              _endTime =
+                                  _startTime!.add(const Duration(hours: 1));
+                            } else {
+                              _endTime ??=
+                                  _startTime!.add(const Duration(minutes: 30));
+                            }
+                          });
                         }
                       },
                       child: _buildDateTimeDisplay(
                         label: loc.startTime,
                         dateTime: _startTime,
+                        isAllDay: _isAllDay,
                       ),
                     ),
                   ),
@@ -515,6 +523,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                             child: _buildDateTimeDisplay(
                               label: loc.endTime,
                               dateTime: _endTime,
+                              isAllDay: false,
                             ),
                           )
                         : Container(),
@@ -585,6 +594,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
               // AllDay
               SwitchListTile(
+                activeColor: Colors.green,
+                activeTrackColor: Colors.greenAccent,
                 title: Text(loc.allDay),
                 subtitle: Text(loc.allDaySubtitle),
                 value: _isAllDay,
@@ -634,6 +645,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                           const SizedBox(height: 12),
                           Text(loc.prayerTimeSettings, style: headlineStyle),
                           SwitchListTile(
+                            activeColor: Colors.green,
+                            activeTrackColor: Colors.greenAccent,
                             title: Text(loc.relatedToPrayerTimes),
                             subtitle: Text(loc.relatedToPrayerTimesSubtitle),
                             value: _isRelatedToPrayerTimes,
@@ -768,6 +781,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                           const SizedBox(height: 24),
                           Text(loc.recurrence, style: headlineStyle),
                           SwitchListTile(
+                            activeColor: Colors.green,
+                            activeTrackColor: Colors.greenAccent,
                             title: Text(loc.recurringEvent),
                             value: _isRecurring,
                             onChanged: (value) {
@@ -777,9 +792,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                             },
                           ),
                           if (_isRecurring) ...[
-                            // >>> HIER fügen wir den Code wieder ein,
-                            //     der den aktuell gewählten Wochentag
-                            //     bei weekly automatisch markiert. <<<
+                            // >>> Wochentag des Startdatums markieren
                             DropdownButtonFormField<RecurrenceType>(
                               value: _recurrenceType,
                               decoration: InputDecoration(
@@ -956,9 +969,12 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   Widget _buildDateTimeDisplay({
     required String label,
     required DateTime? dateTime,
+    required bool isAllDay,
   }) {
     final text = dateTime != null
-        ? '${dateTime.day}/${dateTime.month}/${dateTime.year} ${_formatTime(dateTime)}'
+        ? isAllDay
+            ? '${dateTime.day}/${dateTime.month}/${dateTime.year}'
+            : '${dateTime.day}/${dateTime.month}/${dateTime.year} ${_formatTime(dateTime)}'
         : '---';
     return Container(
       padding: const EdgeInsets.all(8),
