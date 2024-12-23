@@ -739,8 +739,12 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                               },
                             ),
                             const SizedBox(height: 12),
+                            // >>> BUG FIX: Fallback, falls _selectedCountry nicht existiert <<<
                             DropdownButtonFormField<String>(
-                              value: _selectedCountry,
+                              value: _countryCityData.keys
+                                      .contains(_selectedCountry)
+                                  ? _selectedCountry
+                                  : null,
                               hint: Text(loc.selectCountry),
                               decoration:
                                   InputDecoration(labelText: loc.country),
@@ -760,7 +764,12 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                             const SizedBox(height: 12),
                             if (_selectedCountry != null)
                               DropdownButtonFormField<String>(
-                                value: _selectedCity,
+                                // Falls city nicht in der Liste, setze auf null
+                                value: (_selectedCity != null &&
+                                        _countryCityData[_selectedCountry]!
+                                            .contains(_selectedCity))
+                                    ? _selectedCity
+                                    : null,
                                 hint: Text(loc.selectCity),
                                 decoration:
                                     InputDecoration(labelText: loc.city),
@@ -792,7 +801,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                             },
                           ),
                           if (_isRecurring) ...[
-                            // >>> Wochentag des Startdatums markieren
                             DropdownButtonFormField<RecurrenceType>(
                               value: _recurrenceType,
                               decoration: InputDecoration(

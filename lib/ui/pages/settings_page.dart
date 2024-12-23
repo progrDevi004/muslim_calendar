@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 
+import 'package:muslim_calendar/providers/theme_notifier.dart'; // <<<
+
 enum LocationMode {
   automatic, // per Standort
   manual, // per Auswahl
@@ -181,16 +183,23 @@ class _SettingsPageState extends State<SettingsPage> {
                   fontWeight: FontWeight.bold,
                 ),
           ),
+          // <<< Dark Mode Funktion >>>
           SwitchListTile(
             activeColor: Colors.green,
             activeTrackColor: Colors.greenAccent,
             title: Text(loc.darkMode),
             subtitle: Text(loc.darkModeSubtitle),
             value: _darkModeEnabled,
-            onChanged: (bool value) {
+            onChanged: (bool value) async {
+              // Switch-Status in diesem State speichern ...
               setState(() {
                 _darkModeEnabled = value;
               });
+              // ... und in SharedPreferences sichern
+              await _saveSettings();
+              // ... und unseren ThemeNotifier informieren
+              Provider.of<ThemeNotifier>(context, listen: false)
+                  .toggleTheme(value);
             },
           ),
           const SizedBox(height: 20),
