@@ -12,6 +12,10 @@ import 'package:muslim_calendar/models/enums.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
 
+// >>> NEU: Category-Importe <<<
+import 'package:muslim_calendar/data/repositories/category_repository.dart';
+import 'package:muslim_calendar/models/category_model.dart';
+
 class AppointmentCreationPage extends StatefulWidget {
   final int? appointmentId;
   final DateTime? selectedDate;
@@ -70,13 +74,26 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
   final AppointmentRepository _appointmentRepo = AppointmentRepository();
 
+  // >>> Kategorie-Handling <<<
+  final CategoryRepository _categoryRepo = CategoryRepository();
+  List<CategoryModel> _allCategories = [];
+  CategoryModel? _selectedCategory;
+
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController();
     _descriptionController = TextEditingController();
     _loadCountryCityData();
+    _loadCategories();
     _loadAppointmentData();
+  }
+
+  Future<void> _loadCategories() async {
+    final categories = await _categoryRepo.getAllCategories();
+    setState(() {
+      _allCategories = categories;
+    });
   }
 
   Future<void> _loadAppointmentData() async {
@@ -137,6 +154,18 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               }
             }
             _exceptionDates = appointment.recurrenceExceptionDates ?? [];
+
+            // Kategorie laden
+            if (appointment.categoryId != null) {
+              final catIndex = _allCategories.indexWhere(
+                  (element) => element.id == appointment.categoryId);
+              if (catIndex != -1) {
+                _selectedCategory = _allCategories[catIndex];
+                // Achtung: Wir überschreiben hier NICHT automatisch _color,
+                // weil wir den Nutzer die Farbe behalten lassen,
+                // die beim letzten Speichern ggf. manuell verändert wurde.
+              }
+            }
           });
         }
       } catch (e) {
@@ -285,6 +314,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         recurrenceExceptionDates:
             _exceptionDates.isNotEmpty ? _exceptionDates : null,
         color: _color,
+        categoryId: _selectedCategory?.id,
       );
       if (widget.appointmentId == null) {
         await _appointmentRepo.insertAppointment(appointment);
@@ -736,6 +766,45 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 ),
                 onTap: () => _pickColor(context),
               ),
+
+              // >>> Kategorie-Dropdown (automatisch Farbe anpassen) <<<
+              const SizedBox(height: 24),
+              Text('Kategorie', style: headlineStyle),
+              DropdownButtonFormField<CategoryModel>(
+                value: _selectedCategory,
+                decoration:
+                    const InputDecoration(labelText: 'Kategorie wählen'),
+                items: _allCategories.map((cat) {
+                  return DropdownMenuItem<CategoryModel>(
+                    value: cat,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: cat.color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        Text(cat.name),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedCategory = value;
+                    if (_selectedCategory != null) {
+                      // Sobald eine Kategorie gewählt wird,
+                      // übernimmt der Termin automatisch deren Farbe.
+                      _color = _selectedCategory!.color;
+                    }
+                  });
+                },
+              ),
+
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,

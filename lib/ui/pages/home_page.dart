@@ -11,8 +11,14 @@ import 'package:muslim_calendar/models/appointment_model.dart';
 import 'package:muslim_calendar/ui/widgets/create_events.dart';
 import 'package:muslim_calendar/ui/widgets/prayer_time_appointment_adapter.dart';
 import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
-import 'package:muslim_calendar/ui/pages/settings_page.dart'; // <--- NEU
+import 'package:muslim_calendar/ui/pages/settings_page.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
+
+// >>> Wir brauchen für die Kategorie-Erstellung:
+import 'package:muslim_calendar/data/repositories/category_repository.dart';
+import 'package:muslim_calendar/models/category_model.dart';
+// Für die Farbauswahl:
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -34,11 +40,17 @@ class _HomePageState extends State<HomePage> {
   DateTime? _selectedDate;
   int _selectedNavIndex = 0;
 
+  // Kategorie-Verwaltung
+  final CategoryRepository _categoryRepo = CategoryRepository();
+  List<CategoryModel> _allCategories = [];
+  Set<int> _selectedCategoryIds = {}; // hält IDs der aktiven Kategorien
+
   @override
   void initState() {
     super.initState();
     _calendarController = CalendarController();
     _updateCalendarViewFromNavIndex();
+    _loadAllCategories();
     _loadAllAppointments();
   }
 
@@ -58,6 +70,15 @@ class _HomePageState extends State<HomePage> {
     setState(() {});
   }
 
+  Future<void> _loadAllCategories() async {
+    final cats = await _categoryRepo.getAllCategories();
+    setState(() {
+      _allCategories = cats;
+      // Standard: alle Kategorien anzeigen
+      _selectedCategoryIds = cats.map((e) => e.id!).toSet();
+    });
+  }
+
   Future<void> _loadAllAppointments() async {
     try {
       final List<AppointmentModel> models =
@@ -68,9 +89,13 @@ class _HomePageState extends State<HomePage> {
 
       List<Appointment> allAppointments = [];
       for (var m in models) {
-        final apps =
-            await _adapter.getAppointmentsForRange(m, startRange, endRange);
-        allAppointments.addAll(apps);
+        // Filter nach Kategorie
+        if (m.categoryId == null ||
+            _selectedCategoryIds.contains(m.categoryId)) {
+          final apps =
+              await _adapter.getAppointmentsForRange(m, startRange, endRange);
+          allAppointments.addAll(apps);
+        }
       }
 
       setState(() {
@@ -97,15 +122,19 @@ class _HomePageState extends State<HomePage> {
               _showLanguageSelection(context);
             },
           ),
-          // NEU: Icon für Einstellungen
+          // Icon für Einstellungen
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () async {
               await Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const SettingsPage()),
               );
-              // Evtl. reload logic, falls sich Einstellungen auf HomePage auswirken
             },
+          ),
+          // Button zum Filtern (und neu: Erstellen) von Kategorien
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: _showCategoryFilterDialog,
           ),
         ],
       ),
@@ -155,7 +184,6 @@ class _HomePageState extends State<HomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          // Erstellen mit optional übergebenem Datum
           await Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => AppointmentCreationPage(
@@ -209,6 +237,133 @@ class _HomePageState extends State<HomePage> {
               );
             }).toList(),
           ),
+        );
+      },
+    );
+  }
+
+  void _showCategoryFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Kategorien filtern'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Liste der vorhandenen Kategorien
+                ..._allCategories.map((cat) {
+                  final isSelected = _selectedCategoryIds.contains(cat.id);
+                  return CheckboxListTile(
+                    title: Row(
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: cat.color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        Text(cat.name),
+                      ],
+                    ),
+                    value: isSelected,
+                    onChanged: (val) {
+                      setState(() {
+                        if (val == true) {
+                          _selectedCategoryIds.add(cat.id!);
+                        } else {
+                          _selectedCategoryIds.remove(cat.id!);
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+                const Divider(),
+                // Button: Neue Kategorie anlegen
+                FilledButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    _showAddCategoryDialog();
+                  },
+                  child: const Text('+ Neue Kategorie'),
+                )
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _loadAllAppointments();
+              },
+              child: const Text('Übernehmen'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Dialog zum Erstellen einer neuen Kategorie
+  void _showAddCategoryDialog() {
+    final TextEditingController nameController = TextEditingController();
+    Color selectedColor = Colors.blue;
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Neue Kategorie erstellen'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              const SizedBox(height: 12),
+              // Farbauswahl
+              BlockPicker(
+                pickerColor: selectedColor,
+                onColorChanged: (color) {
+                  selectedColor = color;
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final name = nameController.text.trim();
+                if (name.isNotEmpty) {
+                  // in DB speichern
+                  final newCategory = CategoryModel(
+                    name: name,
+                    color: selectedColor,
+                  );
+                  await _categoryRepo.insertCategory(newCategory);
+                  await _loadAllCategories();
+                  Navigator.of(ctx).pop();
+                  // optional neu filtern
+                  _loadAllAppointments();
+                }
+              },
+              child: const Text('Speichern'),
+            ),
+          ],
         );
       },
     );

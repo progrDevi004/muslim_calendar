@@ -20,6 +20,9 @@ class AppointmentModel {
   final DateTime? startTime;
   final DateTime? endTime;
 
+  // >>> NEW/UPDATED <<< Kategorie
+  final int? categoryId;
+
   AppointmentModel({
     this.id,
     required this.subject,
@@ -36,6 +39,7 @@ class AppointmentModel {
     required this.color,
     this.startTime,
     this.endTime,
+    this.categoryId, // >>> NEW/UPDATED <<<
   });
 
   Map<String, dynamic> toMap() {
@@ -59,6 +63,7 @@ class AppointmentModel {
       'color': color.value,
       'startTime': startTime?.toIso8601String(),
       'endTime': endTime?.toIso8601String(),
+      'categoryId': categoryId, // >>> NEW/UPDATED <<<
     };
   }
 
@@ -97,6 +102,7 @@ class AppointmentModel {
       startTime:
           map['startTime'] != null ? DateTime.parse(map['startTime']) : null,
       endTime: map['endTime'] != null ? DateTime.parse(map['endTime']) : null,
+      categoryId: map['categoryId'], // >>> NEW/UPDATED <<<
     );
   }
 }

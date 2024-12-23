@@ -19,7 +19,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'appointments.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // Version bleibt 2 wie zuvor
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE appointments (
@@ -37,7 +37,8 @@ class DatabaseHelper {
             recurrenceExceptionDates TEXT,
             color INTEGER,
             startTime TEXT,
-            endTime TEXT
+            endTime TEXT,
+            categoryId INTEGER
           )
         ''');
 
@@ -54,6 +55,58 @@ class DatabaseHelper {
             UNIQUE(date, location)
           )
         ''');
+
+        // Neue Tabelle "categories"
+        await db.execute('''
+          CREATE TABLE categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            colorValue INTEGER
+          )
+        ''');
+
+        // >>> Standard-Kategorien einfügen <<<
+        // Du kannst natürlich andere Farben wählen
+        await db.insert('categories', {
+          'name': 'Privat',
+          'colorValue': 0xFF2196F3, // Blau
+        });
+        await db.insert('categories', {
+          'name': 'Geschäftlich',
+          'colorValue': 0xFF4CAF50, // Grün
+        });
+        await db.insert('categories', {
+          'name': 'Islam',
+          'colorValue': 0xFFF44336, // Rot
+        });
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('''
+            ALTER TABLE appointments ADD COLUMN categoryId INTEGER
+          ''');
+          await db.execute('''
+            CREATE TABLE categories (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT,
+              colorValue INTEGER
+            )
+          ''');
+
+          // >>> Standard-Kategorien ggf. auch hier einfügen <<<
+          await db.insert('categories', {
+            'name': 'Privat',
+            'colorValue': 0xFF2196F3,
+          });
+          await db.insert('categories', {
+            'name': 'Geschäftlich',
+            'colorValue': 0xFF4CAF50,
+          });
+          await db.insert('categories', {
+            'name': 'Islam',
+            'colorValue': 0xFFF44336,
+          });
+        }
       },
     );
   }
