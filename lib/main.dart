@@ -22,6 +22,7 @@ class MyApp extends StatelessWidget {
 
     return MaterialApp(
       title: 'Muslim Calendar',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: seedColor),

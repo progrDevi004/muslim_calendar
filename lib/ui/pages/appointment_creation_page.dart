@@ -12,7 +12,7 @@ import 'package:muslim_calendar/models/enums.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
 
-// >>> NEU: Category-Importe <<<
+// Kategorie-Importe
 import 'package:muslim_calendar/data/repositories/category_repository.dart';
 import 'package:muslim_calendar/models/category_model.dart';
 
@@ -52,7 +52,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   DateTime? _startTime;
   DateTime? _endTime;
 
-  /// Location (Voreinstellung aus SharedPreferences)
+  /// Location (Voreinstellung)
   String? _defaultCountry;
   String? _defaultCity;
   String? _selectedCountry;
@@ -74,12 +74,12 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
   final AppointmentRepository _appointmentRepo = AppointmentRepository();
 
-  // >>> Kategorie-Handling <<<
+  // Kategorie-Handling
   final CategoryRepository _categoryRepo = CategoryRepository();
   List<CategoryModel> _allCategories = [];
   CategoryModel? _selectedCategory;
 
-  // >>> Um erweiterte Optionen ein- und auszublenden
+  // Schalter für erweiterte Optionen
   bool _showAdvancedOptions = false;
 
   @override
@@ -87,24 +87,50 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     super.initState();
     _titleController = TextEditingController();
     _descriptionController = TextEditingController();
+
     _loadCountryCityData();
     _loadCategories();
-    _initDefaultValues(); // NEU: Standardwerte für neue Termine
-    _loadAppointmentData();
+
+    _initDefaultValues(); // Voreinstellungen setzen (falls neuer Termin)
+    _loadAppointmentData(); // Termin laden, falls bereits vorhanden
   }
 
-  /// Standardwerte für den Fall, dass ein neuer Termin erstellt wird.
-  void _initDefaultValues() {
-    // Nur wenn kein Termin editiert wird, setzen wir Defaults
+  /// Lädt Land/Stadt aus SharedPreferences und setzt weitere Defaults
+  /// nur, wenn ein neuer Termin erstellt wird.
+  void _initDefaultValues() async {
     if (widget.appointmentId == null) {
-      // Standard: 30 Minuten
+      // 1) Werte aus Einstellungen laden (Land, Stadt)
+      final prefs = await SharedPreferences.getInstance();
+      final country = prefs.getString('defaultCountry');
+      final city = prefs.getString('defaultCity');
+      if (country != null && city != null) {
+        setState(() {
+          _selectedCountry = country;
+          _selectedCity = city;
+        });
+      }
+
+      // 2) Gebetszeit = Dhuhr
+      _selectedPrayerTime = PrayerTime.dhuhr;
+
+      // 3) Minuten Vor/Nachher = 0
+      _minutesBeforeAfter = 0;
+
+      // 4) Zeitbezug = after
+      _selectedTimeRelation = TimeRelation.after;
+
+      // 5) Dauer = 30 Minuten, AllDay = false
       _duration = const Duration(minutes: 30);
-      // Standard: false
       _isAllDay = false;
-      // Start/End auf jetzt +30min (wird später ggf. überschrieben)
+
+      // 6) Wiederholungstyp = Weekly
+      _recurrenceType = RecurrenceType.weekly;
+
+      // Start/End
       final now = DateTime.now();
       _startTime = widget.selectedDate ?? now;
       _endTime = _startTime!.add(const Duration(minutes: 30));
+      setState(() {});
     }
   }
 
@@ -112,8 +138,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     final categories = await _categoryRepo.getAllCategories();
     setState(() {
       _allCategories = categories;
-      // Wenn wir einen neuen Termin erstellen und keine Kategorie ausgewählt ist,
-      // setzen wir standardmäßig die erste Kategorie (z. B. "Privat").
+      // Falls neuer Termin und noch keine Kategorie ausgewählt,
+      // Standard: nimm erste Kategorie (z. B. "Privat")
       if (widget.appointmentId == null && _allCategories.isNotEmpty) {
         _selectedCategory = _allCategories.first;
         _color = _selectedCategory!.color;
@@ -287,15 +313,12 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           if (_selectedWeekDays[5]) recurrence.weekDays.add(WeekDays.saturday);
           if (_selectedWeekDays[6]) recurrence.weekDays.add(WeekDays.sunday);
         } else if (_recurrenceType == RecurrenceType.monthly) {
-          // Tag des Monats übernehmen
           recurrence.dayOfMonth = _startTime!.day;
         } else if (_recurrenceType == RecurrenceType.yearly) {
-          // Monat und Tag übernehmen
           recurrence.month = _startTime!.month;
           recurrence.dayOfMonth = _startTime!.day;
         }
 
-        // Range
         if (_recurrenceRange == RecurrenceRange.count) {
           _recurrenceCount = _recurrenceCount ?? 1;
           recurrence.recurrenceCount = _recurrenceCount!;
@@ -303,7 +326,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           recurrence.endDate = _recurrenceEndDate;
         }
 
-        // RRule generieren
         recurrenceRule =
             SfCalendar.generateRRule(recurrence, _startTime!, _endTime!);
       }
@@ -332,6 +354,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         color: _color,
         categoryId: _selectedCategory?.id,
       );
+
       if (widget.appointmentId == null) {
         await _appointmentRepo.insertAppointment(appointment);
       } else {
@@ -410,27 +433,23 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             ? loc.createAppointment
             : loc.editAppointment),
       ),
-      // SingleChildScrollView + Padding
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          // Wir machen eine Spalte,
-          // wobei der "Schnelleingabe"-Bereich oben ist,
-          // "Erweiterte Optionen" unten.
+          // Schnelleingabe + erweiterte Optionen
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ======================================================
-              // Schnelleingabe-Bereich (Titel, Datum, Kategorie)
-              // ======================================================
+              // ====================
+              // Schnelleingabe
+              // ====================
               Text(
                 loc.general,
                 style: headlineStyle,
               ),
               const SizedBox(height: 12),
 
-              // Titel (Pflichtfeld) + Validator
               TextFormField(
                 controller: _titleController,
                 decoration: InputDecoration(labelText: '${loc.titleLabel} *'),
@@ -439,7 +458,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               ),
               const SizedBox(height: 12),
 
-              // Start / End Time
+              // Start-/Endzeit
               Row(
                 children: [
                   Expanded(
@@ -498,13 +517,14 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                               dateTime: _endTime,
                             ),
                           )
-                        : Container(), // AllDay => kein Endzeit-Feld
+                        : Container(),
                   ),
                 ],
               ),
 
               const SizedBox(height: 12),
-              // Kategorie & Farbe (kurz, so dass man zügig auswählen kann)
+
+              // Kategorie & Farbe
               Row(
                 children: [
                   Expanded(
@@ -542,7 +562,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // Kleiner Kreis, der zur Farbauswahl führt
                   InkWell(
                     onTap: () => _pickColor(context),
                     child: Container(
@@ -564,7 +583,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
               const SizedBox(height: 12),
 
-              // AllDay Switch
+              // AllDay
               SwitchListTile(
                 title: Text(loc.allDay),
                 subtitle: Text(loc.allDaySubtitle),
@@ -584,9 +603,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
               const SizedBox(height: 20),
 
-              // ======================================================
-              // Button / Toggle für "Erweiterte Optionen"
-              // ======================================================
+              // Erweiterte Optionen
               FilledButton(
                 onPressed: () {
                   setState(() {
@@ -597,12 +614,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                     ? 'Weniger Optionen'
                     : 'Erweiterte Optionen'),
               ),
-
               const SizedBox(height: 8),
 
-              // ======================================================
-              // Erweiterte Optionen in Expansion
-              // ======================================================
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 child: _showAdvancedOptions
@@ -610,7 +623,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                         key: const ValueKey('advancedOptions'),
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Notizen
                           const SizedBox(height: 12),
                           TextFormField(
                             controller: _descriptionController,
@@ -620,7 +632,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                                 InputDecoration(labelText: loc.description),
                           ),
                           const SizedBox(height: 12),
-
                           Text(loc.prayerTimeSettings, style: headlineStyle),
                           SwitchListTile(
                             title: Text(loc.relatedToPrayerTimes),
@@ -671,8 +682,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                                 return DropdownMenuItem<PrayerTime>(
                                   value: prayerTime,
                                   child: Text(
-                                    prayerTime.toString().split('.').last,
-                                  ),
+                                      prayerTime.toString().split('.').last),
                                 );
                               }).toList(),
                             ),
@@ -685,8 +695,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                                 return DropdownMenuItem<TimeRelation>(
                                   value: timeRelation,
                                   child: Text(
-                                    timeRelation.toString().split('.').last,
-                                  ),
+                                      timeRelation.toString().split('.').last),
                                 );
                               }).toList(),
                               onChanged: (value) {
@@ -768,6 +777,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                             },
                           ),
                           if (_isRecurring) ...[
+                            // >>> HIER fügen wir den Code wieder ein,
+                            //     der den aktuell gewählten Wochentag
+                            //     bei weekly automatisch markiert. <<<
                             DropdownButtonFormField<RecurrenceType>(
                               value: _recurrenceType,
                               decoration: InputDecoration(
@@ -775,6 +787,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                               onChanged: (value) {
                                 setState(() {
                                   _recurrenceType = value!;
+                                  // Sobald wöchentlich gewählt,
+                                  // Wochentag des Startdatums markieren
                                   if (_recurrenceType ==
                                       RecurrenceType.weekly) {
                                     _selectedWeekDays = List.filled(7, false);
@@ -795,10 +809,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                             ),
                             if (_recurrenceType == RecurrenceType.weekly) ...[
                               const SizedBox(height: 12),
-                              Text(
-                                loc.recurrenceDays,
-                                style: Theme.of(context).textTheme.labelLarge,
-                              ),
+                              Text(loc.recurrenceDays,
+                                  style:
+                                      Theme.of(context).textTheme.labelLarge),
                               const SizedBox(height: 8),
                               Wrap(
                                 spacing: 8.0,
@@ -911,13 +924,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                           ],
                         ],
                       )
-                    : const SizedBox(), // Nichts anzeigen, wenn !showAdvancedOptions
+                    : const SizedBox(),
               ),
 
               const SizedBox(height: 24),
-              // ======================================================
               // Speichern / Löschen
-              // ======================================================
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
