@@ -79,6 +79,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   List<CategoryModel> _allCategories = [];
   CategoryModel? _selectedCategory;
 
+  // >>> Um erweiterte Optionen ein- und auszublenden
+  bool _showAdvancedOptions = false;
+
   @override
   void initState() {
     super.initState();
@@ -86,13 +89,35 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     _descriptionController = TextEditingController();
     _loadCountryCityData();
     _loadCategories();
+    _initDefaultValues(); // NEU: Standardwerte für neue Termine
     _loadAppointmentData();
+  }
+
+  /// Standardwerte für den Fall, dass ein neuer Termin erstellt wird.
+  void _initDefaultValues() {
+    // Nur wenn kein Termin editiert wird, setzen wir Defaults
+    if (widget.appointmentId == null) {
+      // Standard: 30 Minuten
+      _duration = const Duration(minutes: 30);
+      // Standard: false
+      _isAllDay = false;
+      // Start/End auf jetzt +30min (wird später ggf. überschrieben)
+      final now = DateTime.now();
+      _startTime = widget.selectedDate ?? now;
+      _endTime = _startTime!.add(const Duration(minutes: 30));
+    }
   }
 
   Future<void> _loadCategories() async {
     final categories = await _categoryRepo.getAllCategories();
     setState(() {
       _allCategories = categories;
+      // Wenn wir einen neuen Termin erstellen und keine Kategorie ausgewählt ist,
+      // setzen wir standardmäßig die erste Kategorie (z. B. "Privat").
+      if (widget.appointmentId == null && _allCategories.isNotEmpty) {
+        _selectedCategory = _allCategories.first;
+        _color = _selectedCategory!.color;
+      }
     });
   }
 
@@ -161,9 +186,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   (element) => element.id == appointment.categoryId);
               if (catIndex != -1) {
                 _selectedCategory = _allCategories[catIndex];
-                // Achtung: Wir überschreiben hier NICHT automatisch _color,
-                // weil wir den Nutzer die Farbe behalten lassen,
-                // die beim letzten Speichern ggf. manuell verändert wurde.
               }
             }
           });
@@ -173,13 +195,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           SnackBar(content: Text('Error loading appointment: $e')),
         );
       }
-    } else {
-      // Neuer Termin
-      setState(() {
-        _startTime = widget.selectedDate ?? DateTime.now();
-        _endTime = _startTime!.add(const Duration(minutes: 30));
-        _duration = const Duration(minutes: 30);
-      });
     }
   }
 
@@ -282,7 +297,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
         // Range
         if (_recurrenceRange == RecurrenceRange.count) {
-          recurrence.recurrenceCount = _recurrenceCount ?? 1;
+          _recurrenceCount = _recurrenceCount ?? 1;
+          recurrence.recurrenceCount = _recurrenceCount!;
         } else if (_recurrenceRange == RecurrenceRange.endDate) {
           recurrence.endDate = _recurrenceEndDate;
         }
@@ -394,15 +410,27 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             ? loc.createAppointment
             : loc.editAppointment),
       ),
+      // SingleChildScrollView + Padding
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
+          // Wir machen eine Spalte,
+          // wobei der "Schnelleingabe"-Bereich oben ist,
+          // "Erweiterte Optionen" unten.
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(loc.general, style: headlineStyle),
+              // ======================================================
+              // Schnelleingabe-Bereich (Titel, Datum, Kategorie)
+              // ======================================================
+              Text(
+                loc.general,
+                style: headlineStyle,
+              ),
               const SizedBox(height: 12),
+
+              // Titel (Pflichtfeld) + Validator
               TextFormField(
                 controller: _titleController,
                 decoration: InputDecoration(labelText: '${loc.titleLabel} *'),
@@ -410,11 +438,133 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                     (value == null || value.isEmpty) ? loc.titleLabel : null,
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: InputDecoration(labelText: loc.description),
+
+              // Start / End Time
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () async {
+                        final picked =
+                            await _pickDate(_startTime ?? DateTime.now());
+                        if (picked != null) {
+                          final timePicked = await _pickTime(picked);
+                          if (timePicked != null) {
+                            setState(() {
+                              _startTime = timePicked;
+                              if (_isAllDay) {
+                                _endTime =
+                                    _startTime!.add(const Duration(hours: 1));
+                              } else {
+                                _endTime ??= _startTime!
+                                    .add(const Duration(minutes: 30));
+                              }
+                            });
+                          }
+                        }
+                      },
+                      child: _buildDateTimeDisplay(
+                        label: loc.startTime,
+                        dateTime: _startTime,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: !_isAllDay
+                        ? InkWell(
+                            onTap: () async {
+                              if (_startTime == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(loc.selectStartTime),
+                                  ),
+                                );
+                                return;
+                              }
+                              final picked =
+                                  await _pickDate(_endTime ?? _startTime!);
+                              if (picked != null) {
+                                final timePicked = await _pickTime(picked);
+                                if (timePicked != null) {
+                                  setState(() {
+                                    _endTime = timePicked;
+                                  });
+                                }
+                              }
+                            },
+                            child: _buildDateTimeDisplay(
+                              label: loc.endTime,
+                              dateTime: _endTime,
+                            ),
+                          )
+                        : Container(), // AllDay => kein Endzeit-Feld
+                  ),
+                ],
               ),
+
               const SizedBox(height: 12),
+              // Kategorie & Farbe (kurz, so dass man zügig auswählen kann)
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<CategoryModel>(
+                      value: _selectedCategory,
+                      decoration:
+                          const InputDecoration(labelText: 'Kategorie wählen'),
+                      items: _allCategories.map((cat) {
+                        return DropdownMenuItem<CategoryModel>(
+                          value: cat,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 12,
+                                height: 12,
+                                margin: const EdgeInsets.only(right: 8),
+                                decoration: BoxDecoration(
+                                  color: cat.color,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              Text(cat.name),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCategory = value;
+                          if (_selectedCategory != null) {
+                            _color = _selectedCategory!.color;
+                          }
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Kleiner Kreis, der zur Farbauswahl führt
+                  InkWell(
+                    onTap: () => _pickColor(context),
+                    child: Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: _color,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.color_lens,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              // AllDay Switch
               SwitchListTile(
                 title: Text(loc.allDay),
                 subtitle: Text(loc.allDaySubtitle),
@@ -431,381 +581,343 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                       }
                     : null,
               ),
-              const SizedBox(height: 24),
-              Text(loc.prayerTimeSettings, style: headlineStyle),
-              SwitchListTile(
-                title: Text(loc.relatedToPrayerTimes),
-                subtitle: Text(loc.relatedToPrayerTimesSubtitle),
-                value: _isRelatedToPrayerTimes,
-                onChanged: !_isAllDay
-                    ? (bool value) {
-                        setState(() {
-                          _isRelatedToPrayerTimes = value;
-                          if (value && _startTime != null) {
-                            _endTime =
-                                _startTime!.add(const Duration(hours: 1));
-                          }
-                        });
-                      }
-                    : null,
-              ),
-              if (_isRelatedToPrayerTimes) ...[
-                ListTile(
-                  title: Text(loc.selectDate),
-                  subtitle: Text(_startTime != null
-                      ? '${_startTime!.day}/${_startTime!.month}/${_startTime!.year}'
-                      : loc.selectDate),
-                  onTap: () async {
-                    final picked =
-                        await _pickDate(_startTime ?? DateTime.now());
-                    if (picked != null) {
-                      setState(() {
-                        _startTime = DateTime(picked.year, picked.month,
-                            picked.day); // Zeit = 00:00
-                        _endTime = _startTime!.add(const Duration(hours: 1));
-                      });
-                    }
-                  },
-                ),
-                DropdownButtonFormField<PrayerTime>(
-                  value: _selectedPrayerTime,
-                  hint: Text(loc.selectPrayerTime),
-                  decoration: InputDecoration(labelText: loc.prayerTime),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedPrayerTime = value;
-                    });
-                  },
-                  items: PrayerTime.values.map((prayerTime) {
-                    return DropdownMenuItem<PrayerTime>(
-                      value: prayerTime,
-                      child: Text(prayerTime.toString().split('.').last),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<TimeRelation>(
-                  value: _selectedTimeRelation,
-                  decoration: InputDecoration(labelText: loc.timeRelation),
-                  items: TimeRelation.values.map((timeRelation) {
-                    return DropdownMenuItem<TimeRelation>(
-                      value: timeRelation,
-                      child: Text(timeRelation.toString().split('.').last),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedTimeRelation = value;
-                    });
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  initialValue: _minutesBeforeAfter?.toString(),
-                  keyboardType: TextInputType.number,
-                  decoration:
-                      InputDecoration(labelText: loc.minutesBeforeAfter),
-                  onChanged: (value) {
-                    _minutesBeforeAfter = int.tryParse(value);
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  initialValue: _duration?.inMinutes.toString(),
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: loc.durationMinutes),
-                  onChanged: (value) {
-                    _duration = Duration(minutes: int.tryParse(value) ?? 30);
-                  },
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: _selectedCountry,
-                  hint: Text(loc.selectCountry),
-                  decoration: InputDecoration(labelText: loc.country),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedCountry = value;
-                      _selectedCity = null;
-                    });
-                  },
-                  items: _countryCityData.keys.map((country) {
-                    return DropdownMenuItem<String>(
-                      value: country,
-                      child: Text(country),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 12),
-                if (_selectedCountry != null)
-                  DropdownButtonFormField<String>(
-                    value: _selectedCity,
-                    hint: Text(loc.selectCity),
-                    decoration: InputDecoration(labelText: loc.city),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedCity = value;
-                      });
-                    },
-                    items: _countryCityData[_selectedCountry]!.map((city) {
-                      return DropdownMenuItem<String>(
-                        value: city,
-                        child: Text(city),
-                      );
-                    }).toList(),
-                  ),
-              ] else ...[
-                const SizedBox(height: 24),
-                Text(loc.timeSettings, style: headlineStyle),
-                const SizedBox(height: 12),
-                ListTile(
-                  title: Text(loc.startTime),
-                  subtitle: Text((_startTime != null)
-                      ? '${_startTime!.day}/${_startTime!.month}/${_startTime!.year} ${_formatTime(_startTime)}'
-                      : loc.selectStartTime),
-                  onTap: () async {
-                    final picked =
-                        await _pickDate(_startTime ?? DateTime.now());
-                    if (picked != null) {
-                      final timePicked = await _pickTime(picked);
-                      if (timePicked != null) {
-                        setState(() {
-                          _startTime = timePicked;
-                          if (_isAllDay) {
-                            _endTime =
-                                _startTime!.add(const Duration(hours: 1));
-                          } else {
-                            _endTime ??=
-                                _startTime!.add(const Duration(minutes: 30));
-                          }
-                        });
-                      }
-                    }
-                  },
-                ),
-                if (!_isAllDay)
-                  ListTile(
-                    title: Text(loc.endTime),
-                    subtitle: Text((_endTime != null)
-                        ? '${_endTime!.day}/${_endTime!.month}/${_endTime!.year} ${_formatTime(_endTime)}'
-                        : loc.selectEndTime),
-                    onTap: () async {
-                      if (_startTime == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(loc.selectStartTime)));
-                        return;
-                      }
-                      final picked = await _pickDate(_endTime ?? _startTime!);
-                      if (picked != null) {
-                        final timePicked = await _pickTime(picked);
-                        if (timePicked != null) {
-                          setState(() {
-                            _endTime = timePicked;
-                          });
-                        }
-                      }
-                    },
-                  ),
-              ],
-              const SizedBox(height: 24),
-              Text(loc.recurrence, style: headlineStyle),
-              SwitchListTile(
-                title: Text(loc.recurringEvent),
-                value: _isRecurring,
-                onChanged: (value) {
+
+              const SizedBox(height: 20),
+
+              // ======================================================
+              // Button / Toggle für "Erweiterte Optionen"
+              // ======================================================
+              FilledButton(
+                onPressed: () {
                   setState(() {
-                    _isRecurring = value;
+                    _showAdvancedOptions = !_showAdvancedOptions;
                   });
                 },
+                child: Text(_showAdvancedOptions
+                    ? 'Weniger Optionen'
+                    : 'Erweiterte Optionen'),
               ),
-              if (_isRecurring) ...[
-                DropdownButtonFormField<RecurrenceType>(
-                  value: _recurrenceType,
-                  decoration: InputDecoration(labelText: loc.recurrenceType),
-                  onChanged: (value) {
-                    setState(() {
-                      _recurrenceType = value!;
-                      // Sobald wöchentlich gewählt, den Wochentag des Startdatums markieren
-                      if (_recurrenceType == RecurrenceType.weekly) {
-                        _selectedWeekDays = List.filled(7, false);
-                        if (_startTime != null) {
-                          final index = (_startTime!.weekday - 1) % 7;
-                          _selectedWeekDays[index] = true;
-                        }
-                      }
-                    });
-                  },
-                  items: RecurrenceType.values.map((type) {
-                    return DropdownMenuItem<RecurrenceType>(
-                      value: type,
-                      child: Text(type.toString().split('.').last),
-                    );
-                  }).toList(),
-                ),
-                if (_recurrenceType == RecurrenceType.weekly) ...[
-                  const SizedBox(height: 12),
-                  Text(loc.recurrenceDays,
-                      style: Theme.of(context).textTheme.labelLarge),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8.0,
-                    children: List.generate(7, (index) {
-                      final dayNames = [
-                        'MON',
-                        'TUE',
-                        'WED',
-                        'THU',
-                        'FRI',
-                        'SAT',
-                        'SUN'
-                      ];
-                      return FilterChip(
-                        label: Text(dayNames[index]),
-                        selected: _selectedWeekDays[index],
-                        shape: const StadiumBorder(),
-                        onSelected: (bool selected) {
-                          setState(() {
-                            _selectedWeekDays[index] = selected;
-                          });
-                        },
-                      );
-                    }),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                TextFormField(
-                  initialValue: _recurrenceInterval.toString(),
-                  keyboardType: TextInputType.number,
-                  decoration:
-                      InputDecoration(labelText: loc.recurrenceInterval),
-                  onChanged: (value) {
-                    _recurrenceInterval = int.tryParse(value) ?? 1;
-                  },
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<RecurrenceRange>(
-                  value: _recurrenceRange,
-                  decoration: InputDecoration(labelText: loc.recurrenceRange),
-                  onChanged: (value) {
-                    setState(() {
-                      _recurrenceRange = value!;
-                    });
-                  },
-                  items: RecurrenceRange.values.map((range) {
-                    return DropdownMenuItem<RecurrenceRange>(
-                      value: range,
-                      child: Text(range.toString().split('.').last),
-                    );
-                  }).toList(),
-                ),
-                if (_recurrenceRange == RecurrenceRange.count) ...[
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    initialValue: _recurrenceCount?.toString(),
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(labelText: loc.recurrenceCount),
-                    onChanged: (value) {
-                      _recurrenceCount = int.tryParse(value);
-                    },
-                  ),
-                ],
-                if (_recurrenceRange == RecurrenceRange.endDate) ...[
-                  const SizedBox(height: 12),
-                  ListTile(
-                    title: Text(loc.recurrenceEndDate),
-                    subtitle: Text(
-                        _recurrenceEndDate?.toString() ?? loc.selectEndDate),
-                    onTap: () async {
-                      DateTime? selectedDate = await showDatePicker(
-                        context: context,
-                        initialDate: _recurrenceEndDate ?? DateTime.now(),
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2100),
-                      );
-                      if (selectedDate != null) {
-                        setState(() {
-                          _recurrenceEndDate = selectedDate;
-                        });
-                      }
-                    },
-                  ),
-                ],
-                const SizedBox(height: 12),
-                FilledButton(
-                  onPressed: _addExceptionDate,
-                  child: Text(loc.addExceptionDate),
-                ),
-                if (_exceptionDates.isNotEmpty)
-                  Column(
-                    children: _exceptionDates
-                        .map((date) => ListTile(
-                              title: Text(date.toIso8601String()),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete),
-                                onPressed: () {
+
+              const SizedBox(height: 8),
+
+              // ======================================================
+              // Erweiterte Optionen in Expansion
+              // ======================================================
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: _showAdvancedOptions
+                    ? Column(
+                        key: const ValueKey('advancedOptions'),
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Notizen
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _descriptionController,
+                            minLines: 1,
+                            maxLines: 3,
+                            decoration:
+                                InputDecoration(labelText: loc.description),
+                          ),
+                          const SizedBox(height: 12),
+
+                          Text(loc.prayerTimeSettings, style: headlineStyle),
+                          SwitchListTile(
+                            title: Text(loc.relatedToPrayerTimes),
+                            subtitle: Text(loc.relatedToPrayerTimesSubtitle),
+                            value: _isRelatedToPrayerTimes,
+                            onChanged: !_isAllDay
+                                ? (bool value) {
+                                    setState(() {
+                                      _isRelatedToPrayerTimes = value;
+                                      if (value && _startTime != null) {
+                                        _endTime = _startTime!
+                                            .add(const Duration(hours: 1));
+                                      }
+                                    });
+                                  }
+                                : null,
+                          ),
+                          if (_isRelatedToPrayerTimes) ...[
+                            ListTile(
+                              title: Text(loc.selectDate),
+                              subtitle: Text(_startTime != null
+                                  ? '${_startTime!.day}/${_startTime!.month}/${_startTime!.year}'
+                                  : loc.selectDate),
+                              onTap: () async {
+                                final picked = await _pickDate(
+                                    _startTime ?? DateTime.now());
+                                if (picked != null) {
                                   setState(() {
-                                    _exceptionDates.remove(date);
+                                    _startTime = DateTime(
+                                        picked.year, picked.month, picked.day);
+                                    _endTime = _startTime!
+                                        .add(const Duration(hours: 1));
+                                  });
+                                }
+                              },
+                            ),
+                            DropdownButtonFormField<PrayerTime>(
+                              value: _selectedPrayerTime,
+                              hint: Text(loc.selectPrayerTime),
+                              decoration:
+                                  InputDecoration(labelText: loc.prayerTime),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedPrayerTime = value;
+                                });
+                              },
+                              items: PrayerTime.values.map((prayerTime) {
+                                return DropdownMenuItem<PrayerTime>(
+                                  value: prayerTime,
+                                  child: Text(
+                                    prayerTime.toString().split('.').last,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<TimeRelation>(
+                              value: _selectedTimeRelation,
+                              decoration:
+                                  InputDecoration(labelText: loc.timeRelation),
+                              items: TimeRelation.values.map((timeRelation) {
+                                return DropdownMenuItem<TimeRelation>(
+                                  value: timeRelation,
+                                  child: Text(
+                                    timeRelation.toString().split('.').last,
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedTimeRelation = value;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              initialValue: _minutesBeforeAfter?.toString(),
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                  labelText: loc.minutesBeforeAfter),
+                              onChanged: (value) {
+                                _minutesBeforeAfter = int.tryParse(value);
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              initialValue: _duration?.inMinutes.toString(),
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                  labelText: loc.durationMinutes),
+                              onChanged: (value) {
+                                _duration = Duration(
+                                    minutes: int.tryParse(value) ?? 30);
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<String>(
+                              value: _selectedCountry,
+                              hint: Text(loc.selectCountry),
+                              decoration:
+                                  InputDecoration(labelText: loc.country),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedCountry = value;
+                                  _selectedCity = null;
+                                });
+                              },
+                              items: _countryCityData.keys.map((country) {
+                                return DropdownMenuItem<String>(
+                                  value: country,
+                                  child: Text(country),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 12),
+                            if (_selectedCountry != null)
+                              DropdownButtonFormField<String>(
+                                value: _selectedCity,
+                                hint: Text(loc.selectCity),
+                                decoration:
+                                    InputDecoration(labelText: loc.city),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedCity = value;
                                   });
                                 },
+                                items: _countryCityData[_selectedCountry]!
+                                    .map((city) {
+                                  return DropdownMenuItem<String>(
+                                    value: city,
+                                    child: Text(city),
+                                  );
+                                }).toList(),
                               ),
-                            ))
-                        .toList(),
-                  ),
-              ],
-              const SizedBox(height: 24),
-              Text(loc.appointmentColor, style: headlineStyle),
-              ListTile(
-                title: Text(loc.appointmentColor),
-                trailing: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: _color,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                onTap: () => _pickColor(context),
-              ),
-
-              // >>> Kategorie-Dropdown (automatisch Farbe anpassen) <<<
-              const SizedBox(height: 24),
-              Text('Kategorie', style: headlineStyle),
-              DropdownButtonFormField<CategoryModel>(
-                value: _selectedCategory,
-                decoration:
-                    const InputDecoration(labelText: 'Kategorie wählen'),
-                items: _allCategories.map((cat) {
-                  return DropdownMenuItem<CategoryModel>(
-                    value: cat,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                            color: cat.color,
-                            shape: BoxShape.circle,
+                          ],
+                          const SizedBox(height: 24),
+                          Text(loc.recurrence, style: headlineStyle),
+                          SwitchListTile(
+                            title: Text(loc.recurringEvent),
+                            value: _isRecurring,
+                            onChanged: (value) {
+                              setState(() {
+                                _isRecurring = value;
+                              });
+                            },
                           ),
-                        ),
-                        Text(cat.name),
-                      ],
-                    ),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedCategory = value;
-                    if (_selectedCategory != null) {
-                      // Sobald eine Kategorie gewählt wird,
-                      // übernimmt der Termin automatisch deren Farbe.
-                      _color = _selectedCategory!.color;
-                    }
-                  });
-                },
+                          if (_isRecurring) ...[
+                            DropdownButtonFormField<RecurrenceType>(
+                              value: _recurrenceType,
+                              decoration: InputDecoration(
+                                  labelText: loc.recurrenceType),
+                              onChanged: (value) {
+                                setState(() {
+                                  _recurrenceType = value!;
+                                  if (_recurrenceType ==
+                                      RecurrenceType.weekly) {
+                                    _selectedWeekDays = List.filled(7, false);
+                                    if (_startTime != null) {
+                                      final index =
+                                          (_startTime!.weekday - 1) % 7;
+                                      _selectedWeekDays[index] = true;
+                                    }
+                                  }
+                                });
+                              },
+                              items: RecurrenceType.values.map((type) {
+                                return DropdownMenuItem<RecurrenceType>(
+                                  value: type,
+                                  child: Text(type.toString().split('.').last),
+                                );
+                              }).toList(),
+                            ),
+                            if (_recurrenceType == RecurrenceType.weekly) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                loc.recurrenceDays,
+                                style: Theme.of(context).textTheme.labelLarge,
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8.0,
+                                children: List.generate(7, (index) {
+                                  final dayNames = [
+                                    'MON',
+                                    'TUE',
+                                    'WED',
+                                    'THU',
+                                    'FRI',
+                                    'SAT',
+                                    'SUN'
+                                  ];
+                                  return FilterChip(
+                                    label: Text(dayNames[index]),
+                                    selected: _selectedWeekDays[index],
+                                    shape: const StadiumBorder(),
+                                    onSelected: (bool selected) {
+                                      setState(() {
+                                        _selectedWeekDays[index] = selected;
+                                      });
+                                    },
+                                  );
+                                }),
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              initialValue: _recurrenceInterval.toString(),
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                  labelText: loc.recurrenceInterval),
+                              onChanged: (value) {
+                                _recurrenceInterval = int.tryParse(value) ?? 1;
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<RecurrenceRange>(
+                              value: _recurrenceRange,
+                              decoration: InputDecoration(
+                                  labelText: loc.recurrenceRange),
+                              onChanged: (value) {
+                                setState(() {
+                                  _recurrenceRange = value!;
+                                });
+                              },
+                              items: RecurrenceRange.values.map((range) {
+                                return DropdownMenuItem<RecurrenceRange>(
+                                  value: range,
+                                  child: Text(range.toString().split('.').last),
+                                );
+                              }).toList(),
+                            ),
+                            if (_recurrenceRange == RecurrenceRange.count) ...[
+                              const SizedBox(height: 12),
+                              TextFormField(
+                                initialValue: _recurrenceCount?.toString(),
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                    labelText: loc.recurrenceCount),
+                                onChanged: (value) {
+                                  _recurrenceCount = int.tryParse(value);
+                                },
+                              ),
+                            ],
+                            if (_recurrenceRange ==
+                                RecurrenceRange.endDate) ...[
+                              const SizedBox(height: 12),
+                              ListTile(
+                                title: Text(loc.recurrenceEndDate),
+                                subtitle: Text(_recurrenceEndDate?.toString() ??
+                                    loc.selectEndDate),
+                                onTap: () async {
+                                  DateTime? selectedDate = await showDatePicker(
+                                    context: context,
+                                    initialDate:
+                                        _recurrenceEndDate ?? DateTime.now(),
+                                    firstDate: DateTime(2000),
+                                    lastDate: DateTime(2100),
+                                  );
+                                  if (selectedDate != null) {
+                                    setState(() {
+                                      _recurrenceEndDate = selectedDate;
+                                    });
+                                  }
+                                },
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                            FilledButton(
+                              onPressed: _addExceptionDate,
+                              child: Text(loc.addExceptionDate),
+                            ),
+                            if (_exceptionDates.isNotEmpty)
+                              Column(
+                                children: _exceptionDates
+                                    .map((date) => ListTile(
+                                          title: Text(date.toIso8601String()),
+                                          trailing: IconButton(
+                                            icon: const Icon(Icons.delete),
+                                            onPressed: () {
+                                              setState(() {
+                                                _exceptionDates.remove(date);
+                                              });
+                                            },
+                                          ),
+                                        ))
+                                    .toList(),
+                              ),
+                          ],
+                        ],
+                      )
+                    : const SizedBox(), // Nichts anzeigen, wenn !showAdvancedOptions
               ),
 
               const SizedBox(height: 24),
+              // ======================================================
+              // Speichern / Löschen
+              // ======================================================
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -825,6 +937,33 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // Hilfswidget, um Datum/Zeit kompakt anzuzeigen
+  Widget _buildDateTimeDisplay({
+    required String label,
+    required DateTime? dateTime,
+  }) {
+    final text = dateTime != null
+        ? '${dateTime.day}/${dateTime.month}/${dateTime.year} ${_formatTime(dateTime)}'
+        : '---';
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 245, 245, 245),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style:
+                  const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          Text(text, style: const TextStyle(fontSize: 14)),
+        ],
       ),
     );
   }

@@ -14,10 +14,9 @@ import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
 import 'package:muslim_calendar/ui/pages/settings_page.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 
-// >>> Wir brauchen für die Kategorie-Erstellung:
+// >>> NEU: Wir brauchen für die Kategorie-Erstellung (Filter etc.) <<<
 import 'package:muslim_calendar/data/repositories/category_repository.dart';
 import 'package:muslim_calendar/models/category_model.dart';
-// Für die Farbauswahl:
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 class HomePage extends StatefulWidget {
@@ -115,14 +114,12 @@ class _HomePageState extends State<HomePage> {
         centerTitle: true,
         title: Text(loc.myCalendar),
         actions: [
-          // Spracheinstellung (falls vorhanden)
           IconButton(
             icon: const Icon(Icons.language),
             onPressed: () {
               _showLanguageSelection(context);
             },
           ),
-          // Icon für Einstellungen
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () async {
@@ -131,7 +128,6 @@ class _HomePageState extends State<HomePage> {
               );
             },
           ),
-          // Button zum Filtern (und neu: Erstellen) von Kategorien
           IconButton(
             icon: const Icon(Icons.filter_list),
             onPressed: _showCategoryFilterDialog,
@@ -183,6 +179,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        tooltip: 'Neuen Termin hinzufügen',
         onPressed: () async {
           await Navigator.of(context).push(
             MaterialPageRoute(
@@ -252,10 +249,8 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Liste der vorhandenen Kategorien
-                ..._allCategories.map((cat) {
-                  final isSelected = _selectedCategoryIds.contains(cat.id);
-                  return CheckboxListTile(
+                for (var cat in _allCategories)
+                  CheckboxListTile(
                     title: Row(
                       children: [
                         Container(
@@ -270,7 +265,7 @@ class _HomePageState extends State<HomePage> {
                         Text(cat.name),
                       ],
                     ),
-                    value: isSelected,
+                    value: _selectedCategoryIds.contains(cat.id),
                     onChanged: (val) {
                       setState(() {
                         if (val == true) {
@@ -280,10 +275,8 @@ class _HomePageState extends State<HomePage> {
                         }
                       });
                     },
-                  );
-                }).toList(),
+                  ),
                 const Divider(),
-                // Button: Neue Kategorie anlegen
                 FilledButton(
                   onPressed: () {
                     Navigator.of(ctx).pop();
@@ -331,7 +324,6 @@ class _HomePageState extends State<HomePage> {
                 decoration: const InputDecoration(labelText: 'Name'),
               ),
               const SizedBox(height: 12),
-              // Farbauswahl
               BlockPicker(
                 pickerColor: selectedColor,
                 onColorChanged: (color) {
@@ -349,7 +341,6 @@ class _HomePageState extends State<HomePage> {
               onPressed: () async {
                 final name = nameController.text.trim();
                 if (name.isNotEmpty) {
-                  // in DB speichern
                   final newCategory = CategoryModel(
                     name: name,
                     color: selectedColor,
@@ -357,7 +348,6 @@ class _HomePageState extends State<HomePage> {
                   await _categoryRepo.insertCategory(newCategory);
                   await _loadAllCategories();
                   Navigator.of(ctx).pop();
-                  // optional neu filtern
                   _loadAllAppointments();
                 }
               },
