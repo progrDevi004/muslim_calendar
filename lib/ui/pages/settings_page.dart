@@ -1,3 +1,4 @@
+//ui/pages/settings_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,14 +27,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
   final List<String> _availableCountries = [
     'Germany',
-    'Turkey',
+    'Türkiye',
     'Egypt',
     'USA'
   ];
   // Pro Land natürlich beliebig viele Einträge
   final Map<String, List<String>> _cityData = {
     'Germany': ['Berlin', 'Munich', 'Hamburg'],
-    'Turkey': ['Istanbul', 'Ankara', 'Izmir'],
+    'Türkiye': ['Istanbul', 'Ankara', 'Izmir'],
     'Egypt': ['Cairo', 'Alexandria'],
     'USA': ['New York', 'San Francisco', 'Miami'],
   };

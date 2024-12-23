@@ -1,4 +1,4 @@
-// lib/ui/pages/home_page.dart
+// ui/pages/home_page.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,7 +14,7 @@ import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
 import 'package:muslim_calendar/ui/pages/settings_page.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 
-// >>> NEU: Wir brauchen für die Kategorie-Erstellung (Filter etc.) <<<
+// >>> Für die Kategorie-Verwaltung (Filter etc.) <<<
 import 'package:muslim_calendar/data/repositories/category_repository.dart';
 import 'package:muslim_calendar/models/category_model.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -153,11 +153,50 @@ class _HomePageState extends State<HomePage> {
             appointmentDisplayMode: MonthAppointmentDisplayMode.indicator,
             showAgenda: true,
           ),
+          // >>> NEU: Angepasster appointmentBuilder, damit Text skaliert
+          appointmentBuilder:
+              (BuildContext context, CalendarAppointmentDetails details) {
+            if (details.appointments.isEmpty) {
+              return const SizedBox.shrink();
+            }
+            // In der Monatsansicht: nur Punkte
+            if (_selectedView == CalendarView.month) {
+              return Container();
+            } else {
+              // In Week/Day = Text im Balken, skaliert automatisch
+              final appointment = details.appointments.first;
+              return Container(
+                decoration: BoxDecoration(
+                  color: appointment.color,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    child: Text(
+                      appointment.subject,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize:
+                            14, // Basisgröße (wird via FittedBox skaliert)
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ),
+              );
+            }
+          },
           onTap: (calendarTapDetails) async {
             if (calendarTapDetails.targetElement ==
                 CalendarElement.appointment) {
               int appointmentId = int.parse(
-                  (calendarTapDetails.appointments?.first.id ?? '').toString());
+                (calendarTapDetails.appointments?.first.id ?? '').toString(),
+              );
               await Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => AppointmentCreationPage(

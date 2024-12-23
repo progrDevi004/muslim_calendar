@@ -1,3 +1,4 @@
+//ui/pages/appointment_creation_page.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -97,7 +98,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   /// nur, wenn ein neuer Termin erstellt wird.
   void _initDefaultValues() async {
     if (widget.appointmentId == null) {
-      // 1) Werte aus Einstellungen laden (Land, Stadt)
       final prefs = await SharedPreferences.getInstance();
       final country = prefs.getString('defaultCountry');
       final city = prefs.getString('defaultCity');
@@ -108,35 +108,27 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         });
       }
 
-      // 2) Gebetszeit = Dhuhr
+      // Standardwerte
       _selectedPrayerTime = PrayerTime.dhuhr;
-
-      // 3) Minuten Vor/Nachher = 0
       _minutesBeforeAfter = 0;
-
-      // 4) Zeitbezug = after
       _selectedTimeRelation = TimeRelation.after;
-
-      // 5) Dauer = 30 Minuten, AllDay = false
       _duration = const Duration(minutes: 30);
       _isAllDay = false;
 
-      // 6) Wiederholungstyp = Weekly
+      // Wiederholung = weekly
       _recurrenceType = RecurrenceType.weekly;
 
-      // >>> FIX: Wochentag basierend auf Startzeit sofort markieren <<<
+      // Start/Endzeit
       final now = DateTime.now();
       _startTime = widget.selectedDate ?? now;
       _endTime = _startTime!.add(const Duration(minutes: 30));
 
+      // Wochentag markieren
       if (_recurrenceType == RecurrenceType.weekly) {
         _selectedWeekDays = List.filled(7, false);
-        if (_startTime != null) {
-          final index = (_startTime!.weekday - 1) % 7;
-          _selectedWeekDays[index] = true;
-        }
+        final index = (_startTime!.weekday - 1) % 7;
+        _selectedWeekDays[index] = true;
       }
-
       setState(() {});
     }
   }
@@ -145,8 +137,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     final categories = await _categoryRepo.getAllCategories();
     setState(() {
       _allCategories = categories;
-      // Falls neuer Termin und noch keine Kategorie ausgewählt,
-      // Standard: nimm erste Kategorie (z. B. "Privat")
       if (widget.appointmentId == null && _allCategories.isNotEmpty) {
         _selectedCategory = _allCategories.first;
         _color = _selectedCategory!.color;
@@ -175,7 +165,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 _startTime!.add(const Duration(minutes: 30));
             _color = appointment.color;
 
-            // Ort
+            // Location
             if (appointment.location != null) {
               final parts = appointment.location!.split(',');
               if (parts.length == 2) {
@@ -190,7 +180,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 appointment.recurrenceRule!,
                 appointment.startTime ?? DateTime.now(),
               );
-
               _isRecurring = true;
               _recurrenceType = recurrenceProperties.recurrenceType;
               _recurrenceInterval = recurrenceProperties.interval;
@@ -213,7 +202,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             }
             _exceptionDates = appointment.recurrenceExceptionDates ?? [];
 
-            // Kategorie laden
+            // Kategorie
             if (appointment.categoryId != null) {
               final catIndex = _allCategories.indexWhere(
                   (element) => element.id == appointment.categoryId);
@@ -279,7 +268,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         );
         Navigator.of(context).pop(true);
       } catch (e) {
-        print('Error deleting appointment: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error deleting appointment.')),
         );
@@ -290,6 +278,18 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   void _saveAppointment() async {
     if (_formKey.currentState!.validate()) {
       final loc = Provider.of<AppLocalizations>(context, listen: false);
+
+      // Startzeit darf nicht null sein
+      if (_startTime == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Bitte wähle eine Startzeit aus.')),
+        );
+        return;
+      }
+
+      // Falls Endzeit nicht gesetzt -> Default
+      _endTime ??= _startTime!.add(const Duration(minutes: 30));
+
       final location = (_isRelatedToPrayerTimes &&
               _selectedCity != null &&
               _selectedCountry != null)
@@ -302,14 +302,17 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
       String? recurrenceRule;
       if (_isRecurring) {
-        RecurrenceProperties recurrence = RecurrenceProperties(
-          startDate: _startTime!,
+        // sichere Kopien
+        final safeStart = _startTime ?? DateTime.now();
+        final safeEnd = _endTime ?? safeStart.add(const Duration(minutes: 30));
+
+        final recurrence = RecurrenceProperties(
+          startDate: safeStart,
           recurrenceType: _recurrenceType,
           interval: _recurrenceInterval,
           recurrenceRange: _recurrenceRange,
         );
 
-        // Wöchentlich
         if (_recurrenceType == RecurrenceType.weekly) {
           recurrence.weekDays.clear();
           if (_selectedWeekDays[0]) recurrence.weekDays.add(WeekDays.monday);
@@ -320,10 +323,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           if (_selectedWeekDays[5]) recurrence.weekDays.add(WeekDays.saturday);
           if (_selectedWeekDays[6]) recurrence.weekDays.add(WeekDays.sunday);
         } else if (_recurrenceType == RecurrenceType.monthly) {
-          recurrence.dayOfMonth = _startTime!.day;
+          recurrence.dayOfMonth = safeStart.day;
         } else if (_recurrenceType == RecurrenceType.yearly) {
-          recurrence.month = _startTime!.month;
-          recurrence.dayOfMonth = _startTime!.day;
+          recurrence.month = safeStart.month;
+          recurrence.dayOfMonth = safeStart.day;
         }
 
         if (_recurrenceRange == RecurrenceRange.count) {
@@ -333,32 +336,31 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           recurrence.endDate = _recurrenceEndDate;
         }
 
+        // Erzeugung der RRule
         recurrenceRule =
-            SfCalendar.generateRRule(recurrence, _startTime!, _endTime!);
+            SfCalendar.generateRRule(recurrence, safeStart, safeEnd);
       }
 
       final appointment = AppointmentModel(
         id: widget.appointmentId,
-        prayerTime: _isRelatedToPrayerTimes ? _selectedPrayerTime : null,
-        timeRelation: _isRelatedToPrayerTimes ? _selectedTimeRelation : null,
-        minutesBeforeAfter:
-            _isRelatedToPrayerTimes ? _minutesBeforeAfter : null,
-        isRelatedToPrayerTimes: _isRelatedToPrayerTimes,
-        duration: _isRelatedToPrayerTimes ? _duration : null,
-        isAllDay: _isAllDay,
-        startTime: _startTime,
-        endTime: (_isRelatedToPrayerTimes && _duration != null)
-            ? _startTime?.add(_duration!)
-            : _endTime,
         subject: _titleController.text,
         notes: _descriptionController.text.isNotEmpty
             ? _descriptionController.text
             : null,
+        isAllDay: _isAllDay,
+        isRelatedToPrayerTimes: _isRelatedToPrayerTimes,
+        prayerTime: _isRelatedToPrayerTimes ? _selectedPrayerTime : null,
+        timeRelation: _isRelatedToPrayerTimes ? _selectedTimeRelation : null,
+        minutesBeforeAfter:
+            _isRelatedToPrayerTimes ? _minutesBeforeAfter : null,
+        duration: _isRelatedToPrayerTimes ? _duration : null,
         location: location,
         recurrenceRule: recurrenceRule,
         recurrenceExceptionDates:
             _exceptionDates.isNotEmpty ? _exceptionDates : null,
         color: _color,
+        startTime: _startTime,
+        endTime: _endTime,
         categoryId: _selectedCategory?.id,
       );
 
@@ -372,7 +374,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     }
   }
 
-  /// Das Hinzufügen einer Exception
   void _addExceptionDate() async {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
     DateTime? selectedDate = await showDatePicker(
@@ -428,7 +429,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
-
     final headlineStyle = Theme.of(context)
         .textTheme
         .titleMedium
@@ -739,7 +739,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                               },
                             ),
                             const SizedBox(height: 12),
-                            // >>> BUG FIX: Fallback, falls _selectedCountry nicht existiert <<<
+                            // Land
                             DropdownButtonFormField<String>(
                               value: _countryCityData.keys
                                       .contains(_selectedCountry)
@@ -762,9 +762,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                               }).toList(),
                             ),
                             const SizedBox(height: 12),
+                            // Stadt
                             if (_selectedCountry != null)
                               DropdownButtonFormField<String>(
-                                // Falls city nicht in der Liste, setze auf null
                                 value: (_selectedCity != null &&
                                         _countryCityData[_selectedCountry]!
                                             .contains(_selectedCity))
@@ -808,8 +808,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                               onChanged: (value) {
                                 setState(() {
                                   _recurrenceType = value!;
-                                  // Sobald wöchentlich gewählt,
-                                  // Wochentag des Startdatums markieren
+                                  // Wochentag bei weekly
                                   if (_recurrenceType ==
                                       RecurrenceType.weekly) {
                                     _selectedWeekDays = List.filled(7, false);
@@ -973,16 +972,15 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     );
   }
 
-  // Hilfswidget, um Datum/Zeit kompakt anzuzeigen
   Widget _buildDateTimeDisplay({
     required String label,
     required DateTime? dateTime,
     required bool isAllDay,
   }) {
     final text = dateTime != null
-        ? isAllDay
+        ? (isAllDay
             ? '${dateTime.day}/${dateTime.month}/${dateTime.year}'
-            : '${dateTime.day}/${dateTime.month}/${dateTime.year} ${_formatTime(dateTime)}'
+            : '${dateTime.day}/${dateTime.month}/${dateTime.year} ${_formatTime(dateTime)}')
         : '---';
     return Container(
       padding: const EdgeInsets.all(8),

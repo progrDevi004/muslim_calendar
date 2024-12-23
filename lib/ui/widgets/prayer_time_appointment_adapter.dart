@@ -1,3 +1,4 @@
+//widgets/prayer_time_appointment_adapter.dart
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
