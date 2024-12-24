@@ -3,7 +3,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-// >>> WICHTIG: Diesen Import brauchst du für initializeDateFormatting <<<
 import 'package:intl/date_symbol_data_local.dart' show initializeDateFormatting;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,37 +18,29 @@ class DashboardPage extends StatefulWidget {
   const DashboardPage({Key? key}) : super(key: key);
 
   @override
-  State<DashboardPage> createState() => _DashboardPageState();
+  State<DashboardPage> createState() => DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> {
-  // ----------------------------------------
-  // Wetter + Standort
-  // ----------------------------------------
+class DashboardPageState extends State<DashboardPage> {
+  bool _isWeatherLoading = false;
+  bool _isPrayerTimesLoading = false;
+  bool _isAppointmentsLoading = false;
+
   String? _weatherTemp;
   String? _weatherLocation;
   String? _weatherSymbol;
-  bool _isWeatherLoading = false;
   String? _weatherErrorMessage;
 
-  // ----------------------------------------
-  // Gebetszeiten
-  // ----------------------------------------
   Map<String, String> _todayPrayerTimes = {};
-  bool _isPrayerTimesLoading = false;
   String? _prayerTimeErrorMessage;
 
-  // ----------------------------------------
-  // Termine für heute (Dashboard-Tasks)
-  // ----------------------------------------
   List<_DashboardTask> _todayTasks = [];
-  bool _isAppointmentsLoading = false;
 
-  // ----------------------------------------
-  // Repositories
-  // ----------------------------------------
   final PrayerTimeRepository _prayerTimeRepo = PrayerTimeRepository();
   final AppointmentRepository _appointmentRepo = AppointmentRepository();
+
+  // Neu: Zeitformat
+  bool _use24hFormat = false;
 
   @override
   void initState() {
@@ -57,43 +48,40 @@ class _DashboardPageState extends State<DashboardPage> {
     _initData();
   }
 
-  /// Initialisiert die Lokalisierung (Datumsformate) und lädt Wetter/Gebetszeiten/Termine.
+  /// >>> Öffentliche Methode, damit wir von außen (z. B. HomePage) ein Reload auslösen können <<<
+  Future<void> reloadData() async {
+    await _initData();
+  }
+
+  /// Lädt Zeitformat, Wetter, Gebetszeiten und heutige Termine
   Future<void> _initData() async {
-    // 1) Vor dem Erzeugen eines DateFormat einmalig initializeDateFormatting aufrufen.
-    //    Damit verhinderst du den "Locale data has not been initialized"-Fehler.
     final loc = Provider.of<AppLocalizations>(context, listen: false);
+
     final languageCode = _mapAppLanguageToCode(loc.currentLanguage);
     await initializeDateFormatting(languageCode, null);
 
-    // 2) Dann normal weiter:
+    final prefs = await SharedPreferences.getInstance();
+    _use24hFormat = prefs.getBool('use24hFormat') ?? false;
+
     setState(() {
       _isWeatherLoading = true;
       _isPrayerTimesLoading = true;
       _isAppointmentsLoading = true;
     });
 
-    final prefs = await SharedPreferences.getInstance();
     final defaultCountry = prefs.getString('defaultCountry') ?? 'Turkey';
     final defaultCity = prefs.getString('defaultCity') ?? 'Istanbul';
     final locationString = '$defaultCity,$defaultCountry';
 
-    // Wetter
     await _fetchWeather(defaultCity);
-
-    // Gebetszeiten
     await _fetchPrayerTimesForToday(locationString);
-
-    // Heutige Termine
     await _loadTodaysAppointments();
 
     setState(() {});
   }
 
-  // ----------------------------------------
-  // WETTER
-  // ----------------------------------------
   Future<void> _fetchWeather(String city) async {
-    const apiKey = 'ea71a51c210c3fa6760039a8b592c19c'; // Dein API-Key
+    const apiKey = 'ea71a51c210c3fa6760039a8b592c19c';
     try {
       final url = Uri.parse(
           'https://api.openweathermap.org/data/2.5/weather?q=$city&units=metric&appid=$apiKey');
@@ -101,7 +89,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-
         final temp = jsonData['main']['temp'];
         final tempStr = '${temp.toStringAsFixed(1)}°C';
 
@@ -132,24 +119,6 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  String _mapWeatherSymbol(String condition) {
-    final lower = condition.toLowerCase();
-    if (lower.contains('rain')) {
-      return '🌧';
-    } else if (lower.contains('cloud')) {
-      return '☁';
-    } else if (lower.contains('clear')) {
-      return '☀';
-    } else if (lower.contains('snow')) {
-      return '❄';
-    } else {
-      return '🌤';
-    }
-  }
-
-  // ----------------------------------------
-  // GEBETSZEITEN
-  // ----------------------------------------
   Future<void> _fetchPrayerTimesForToday(String location) async {
     final now = DateTime.now();
     try {
@@ -166,11 +135,11 @@ class _DashboardPageState extends State<DashboardPage> {
 
       setState(() {
         _todayPrayerTimes = {
-          'Fajr': _formatHHmm(fajr),
-          'Dhuhr': _formatHHmm(dhuhr),
-          'Asr': _formatHHmm(asr),
-          'Maghrib': _formatHHmm(maghrib),
-          'Isha': _formatHHmm(isha),
+          'Fajr': _formatTimeFromMinutes(fajr),
+          'Dhuhr': _formatTimeFromMinutes(dhuhr),
+          'Asr': _formatTimeFromMinutes(asr),
+          'Maghrib': _formatTimeFromMinutes(maghrib),
+          'Isha': _formatTimeFromMinutes(isha),
         };
         _prayerTimeErrorMessage = null;
       });
@@ -183,16 +152,6 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  String _formatHHmm(int? totalMinutes) {
-    if (totalMinutes == null) return '--:--';
-    final h = totalMinutes ~/ 60;
-    final m = totalMinutes % 60;
-    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
-  }
-
-  // ----------------------------------------
-  // HEUTIGE TERMINE
-  // ----------------------------------------
   Future<void> _loadTodaysAppointments() async {
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day, 0, 0);
@@ -216,8 +175,8 @@ class _DashboardPageState extends State<DashboardPage> {
 
       tasks.add(_DashboardTask(
         title: ap.subject,
-        startTime: DateFormat('h:mm a').format(start),
-        endTime: DateFormat('h:mm a').format(end),
+        startTime: _formatDateTime(start),
+        endTime: _formatDateTime(end),
         durationInMinutes: diff,
         description: desc,
         color: ap.color,
@@ -230,31 +189,60 @@ class _DashboardPageState extends State<DashboardPage> {
     });
   }
 
-  // ----------------------------------------
-  // Dauer-Format
-  // ----------------------------------------
-  String _formatDuration(int minutes) {
-    if (minutes >= 60) {
-      final h = minutes ~/ 60;
-      final m = minutes % 60;
-      return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')} h';
+  /// Hilfsfunktion, um aus totalMinutes (z.B. 350) ein "HH:mm" oder "h:mm a" zu machen
+  String _formatTimeFromMinutes(int? totalMinutes) {
+    if (totalMinutes == null) return '--:--';
+    final h = totalMinutes ~/ 60;
+    final m = totalMinutes % 60;
+    final dt = DateTime(2000, 1, 1, h, m);
+    final pattern = _use24hFormat ? 'HH:mm' : 'h:mm a';
+    return DateFormat(pattern).format(dt);
+  }
+
+  /// Für Start/End im Dashboard
+  String _formatDateTime(DateTime dt) {
+    final pattern = _use24hFormat ? 'HH:mm' : 'h:mm a';
+    return DateFormat(pattern).format(dt);
+  }
+
+  String _mapWeatherSymbol(String condition) {
+    final lower = condition.toLowerCase();
+    if (lower.contains('rain')) {
+      return '🌧';
+    } else if (lower.contains('cloud')) {
+      return '☁';
+    } else if (lower.contains('clear')) {
+      return '☀';
+    } else if (lower.contains('snow')) {
+      return '❄';
     } else {
-      return '${minutes}m';
+      return '🌤';
     }
   }
 
-  // ----------------------------------------
-  // BUILD
-  // ----------------------------------------
+  String _mapAppLanguageToCode(AppLanguage lang) {
+    switch (lang) {
+      case AppLanguage.german:
+        return 'de';
+      case AppLanguage.turkish:
+        return 'tr';
+      case AppLanguage.arabic:
+        return 'ar';
+      case AppLanguage.english:
+      default:
+        return 'en';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
 
-    // >>> Wir erstellen einen lokalisierten Formatter
-    final dateFormatter = _createLocalizedDateFormatter(loc);
-    final weekdayFormatter = _createLocalizedWeekdayFormatter(loc);
-
     final now = DateTime.now();
+    final dateFormatter =
+        DateFormat('d MMMM yyyy', _mapAppLanguageToCode(loc.currentLanguage));
+    final weekdayFormatter =
+        DateFormat('EEEE', _mapAppLanguageToCode(loc.currentLanguage));
     final dateString = dateFormatter.format(now);
     final weekdayString = weekdayFormatter.format(now);
 
@@ -267,17 +255,13 @@ class _DashboardPageState extends State<DashboardPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 16),
-
-                // Z.B. "24 December 2024, Tuesday" in lokalisierter Schreibweise
                 Text(
                   '$dateString, $weekdayString',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                 ),
-
                 const SizedBox(height: 8),
-
                 IntrinsicHeight(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -294,7 +278,6 @@ class _DashboardPageState extends State<DashboardPage> {
                           child: _buildWeatherTile(context, loc),
                         ),
                       ),
-
                       // Gebetszeiten-Kachel
                       Expanded(
                         child: Container(
@@ -310,7 +293,6 @@ class _DashboardPageState extends State<DashboardPage> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 16),
                 Text(
                   loc.upcomingTasksLabel,
@@ -319,13 +301,11 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                 ),
                 const SizedBox(height: 8),
-
                 _isAppointmentsLoading
                     ? const Center(child: CircularProgressIndicator())
                     : Column(
                         children: _todayTasks.map((t) {
                           final tintedColor = t.color.withOpacity(0.15);
-
                           return Container(
                             margin: const EdgeInsets.symmetric(vertical: 6),
                             padding: const EdgeInsets.all(16),
@@ -373,7 +353,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                             .textTheme
                                             .titleMedium
                                             ?.copyWith(
-                                                fontWeight: FontWeight.bold),
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(t.description),
@@ -385,7 +366,6 @@ class _DashboardPageState extends State<DashboardPage> {
                           );
                         }).toList(),
                       ),
-
                 const SizedBox(height: 40),
               ],
             ),
@@ -395,9 +375,6 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // ----------------------------------------
-  // Wetter-Widget
-  // ----------------------------------------
   Widget _buildWeatherTile(BuildContext context, AppLocalizations loc) {
     if (_isWeatherLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -408,8 +385,6 @@ class _DashboardPageState extends State<DashboardPage> {
         style: TextStyle(color: Colors.red.shade400),
       );
     }
-
-    // Überschrift: "Wetter" o.Ä. via loc.weather
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -420,7 +395,6 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
         ),
         const SizedBox(height: 6),
-        // Temperatur
         Text(
           _weatherTemp ?? '--',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -429,13 +403,11 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
         ),
         const SizedBox(height: 4),
-        // Symbol
         Text(
           _weatherSymbol ?? '',
           style: const TextStyle(fontSize: 28),
         ),
         const Spacer(),
-        // Ort
         Text(
           _weatherLocation ?? '--',
           style: Theme.of(context).textTheme.bodySmall,
@@ -444,9 +416,6 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // ----------------------------------------
-  // Gebetszeiten
-  // ----------------------------------------
   Widget _buildPrayerTimeTile(BuildContext context, AppLocalizations loc) {
     if (_isPrayerTimesLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -460,7 +429,6 @@ class _DashboardPageState extends State<DashboardPage> {
     if (_todayPrayerTimes.isEmpty) {
       return Text('${loc.prayerTimeDashboard}\n--');
     }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -489,37 +457,17 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // ----------------------------------------
-  // Lokalisierte Formatter
-  // ----------------------------------------
-  DateFormat _createLocalizedDateFormatter(AppLocalizations loc) {
-    final languageCode = _mapAppLanguageToCode(loc.currentLanguage);
-    return DateFormat('d MMMM yyyy', languageCode);
-  }
-
-  DateFormat _createLocalizedWeekdayFormatter(AppLocalizations loc) {
-    final languageCode = _mapAppLanguageToCode(loc.currentLanguage);
-    return DateFormat('EEEE', languageCode);
-  }
-
-  String _mapAppLanguageToCode(AppLanguage lang) {
-    switch (lang) {
-      case AppLanguage.german:
-        return 'de';
-      case AppLanguage.turkish:
-        return 'tr';
-      case AppLanguage.arabic:
-        return 'ar';
-      case AppLanguage.english:
-      default:
-        return 'en';
+  String _formatDuration(int minutes) {
+    if (minutes >= 60) {
+      final h = minutes ~/ 60;
+      final m = minutes % 60;
+      return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')} h';
+    } else {
+      return '${minutes}m';
     }
   }
 }
 
-// ----------------------------------------
-// Hilfsklasse für Task-Anzeige
-// ----------------------------------------
 class _DashboardTask {
   final String title;
   final String startTime;

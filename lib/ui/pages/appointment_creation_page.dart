@@ -22,8 +22,11 @@ import 'package:muslim_calendar/data/repositories/category_repository.dart';
 // Models
 import 'package:muslim_calendar/models/category_model.dart';
 
-// Neu: Notification-Service
+// Notification Service
 import 'package:muslim_calendar/data/services/notification_service.dart';
+
+// Für das Zeitformat
+import 'package:intl/intl.dart';
 
 class AppointmentCreationPage extends StatefulWidget {
   final int? appointmentId;
@@ -43,11 +46,11 @@ class AppointmentCreationPage extends StatefulWidget {
 class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   final _formKey = GlobalKey<FormState>();
 
-  /// Standard-Felder
+  // Titel & Beschreibung
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
 
-  /// Gebetszeit-Felder
+  // Gebetszeit-Flags
   bool _isAllDay = false;
   bool _isRelatedToPrayerTimes = false;
   PrayerTime? _selectedPrayerTime;
@@ -55,18 +58,16 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   int? _minutesBeforeAfter;
   Duration? _duration;
 
-  /// Start-/Endzeit
+  // Start-/Endzeit
   DateTime? _startTime;
   DateTime? _endTime;
 
-  /// Location
-  String? _defaultCountry;
-  String? _defaultCity;
+  // Ort (Land / Stadt)
   String? _selectedCountry;
   String? _selectedCity;
   Map<String, List<String>> _countryCityData = {};
 
-  /// Wiederkehrende Termine
+  // Wiederkehrende Termine
   bool _isRecurring = false;
   RecurrenceType _recurrenceType = RecurrenceType.daily;
   int _recurrenceInterval = 1;
@@ -76,29 +77,24 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   List<DateTime> _exceptionDates = [];
   List<bool> _selectedWeekDays = List.filled(7, false);
 
-  /// Farbe & Kategorie
+  // Kategorie/Farbe
   Color _color = Colors.blue;
   final CategoryRepository _categoryRepo = CategoryRepository();
   List<CategoryModel> _allCategories = [];
   CategoryModel? _selectedCategory;
 
-  /// Erinnerung (Reminder)
+  // Erinnerung (Benachrichtigung)
   int? _selectedReminderMinutes;
-  final List<int?> _reminderOptions = [
-    null, // Keine Erinnerung
-    5, // 5 Minuten
-    15,
-    30,
-    60, // 1 Stunde
-    120, // 2 Stunden
-    1440, // 1 Tag
-  ];
+  final List<int?> _reminderOptions = [null, 5, 15, 30, 60, 120, 1440];
 
-  /// Repositories
+  // Repository
   final AppointmentRepository _appointmentRepo = AppointmentRepository();
 
-  /// Schalter für erweiterte Optionen
+  // Umschalter für erweiterte Optionen
   bool _showAdvancedOptions = false;
+
+  // Zeitformat (24h vs. AM/PM)
+  bool _use24hFormat = false;
 
   @override
   void initState() {
@@ -106,15 +102,25 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     _titleController = TextEditingController();
     _descriptionController = TextEditingController();
 
-    _loadCountryCityData();
-    _loadCategories();
-    _initDefaultValues();
-    _loadAppointmentData();
+    _loadUserPrefs(); // <-- Zeitformat laden
+    _loadCountryCityData(); // <-- Land/Stadt-Daten
+    _loadCategories(); // <-- Kategorien
+    _initDefaultValues(); // <-- Standardwerte
+    _loadAppointmentData(); // <-- Termin laden (falls Bearbeitung)
   }
 
-  /// Standardwerte (nur bei neuem Termin)
+  /// Lädt das Zeitformat aus SharedPreferences
+  Future<void> _loadUserPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _use24hFormat = prefs.getBool('use24hFormat') ?? false;
+    });
+  }
+
+  /// Standardwerte (nur wenn appointmentId == null)
   void _initDefaultValues() async {
     if (widget.appointmentId == null) {
+      // Land & Stadt
       final prefs = await SharedPreferences.getInstance();
       final country = prefs.getString('defaultCountry');
       final city = prefs.getString('defaultCity');
@@ -125,7 +131,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         });
       }
 
-      // Standard-Einstellungen
+      // Gebetszeit-Defaults
       _selectedPrayerTime = PrayerTime.dhuhr;
       _minutesBeforeAfter = 0;
       _selectedTimeRelation = TimeRelation.after;
@@ -135,21 +141,30 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       // Wiederholung = weekly
       _recurrenceType = RecurrenceType.weekly;
 
-      // Start/Endzeit
-      final now = DateTime.now();
-      _startTime = widget.selectedDate ?? now;
+      // Datum: entweder widget.selectedDate oder "heute"
+      final baseDate = widget.selectedDate ?? DateTime.now();
+
+      // >>> Startzeit 12:00, Endzeit 12:30
+      _startTime = DateTime(baseDate.year, baseDate.month, baseDate.day, 12, 0);
       _endTime = _startTime!.add(const Duration(minutes: 30));
 
-      // Wochentag markieren (falls weekly)
-      if (_recurrenceType == RecurrenceType.weekly) {
-        _selectedWeekDays = List.filled(7, false);
-        final index = (_startTime!.weekday - 1) % 7;
-        _selectedWeekDays[index] = true;
-      }
+      // Wochentag markieren
+      _selectedWeekDays = List.filled(7, false);
+      final index = (_startTime!.weekday - 1) % 7;
+      _selectedWeekDays[index] = true;
     }
   }
 
-  /// Kategorien laden
+  Future<void> _loadCountryCityData() async {
+    final String response =
+        await rootBundle.loadString('assets/country_city_data.json');
+    final Map<String, dynamic> data = json.decode(response);
+    setState(() {
+      _countryCityData = data.map((key, value) =>
+          MapEntry<String, List<String>>(key, List<String>.from(value)));
+    });
+  }
+
   Future<void> _loadCategories() async {
     final categories = await _categoryRepo.getAllCategories();
     setState(() {
@@ -161,7 +176,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     });
   }
 
-  /// Termin laden, falls vorhanden (Bearbeitung)
+  /// Termin laden (falls appointmentId != null)
   Future<void> _loadAppointmentData() async {
     if (widget.appointmentId != null) {
       try {
@@ -169,6 +184,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             await _appointmentRepo.getAppointment(widget.appointmentId!);
         if (appointment != null) {
           setState(() {
+            // Felder füllen
             _titleController.text = appointment.subject;
             _descriptionController.text = appointment.notes ?? '';
             _isAllDay = appointment.isAllDay;
@@ -181,7 +197,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             _endTime = appointment.endTime ??
                 _startTime!.add(const Duration(minutes: 30));
             _color = appointment.color;
-
             _selectedReminderMinutes = appointment.reminderMinutesBefore;
 
             // Location
@@ -239,23 +254,12 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     }
   }
 
-  /// Country/City Daten laden
-  Future<void> _loadCountryCityData() async {
-    final String response =
-        await rootBundle.loadString('assets/country_city_data.json');
-    final Map<String, dynamic> data = json.decode(response);
-    setState(() {
-      _countryCityData = data.map((key, value) =>
-          MapEntry<String, List<String>>(key, List<String>.from(value)));
-    });
-  }
-
   /// Termin löschen
   Future<void> _deleteAppointment() async {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
     if (widget.appointmentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No appointment to delete.')),
+        const SnackBar(content: Text('No appointment to delete.')),
       );
       return;
     }
@@ -283,11 +287,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
     if (confirmDelete) {
       try {
-        // Vorherige Notification ggf. stornieren
+        // Notification stornieren
         await NotificationService().cancelNotification(widget.appointmentId!);
         await _appointmentRepo.deleteAppointment(widget.appointmentId!);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Appointment deleted successfully.')),
+          const SnackBar(content: Text('Appointment deleted successfully.')),
         );
         Navigator.of(context).pop(true);
       } catch (e) {
@@ -298,22 +302,21 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     }
   }
 
-  /// Termin speichern (neu oder update)
+  /// Termin speichern (Neu oder Update)
   void _saveAppointment() async {
     if (_formKey.currentState!.validate()) {
       final loc = Provider.of<AppLocalizations>(context, listen: false);
 
       if (_startTime == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Bitte wähle eine Startzeit aus.')),
+          const SnackBar(content: Text('Bitte wähle eine Startzeit aus.')),
         );
         return;
       }
 
-      // Falls Endzeit nicht gesetzt => Default
+      // Falls Endzeit nicht gesetzt => Start+30 min
       _endTime ??= _startTime!.add(const Duration(minutes: 30));
 
-      // Location
       final location = (_isRelatedToPrayerTimes &&
               _selectedCity != null &&
               _selectedCountry != null)
@@ -324,7 +327,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               ? '$_selectedCity,$_selectedCountry'
               : null;
 
-      // Wiederholungsregel
+      // Recurrence generieren (falls Schalter an)
       String? recurrenceRule;
       if (_isRecurring) {
         final safeStart = _startTime ?? DateTime.now();
@@ -363,7 +366,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             SfCalendar.generateRRule(recurrence, safeStart, safeEnd);
       }
 
-      // Termin-Objekt
       final appointment = AppointmentModel(
         id: widget.appointmentId,
         subject: _titleController.text,
@@ -385,14 +387,12 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         startTime: _startTime,
         endTime: _endTime,
         categoryId: _selectedCategory?.id,
-
         // Erinnerung
         reminderMinutesBefore: _selectedReminderMinutes,
       );
 
-      // Neu / Edit
       if (widget.appointmentId == null) {
-        // INSERT
+        // NEU
         final newId = await _appointmentRepo.insertAppointment(appointment);
 
         // Notification planen?
@@ -401,9 +401,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             appointment.startTime != null) {
           final reminderTime = appointment.startTime!
               .subtract(Duration(minutes: _selectedReminderMinutes!));
-
-          // Hier nutzen wir loc.reminderTitle und loc.reminderBody
-          // für sprachabhängigen Text
           await NotificationService().scheduleNotification(
             appointmentId: newId,
             title: '${loc.reminderTitle}: ${appointment.subject}',
@@ -413,19 +410,15 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         }
       } else {
         // UPDATE
-        // alte Notification erst löschen ...
         await NotificationService().cancelNotification(widget.appointmentId!);
-
-        // ... dann updaten
         await _appointmentRepo.updateAppointment(appointment);
 
-        // ... und ggf. neue Notification planen
+        // Neue Notification (falls gewünscht)
         if (_selectedReminderMinutes != null &&
             _selectedReminderMinutes! > 0 &&
             appointment.startTime != null) {
           final reminderTime = appointment.startTime!
               .subtract(Duration(minutes: _selectedReminderMinutes!));
-
           await NotificationService().scheduleNotification(
             appointmentId: widget.appointmentId!,
             title: '${loc.reminderTitle}: ${appointment.subject}',
@@ -439,7 +432,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     }
   }
 
-  /// Ausnahme-Datum hinzufügen
+  /// Fügt ein Ausnahme-Datum hinzu
   void _addExceptionDate() async {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
     DateTime? selectedDate = await showDatePicker(
@@ -456,44 +449,65 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     }
   }
 
-  /// Anzeigeformat "HH:mm"
-  String _formatTime(DateTime? dt) {
-    if (dt == null) return '--:--';
-    final hours = dt.hour.toString().padLeft(2, '0');
-    final minutes = dt.minute.toString().padLeft(2, '0');
-    return '$hours:$minutes';
-  }
-
-  Future<DateTime?> _pickDate(DateTime initial) async {
-    return await showDatePicker(
+  /// Hilfsfunktion: Datum+Zeit-Picker
+  Future<DateTime?> _pickDateTime({
+    required DateTime initial,
+    required bool isAllDay,
+  }) async {
+    // 1) Datum wählen
+    final date = await showDatePicker(
       context: context,
       initialDate: initial,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-  }
+    if (date == null) return null;
 
-  Future<DateTime?> _pickTime(DateTime initial) async {
-    TimeOfDay? timeOfDay = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(hour: initial.hour, minute: initial.minute),
-    );
-    if (timeOfDay != null) {
-      return DateTime(
-        initial.year,
-        initial.month,
-        initial.day,
-        timeOfDay.hour,
-        timeOfDay.minute,
-        initial.second,
-        initial.millisecond,
-        initial.microsecond,
-      );
+    // Falls ganztägig => keine Zeitabfrage
+    if (isAllDay) {
+      return date;
     }
-    return null;
+
+    // 2) Zeit wählen
+    final newDateTime = await _pickTime(date);
+    return newDateTime ?? date;
   }
 
-  /// UI
+  /// TimePicker mit 24h- oder AM/PM-Format
+  Future<DateTime?> _pickTime(DateTime dateBase) async {
+    final timeOfDay = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: dateBase.hour, minute: dateBase.minute),
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            alwaysUse24HourFormat: _use24hFormat,
+          ),
+          child: child ?? const SizedBox(),
+        );
+      },
+    );
+    if (timeOfDay == null) return null;
+
+    return DateTime(
+      dateBase.year,
+      dateBase.month,
+      dateBase.day,
+      timeOfDay.hour,
+      timeOfDay.minute,
+      dateBase.second,
+      dateBase.millisecond,
+      dateBase.microsecond,
+    );
+  }
+
+  /// Anzeigeformat
+  String _formatTime(DateTime dt) {
+    final pattern = _use24hFormat ? 'HH:mm' : 'h:mm a';
+    return DateFormat(pattern).format(dt);
+  }
+
+  /// Aufbau der UI
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
@@ -512,11 +526,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          // Schnelleingabe + erweiterte Optionen
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Überschrift
               Text(loc.general, style: headlineStyle),
               const SizedBox(height: 12),
 
@@ -535,19 +547,19 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   Expanded(
                     child: InkWell(
                       onTap: () async {
-                        final picked =
-                            await _pickDate(_startTime ?? DateTime.now());
+                        final picked = await _pickDateTime(
+                          initial: _startTime ?? DateTime.now(),
+                          isAllDay: _isAllDay,
+                        );
                         if (picked != null) {
-                          final timePicked = _isAllDay
-                              ? picked
-                              : await _pickTime(picked) ?? picked;
                           setState(() {
-                            _startTime = timePicked;
+                            _startTime = picked;
+                            // Endzeit auf Start+30 min anpassen
                             if (_isAllDay) {
                               _endTime =
                                   _startTime!.add(const Duration(hours: 1));
                             } else {
-                              _endTime ??=
+                              _endTime =
                                   _startTime!.add(const Duration(minutes: 30));
                             }
                           });
@@ -573,15 +585,14 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                                 );
                                 return;
                               }
-                              final picked =
-                                  await _pickDate(_endTime ?? _startTime!);
+                              final picked = await _pickDateTime(
+                                initial: _endTime ?? _startTime!,
+                                isAllDay: false,
+                              );
                               if (picked != null) {
-                                final timePicked = await _pickTime(picked);
-                                if (timePicked != null) {
-                                  setState(() {
-                                    _endTime = timePicked;
-                                  });
-                                }
+                                setState(() {
+                                  _endTime = picked;
+                                });
                               }
                             },
                             child: _buildDateTimeDisplay(
@@ -590,7 +601,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                               isAllDay: false,
                             ),
                           )
-                        : Container(), // Falls ganztägig => kein Endzeit-Picker
+                        : Container(),
                   ),
                 ],
               ),
@@ -654,7 +665,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               ),
               const SizedBox(height: 12),
 
-              // Ganztägig?
+              // Ganztägig
               SwitchListTile(
                 activeColor: Colors.green,
                 activeTrackColor: Colors.greenAccent,
@@ -675,7 +686,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               ),
               const SizedBox(height: 16),
 
-              // Reminder
+              // Erinnerung
               DropdownButtonFormField<int?>(
                 value: _selectedReminderMinutes,
                 decoration: const InputDecoration(
@@ -686,36 +697,45 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   });
                 },
                 items: _reminderOptions.map((option) {
-                  String label;
                   if (option == null) {
-                    label = 'Keine Erinnerung';
+                    return const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('Keine Erinnerung'),
+                    );
                   } else if (option < 60) {
-                    label = '$option Min. vorher';
+                    return DropdownMenuItem<int?>(
+                      value: option,
+                      child: Text('$option Min. vorher'),
+                    );
                   } else if (option < 1440) {
-                    final hours = option ~/ 60;
-                    label = '$hours Std. vorher';
+                    final h = option ~/ 60;
+                    return DropdownMenuItem<int?>(
+                      value: option,
+                      child: Text('$h Std. vorher'),
+                    );
                   } else {
-                    final days = option ~/ 1440;
-                    label = '$days Tag(e) vorher';
+                    final d = option ~/ 1440;
+                    return DropdownMenuItem<int?>(
+                      value: option,
+                      child: Text('$d Tag(e) vorher'),
+                    );
                   }
-                  return DropdownMenuItem<int?>(
-                    value: option,
-                    child: Text(label),
-                  );
                 }).toList(),
               ),
+
               const SizedBox(height: 20),
 
-              // Schalter "Erweiterte Optionen"
               FilledButton(
                 onPressed: () {
                   setState(() {
                     _showAdvancedOptions = !_showAdvancedOptions;
                   });
                 },
-                child: Text(_showAdvancedOptions
-                    ? 'Weniger Optionen'
-                    : 'Erweiterte Optionen'),
+                child: Text(
+                  _showAdvancedOptions
+                      ? 'Weniger Optionen'
+                      : 'Erweiterte Optionen',
+                ),
               ),
               const SizedBox(height: 8),
 
@@ -727,8 +747,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               ),
 
               const SizedBox(height: 24),
-
-              // Save / Delete
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -752,7 +770,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     );
   }
 
-  /// Erweiterte Optionen
+  /// Erweitere Optionen
   Widget _buildAdvancedOptions(AppLocalizations loc, TextStyle? headlineStyle) {
     return Column(
       key: const ValueKey('advancedOptions'),
@@ -791,10 +809,19 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 ? '${_startTime!.day}/${_startTime!.month}/${_startTime!.year}'
                 : loc.selectDate),
             onTap: () async {
-              final picked = await _pickDate(_startTime ?? DateTime.now());
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: _startTime ?? DateTime.now(),
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2100),
+              );
               if (picked != null) {
                 setState(() {
-                  _startTime = DateTime(picked.year, picked.month, picked.day);
+                  _startTime = DateTime(
+                    picked.year,
+                    picked.month,
+                    picked.day,
+                  );
                   _endTime = _startTime!.add(const Duration(hours: 1));
                 });
               }
@@ -809,10 +836,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 _selectedPrayerTime = value;
               });
             },
-            items: PrayerTime.values.map((prayerTime) {
+            items: PrayerTime.values.map((pt) {
               return DropdownMenuItem<PrayerTime>(
-                value: prayerTime,
-                child: Text(prayerTime.toString().split('.').last),
+                value: pt,
+                child: Text(pt.toString().split('.').last),
               );
             }).toList(),
           ),
@@ -863,10 +890,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 _selectedCity = null;
               });
             },
-            items: _countryCityData.keys.map((country) {
+            items: _countryCityData.keys.map((c) {
               return DropdownMenuItem<String>(
-                value: country,
-                child: Text(country),
+                value: c,
+                child: Text(c),
               );
             }).toList(),
           ),
@@ -1001,8 +1028,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             const SizedBox(height: 12),
             ListTile(
               title: Text(loc.recurrenceEndDate),
-              subtitle:
-                  Text(_recurrenceEndDate?.toString() ?? loc.selectEndDate),
+              subtitle: Text(
+                _recurrenceEndDate?.toString() ?? loc.selectEndDate,
+              ),
               onTap: () async {
                 DateTime? selectedDate = await showDatePicker(
                   context: context,
@@ -1044,7 +1072,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     );
   }
 
-  /// UI-Helfer für Datum/Zeit
+  /// UI-Baustein für Datum/Zeit
   Widget _buildDateTimeDisplay({
     required String label,
     required DateTime? dateTime,
@@ -1055,6 +1083,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             ? '${dateTime.day}/${dateTime.month}/${dateTime.year}'
             : '${dateTime.day}/${dateTime.month}/${dateTime.year} ${_formatTime(dateTime)}')
         : '---';
+
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -1075,7 +1104,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     );
   }
 
-  /// Farbe wählen
+  /// Farbwahl
   void _pickColor(BuildContext context) {
     Color tempColor = _color;
     final loc = Provider.of<AppLocalizations>(context, listen: false);
@@ -1087,8 +1116,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           content: SingleChildScrollView(
             child: BlockPicker(
               pickerColor: _color,
-              onColorChanged: (Color color) {
-                tempColor = color;
+              onColorChanged: (Color c) {
+                tempColor = c;
               },
             ),
           ),

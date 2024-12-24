@@ -14,10 +14,10 @@ import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
 import 'package:muslim_calendar/ui/pages/settings_page.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 
-// >>> NEU: DashboardPage importieren
+// Dashboard
 import 'package:muslim_calendar/ui/pages/dashboard_page.dart';
 
-// Für die Kategorie-Verwaltung (Filter etc.)
+// Kategorien
 import 'package:muslim_calendar/data/repositories/category_repository.dart';
 import 'package:muslim_calendar/models/category_model.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -30,10 +30,11 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  /// Index 0 => Dashboard
-  /// Index 1 => Month
-  /// Index 2 => Week
-  /// Index 3 => Day
+  /// Navigation:
+  /// 0 => Dashboard
+  /// 1 => Month
+  /// 2 => Week
+  /// 3 => Day
   int _selectedNavIndex = 0;
 
   CalendarView _selectedView = CalendarView.month;
@@ -49,25 +50,39 @@ class _HomePageState extends State<HomePage> {
 
   DateTime? _selectedDate;
 
-  // Kategorie-Verwaltung
+  // Kategorien
   final CategoryRepository _categoryRepo = CategoryRepository();
   List<CategoryModel> _allCategories = [];
-  Set<int> _selectedCategoryIds = {}; // IDs der aktiven Kategorien
+  Set<int> _selectedCategoryIds = {};
 
-  // >>> NEU: Eine finale Instanz von DashboardPage, damit sie nur einmal erzeugt wird
-  final _dashboardPage = const DashboardPage();
+  // *** NEU: GlobalKey für das Dashboard ***
+  final GlobalKey<DashboardPageState> _dashboardKey =
+      GlobalKey<DashboardPageState>();
+
+  // Wir erstellen das DashboardPage-Objekt nur einmal
+  late final _dashboardPage = DashboardPage(key: _dashboardKey);
 
   @override
   void initState() {
     super.initState();
     _calendarController = CalendarController();
-
-    // Standard: Index 0 => Dashboard
-    _selectedNavIndex = 0;
+    _selectedNavIndex = 0; // Standard: Dashboard
     _updateCalendarViewFromNavIndex();
 
     _loadAllCategories();
     _loadAllAppointments();
+  }
+
+  // *** NEU: Wenn wir aus den Settings zurückkommen, sollen wir ggf. das Dashboard updaten. ***
+  Future<void> _openSettings() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const SettingsPage()),
+    );
+
+    // Wenn wir nach dem Schließen auf dem Dashboard sind => reloadData
+    if (_selectedNavIndex == 0) {
+      _dashboardKey.currentState?.reloadData();
+    }
   }
 
   void _updateCalendarViewFromNavIndex() {
@@ -93,7 +108,7 @@ class _HomePageState extends State<HomePage> {
     final cats = await _categoryRepo.getAllCategories();
     setState(() {
       _allCategories = cats;
-      _selectedCategoryIds = cats.map((e) => e.id!).toSet(); // alle anzeigen
+      _selectedCategoryIds = cats.map((e) => e.id!).toSet();
     });
   }
 
@@ -102,14 +117,11 @@ class _HomePageState extends State<HomePage> {
       final List<AppointmentModel> models =
           await _appointmentRepo.getAllAppointments();
       final now = DateTime.now();
-
-      // Geben wir dem Recurrence-Service ein Zeitfenster
       final startRange = DateTime(now.year, now.month - 1, 1);
       final endRange = DateTime(now.year, now.month + 2, 1);
 
       final List<Appointment> allAppointments = [];
       for (var m in models) {
-        // Filter nach Kategorie
         if (m.categoryId == null ||
             _selectedCategoryIds.contains(m.categoryId)) {
           final apps =
@@ -130,32 +142,15 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
 
-    // Wir zeigen den FloatingActionButton nur in den Kalender-Ansichten
-    // (Month, Week, Day => index 1..3). Im Dashboard (index 0) nicht
     final bool showFab = (_selectedNavIndex >= 1);
 
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        //title: Text(loc.myCalendar),
         actions: [
-          // --------------------------------------------
-          // Ursprünglich gab es hier einen Button für die Sprache.
-          // Gemäß Wunsch haben wir die Sprachwahl jetzt in die Settings verschoben.
-          // Falls du den Button entfernen möchtest, entferne das Kommentar.
-          /*
-          IconButton(
-            icon: const Icon(Icons.language),
-            onPressed: () => _showLanguageSelection(context),
-          ),
-          */
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const SettingsPage()),
-              );
-            },
+            onPressed: _openSettings, // *** NEU: Wir rufen _openSettings() auf
           ),
           IconButton(
             icon: const Icon(Icons.filter_list),
@@ -163,12 +158,8 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-
-      // >>> HIER: Entweder Dashboard oder Kalender
       body: _selectedNavIndex == 0
-          // Dashboard
           ? _dashboardPage
-          // Kalender
           : Padding(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
               child: SfCalendar(
@@ -188,14 +179,11 @@ class _HomePageState extends State<HomePage> {
                 ),
                 appointmentBuilder:
                     (BuildContext context, CalendarAppointmentDetails details) {
-                  if (details.appointments.isEmpty) {
+                  if (details.appointments.isEmpty)
                     return const SizedBox.shrink();
-                  }
-                  // Monat => Indikatoren
                   if (_selectedView == CalendarView.month) {
                     return Container();
                   } else {
-                    // Woche/Tag => Termin-Titel im farbigen Balken (FittedBox)
                     final appointment = details.appointments.first;
                     return Container(
                       padding: const EdgeInsets.all(4),
@@ -219,8 +207,8 @@ class _HomePageState extends State<HomePage> {
                     );
                   }
                 },
-                onSelectionChanged: (calendarSelectionDetails) {
-                  _selectedDate = calendarSelectionDetails.date;
+                onSelectionChanged: (details) {
+                  _selectedDate = details.date;
                 },
                 onTap: (calendarTapDetails) async {
                   if (calendarTapDetails.targetElement ==
@@ -232,14 +220,13 @@ class _HomePageState extends State<HomePage> {
                     await Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) => AppointmentCreationPage(
-                          appointmentId: appointmentId,
-                        ),
+                            appointmentId: appointmentId),
                       ),
                     );
                     _loadAllAppointments();
                   } else if (calendarTapDetails.targetElement ==
                       CalendarElement.calendarCell) {
-                    // Falls man auf den gleichen Tag tippt => Detailansicht (Day View)
+                    // Wenn man auf den gleichen Tag tippt => Day-View
                     if (calendarTapDetails.date == _selectedDate) {
                       setState(() {
                         _selectedNavIndex = 3; // Day
@@ -291,32 +278,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-    );
-  }
-
-  // ------------------------------------------------
-  // Ursprüngliche Funktion zur Sprache (optional)
-  // ------------------------------------------------
-  void _showLanguageSelection(BuildContext context) {
-    final loc = Provider.of<AppLocalizations>(context, listen: false);
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            children: AppLanguage.values.map((language) {
-              return ListTile(
-                title: Text(loc.getLanguageName(language)),
-                onTap: () {
-                  loc.setLanguage(language);
-                  Navigator.pop(context);
-                },
-              );
-            }).toList(),
-          ),
-        );
-      },
     );
   }
 
@@ -386,7 +347,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Dialog zum Erstellen einer neuen Kategorie
   void _showAddCategoryDialog() {
     final TextEditingController nameController = TextEditingController();
     Color selectedColor = Colors.blue;

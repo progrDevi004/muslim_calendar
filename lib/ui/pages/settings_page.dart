@@ -4,10 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
-
-// Neu importiert
 import 'package:muslim_calendar/data/services/notification_service.dart';
-
 import 'package:muslim_calendar/providers/theme_notifier.dart';
 
 enum LocationMode {
@@ -29,6 +26,9 @@ class _SettingsPageState extends State<SettingsPage> {
   String? _defaultCity;
   bool _notificationsEnabled = true;
   bool _darkModeEnabled = false;
+
+  // >>> 24h/AM-PM
+  bool _use24hFormat = false;
 
   final List<String> _availableCountries = [
     'Germany',
@@ -54,6 +54,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
     _darkModeEnabled = prefs.getBool('darkModeEnabled') ?? false;
+    _use24hFormat = prefs.getBool('use24hFormat') ?? false;
 
     final modeString = prefs.getString('locationMode') ?? 'automatic';
     if (modeString == 'manual') {
@@ -82,19 +83,18 @@ class _SettingsPageState extends State<SettingsPage> {
 
     await prefs.setBool('notificationsEnabled', _notificationsEnabled);
     await prefs.setBool('darkModeEnabled', _darkModeEnabled);
+    await prefs.setBool('use24hFormat', _use24hFormat);
 
     await prefs.setString(
       'locationMode',
       _locationMode == LocationMode.manual ? 'manual' : 'automatic',
     );
-
     if (_defaultCountry != null) {
       await prefs.setString('defaultCountry', _defaultCountry!);
     }
     if (_defaultCity != null) {
       await prefs.setString('defaultCity', _defaultCity!);
     }
-
     await prefs.setInt('selectedLanguageIndex', _selectedLanguage.index);
   }
 
@@ -158,19 +158,42 @@ class _SettingsPageState extends State<SettingsPage> {
               setState(() {
                 _notificationsEnabled = value;
               });
-
               if (value) {
                 await NotificationService().enableNotifications();
               } else {
                 await NotificationService().disableNotifications();
               }
-
               await _saveSettings();
             },
           ),
           const Divider(height: 40),
 
-          // Erweiterte Einstellungen
+          // >>> NEU: 24h-Format
+          Text(
+            'Zeitformat',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            activeColor: Colors.green,
+            activeTrackColor: Colors.greenAccent,
+            title: const Text('24-Stunden-Format'),
+            subtitle: Text(_use24hFormat
+                ? 'Aktuell ist das 24h-Format aktiv'
+                : 'Aktuell ist das AM/PM-Format aktiv'),
+            value: _use24hFormat,
+            onChanged: (bool val) async {
+              setState(() {
+                _use24hFormat = val;
+              });
+              await _saveSettings();
+            },
+          ),
+          const Divider(height: 40),
+
+          // Erweitert: Standort
           Text(
             loc.locationSettings,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -229,6 +252,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
           ],
           const SizedBox(height: 40),
+
           Center(
             child: FilledButton(
               onPressed: () async {
