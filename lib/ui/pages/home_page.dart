@@ -1,4 +1,4 @@
-// ui/pages/home_page.dart
+//ui/pages/home_page.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,7 +14,10 @@ import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
 import 'package:muslim_calendar/ui/pages/settings_page.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 
-// >>> Für die Kategorie-Verwaltung (Filter etc.) <<<
+// >>> NEU: Für das Dashboard
+import 'package:muslim_calendar/ui/pages/dashboard_page.dart';
+
+// >>> NEU: Wir brauchen für die Kategorie-Erstellung (Filter etc.) <<<
 import 'package:muslim_calendar/data/repositories/category_repository.dart';
 import 'package:muslim_calendar/models/category_model.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -27,6 +30,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // >>> STARTINDEX = 0 => Dashboard <<<
+  int _selectedNavIndex = 0;
+
   CalendarView _selectedView = CalendarView.month;
   late CalendarController _calendarController;
   EventDataSource? _dataSource;
@@ -37,7 +43,6 @@ class _HomePageState extends State<HomePage> {
     recurrenceService: RecurrenceService(),
   );
   DateTime? _selectedDate;
-  int _selectedNavIndex = 0;
 
   // Kategorie-Verwaltung
   final CategoryRepository _categoryRepo = CategoryRepository();
@@ -48,7 +53,11 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _calendarController = CalendarController();
+
+    // >>> Hier legen wir fest, dass beim Start "Dashboard" aktiv ist
+    _selectedNavIndex = 0;
     _updateCalendarViewFromNavIndex();
+
     _loadAllCategories();
     _loadAllAppointments();
   }
@@ -56,12 +65,15 @@ class _HomePageState extends State<HomePage> {
   void _updateCalendarViewFromNavIndex() {
     switch (_selectedNavIndex) {
       case 0:
-        _selectedView = CalendarView.month;
+        // Dashboard => Keine Kalender-View
         break;
       case 1:
-        _selectedView = CalendarView.week;
+        _selectedView = CalendarView.month;
         break;
       case 2:
+        _selectedView = CalendarView.week;
+        break;
+      case 3:
         _selectedView = CalendarView.day;
         break;
     }
@@ -109,6 +121,9 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
 
+    // Wenn wir im Dashboard sind, zeigen wir NICHT den FAB
+    final bool showFab = _selectedNavIndex != 0;
+
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
@@ -134,103 +149,72 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
+      // BODY: Dashboard oder Kalender je nach Tab
       body: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
-        child: SfCalendar(
-          headerStyle: const CalendarHeaderStyle(
-            backgroundColor: Colors.transparent,
-            textAlign: TextAlign.center,
-            textStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-          ),
-          view: _selectedView,
-          controller: _calendarController,
-          dataSource: _dataSource,
-          showDatePickerButton: true,
-          onSelectionChanged: (calendarSelectionDetails) {
-            _selectedDate = calendarSelectionDetails.date;
-          },
-          monthViewSettings: const MonthViewSettings(
-            appointmentDisplayMode: MonthAppointmentDisplayMode.indicator,
-            showAgenda: true,
-          ),
-          // >>> NEU: Angepasster appointmentBuilder, damit Text skaliert
-          appointmentBuilder:
-              (BuildContext context, CalendarAppointmentDetails details) {
-            if (details.appointments.isEmpty) {
-              return const SizedBox.shrink();
-            }
-            // In der Monatsansicht: nur Punkte
-            if (_selectedView == CalendarView.month) {
-              return Container();
-            } else {
-              // In Week/Day = Text im Balken, skaliert automatisch
-              final appointment = details.appointments.first;
-              return Container(
-                decoration: BoxDecoration(
-                  color: appointment.color,
-                  borderRadius: BorderRadius.circular(4),
+        child: _selectedNavIndex == 0
+            ? const DashboardPage()
+            : SfCalendar(
+                headerStyle: const CalendarHeaderStyle(
+                  backgroundColor: Colors.transparent,
+                  textAlign: TextAlign.center,
+                  textStyle:
+                      TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                 ),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    child: Text(
-                      appointment.subject,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize:
-                            14, // Basisgröße (wird via FittedBox skaliert)
+                view: _selectedView,
+                controller: _calendarController,
+                dataSource: _dataSource,
+                showDatePickerButton: true,
+                onSelectionChanged: (calendarSelectionDetails) {
+                  _selectedDate = calendarSelectionDetails.date;
+                },
+                monthViewSettings: const MonthViewSettings(
+                  appointmentDisplayMode: MonthAppointmentDisplayMode.indicator,
+                  showAgenda: true,
+                ),
+                onTap: (calendarTapDetails) async {
+                  if (calendarTapDetails.targetElement ==
+                      CalendarElement.appointment) {
+                    int appointmentId = int.parse(
+                      (calendarTapDetails.appointments?.first.id ?? '')
+                          .toString(),
+                    );
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => AppointmentCreationPage(
+                          appointmentId: appointmentId,
+                        ),
                       ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
+                    );
+                    _loadAllAppointments();
+                  } else if (calendarTapDetails.targetElement ==
+                      CalendarElement.calendarCell) {
+                    if (calendarTapDetails.date == _selectedDate) {
+                      setState(() {
+                        _selectedNavIndex = 3; // Day View
+                        _updateCalendarViewFromNavIndex();
+                      });
+                    }
+                  }
+                },
+              ),
+      ),
+      floatingActionButton: showFab
+          ? FloatingActionButton(
+              tooltip: 'Neuen Termin hinzufügen',
+              onPressed: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => AppointmentCreationPage(
+                      selectedDate: _selectedDate,
                     ),
                   ),
-                ),
-              );
-            }
-          },
-          onTap: (calendarTapDetails) async {
-            if (calendarTapDetails.targetElement ==
-                CalendarElement.appointment) {
-              int appointmentId = int.parse(
-                (calendarTapDetails.appointments?.first.id ?? '').toString(),
-              );
-              await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => AppointmentCreationPage(
-                    appointmentId: appointmentId,
-                  ),
-                ),
-              );
-              _loadAllAppointments();
-            } else if (calendarTapDetails.targetElement ==
-                CalendarElement.calendarCell) {
-              if (calendarTapDetails.date == _selectedDate) {
-                setState(() {
-                  _selectedNavIndex = 2; // Day View
-                  _updateCalendarViewFromNavIndex();
-                });
-              }
-            }
-          },
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        tooltip: 'Neuen Termin hinzufügen',
-        onPressed: () async {
-          await Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => AppointmentCreationPage(
-                selectedDate: _selectedDate,
-              ),
-            ),
-          );
-          _loadAllAppointments();
-        },
-        child: const Icon(Icons.add),
-      ),
+                );
+                _loadAllAppointments();
+              },
+              child: const Icon(Icons.add),
+            )
+          : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedNavIndex,
         onDestinationSelected: (int index) {
@@ -238,6 +222,10 @@ class _HomePageState extends State<HomePage> {
           _updateCalendarViewFromNavIndex();
         },
         destinations: [
+          NavigationDestination(
+            icon: const Icon(Icons.dashboard),
+            label: 'Dashboard',
+          ),
           NavigationDestination(
             icon: const Icon(Icons.calendar_month),
             label: loc.month,

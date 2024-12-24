@@ -931,4 +931,119 @@ class AppLocalizations extends ChangeNotifier {
         return 'Enable dark theme';
     }
   }
+
+  // ------------------------------
+  // >>> NEU: Dashboard-Strings
+  // ------------------------------
+  String get welcomeBack {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Willkommen zurück';
+      case AppLanguage.turkish:
+        return 'Tekrar hoş geldiniz';
+      case AppLanguage.arabic:
+        return 'مرحبًا بعودتك';
+      case AppLanguage.english:
+      default:
+        return 'Welcome back';
+    }
+  }
+
+  String get today {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Heute';
+      case AppLanguage.turkish:
+        return 'Bugün';
+      case AppLanguage.arabic:
+        return 'اليوم';
+      case AppLanguage.english:
+      default:
+        return 'Today';
+    }
+  }
+
+  String get calendar {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Kalender';
+      case AppLanguage.turkish:
+        return 'Takvim';
+      case AppLanguage.arabic:
+        return 'التقويم';
+      case AppLanguage.english:
+      default:
+        return 'Calendar';
+    }
+  }
+
+  String get weather {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Wetter';
+      case AppLanguage.turkish:
+        return 'Hava';
+      case AppLanguage.arabic:
+        return 'الطقس';
+      case AppLanguage.english:
+      default:
+        return 'Weather';
+    }
+  }
+
+  String get searchHint {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Suche nach Meeting, Aufgabe etc...';
+      case AppLanguage.turkish:
+        return 'Toplantı, görev vb. ara...';
+      case AppLanguage.arabic:
+        return 'ابحث عن اجتماع أو مهمة...';
+      case AppLanguage.english:
+      default:
+        return 'Search meeting, task etc...';
+    }
+  }
+
+  String get upcomingTasksLabel {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Aufgaben heute';
+      case AppLanguage.turkish:
+        return 'Bugünkü Görevler';
+      case AppLanguage.arabic:
+        return 'المهمة القادمة';
+      case AppLanguage.english:
+      default:
+        return 'Tasks today';
+    }
+  }
+
+  String get minutes {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'm';
+      case AppLanguage.turkish:
+        return 'Dakika';
+      case AppLanguage.arabic:
+        return 'دقيقة';
+      case AppLanguage.english:
+      default:
+        return 'm';
+    }
+  }
+
+  String get location {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Ort';
+      case AppLanguage.turkish:
+        return 'Bölge';
+      case AppLanguage.arabic:
+        return 'الشهر';
+      case AppLanguage.english:
+      default:
+        return 'Location';
+    }
+  }
 }

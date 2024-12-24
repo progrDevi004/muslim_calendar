@@ -1,4 +1,4 @@
-//main.dart
+// main.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'localization/app_localizations.dart';
@@ -146,7 +146,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Muslim Calendar',
       debugShowCheckedModeBanner: false,
-      // >>> Wir schalten dynamisch zwischen Light/Dark um <<<
+      // >>> Du lässt es bei HomePage
+      // >>> Dort ist nun Index=0 => Dashboard, Index=1 => Month, etc.
       theme: isDark ? darkTheme : lightTheme,
       home: const HomePage(),
     );
