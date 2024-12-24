@@ -35,7 +35,7 @@ class _MyHomePageState extends State<MyHomePage> {
       // by default the month appointment display mode set as Indicator, we can
       // change the display mode as appointment using the appointment display
       // mode property
-      monthViewSettings: const MonthViewSettings(
+      monthViewSettings: MonthViewSettings(
           appointmentDisplayMode: MonthAppointmentDisplayMode.appointment),
     ));
   }

@@ -8,11 +8,15 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
+// Localization & Models
 import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
 import 'package:muslim_calendar/models/enums.dart';
 import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
+
+// <<< NEU: Detailseite importieren >>>
+import 'package:muslim_calendar/ui/pages/appointment_details_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({Key? key}) : super(key: key);
@@ -39,7 +43,6 @@ class DashboardPageState extends State<DashboardPage> {
   final PrayerTimeRepository _prayerTimeRepo = PrayerTimeRepository();
   final AppointmentRepository _appointmentRepo = AppointmentRepository();
 
-  // Neu: Zeitformat
   bool _use24hFormat = false;
 
   @override
@@ -48,15 +51,13 @@ class DashboardPageState extends State<DashboardPage> {
     _initData();
   }
 
-  /// >>> Öffentliche Methode, damit wir von außen (z. B. HomePage) ein Reload auslösen können <<<
+  /// >>> Neu: öffentlich, damit wir von außen reloadData() aufrufen können <<<
   Future<void> reloadData() async {
     await _initData();
   }
 
-  /// Lädt Zeitformat, Wetter, Gebetszeiten und heutige Termine
   Future<void> _initData() async {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
-
     final languageCode = _mapAppLanguageToCode(loc.currentLanguage);
     await initializeDateFormatting(languageCode, null);
 
@@ -81,7 +82,7 @@ class DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _fetchWeather(String city) async {
-    const apiKey = 'ea71a51c210c3fa6760039a8b592c19c';
+    const apiKey = 'ea71a51c210c3fa6760039a8b592c19c'; // z. B. openweathermap
     try {
       final url = Uri.parse(
           'https://api.openweathermap.org/data/2.5/weather?q=$city&units=metric&appid=$apiKey');
@@ -170,17 +171,19 @@ class DashboardPageState extends State<DashboardPage> {
       final start = ap.startTime ?? now;
       final end = ap.endTime ?? start.add(const Duration(minutes: 30));
       final diff = end.difference(start).inMinutes;
-
       final desc = ap.notes ?? '';
 
-      tasks.add(_DashboardTask(
-        title: ap.subject,
-        startTime: _formatDateTime(start),
-        endTime: _formatDateTime(end),
-        durationInMinutes: diff,
-        description: desc,
-        color: ap.color,
-      ));
+      tasks.add(
+        _DashboardTask(
+          appointmentId: ap.id, // NEU: Halten wir die ID fest
+          title: ap.subject,
+          startTime: _formatDateTime(start),
+          endTime: _formatDateTime(end),
+          durationInMinutes: diff,
+          description: desc,
+          color: ap.color,
+        ),
+      );
     }
 
     setState(() {
@@ -189,7 +192,7 @@ class DashboardPageState extends State<DashboardPage> {
     });
   }
 
-  /// Hilfsfunktion, um aus totalMinutes (z.B. 350) ein "HH:mm" oder "h:mm a" zu machen
+  /// Hilfsfunktion, um totalMinutes in passendes Format umzuwandeln
   String _formatTimeFromMinutes(int? totalMinutes) {
     if (totalMinutes == null) return '--:--';
     final h = totalMinutes ~/ 60;
@@ -199,7 +202,7 @@ class DashboardPageState extends State<DashboardPage> {
     return DateFormat(pattern).format(dt);
   }
 
-  /// Für Start/End im Dashboard
+  /// Start-/Endzeit
   String _formatDateTime(DateTime dt) {
     final pattern = _use24hFormat ? 'HH:mm' : 'h:mm a';
     return DateFormat(pattern).format(dt);
@@ -237,7 +240,6 @@ class DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
-
     final now = DateTime.now();
     final dateFormatter =
         DateFormat('d MMMM yyyy', _mapAppLanguageToCode(loc.currentLanguage));
@@ -262,6 +264,8 @@ class DashboardPageState extends State<DashboardPage> {
                       ),
                 ),
                 const SizedBox(height: 8),
+
+                // Wetter + Gebetszeiten
                 IntrinsicHeight(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -293,6 +297,7 @@ class DashboardPageState extends State<DashboardPage> {
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 16),
                 Text(
                   loc.upcomingTasksLabel,
@@ -301,67 +306,84 @@ class DashboardPageState extends State<DashboardPage> {
                       ),
                 ),
                 const SizedBox(height: 8),
+
                 _isAppointmentsLoading
                     ? const Center(child: CircularProgressIndicator())
                     : Column(
                         children: _todayTasks.map((t) {
                           final tintedColor = t.color.withOpacity(0.15);
-                          return Container(
-                            margin: const EdgeInsets.symmetric(vertical: 6),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: tintedColor,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 60,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        _formatDuration(t.durationInMinutes),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
+                          return InkWell(
+                            onTap: () async {
+                              // <<< NEU: Termin-Details anzeigen >>>
+                              if (t.appointmentId != null) {
+                                await Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (ctx) => AppointmentDetailsPage(
+                                      appointmentId: t.appointmentId!,
+                                    ),
+                                  ),
+                                );
+                                // Nach Rückkehr reload
+                                reloadData();
+                              }
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 6),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: tintedColor,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                children: [
+                                  SizedBox(
+                                    width: 60,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _formatDuration(t.durationInMinutes),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '${t.startTime} - ${t.endTime}',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                              color: Colors.grey.shade600,
-                                            ),
-                                      ),
-                                    ],
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${t.startTime} - ${t.endTime}',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: Colors.grey.shade600,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        t.title,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(t.description),
-                                    ],
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          t.title,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(t.description),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           );
                         }).toList(),
@@ -469,6 +491,7 @@ class DashboardPageState extends State<DashboardPage> {
 }
 
 class _DashboardTask {
+  final int? appointmentId;
   final String title;
   final String startTime;
   final String endTime;
@@ -477,6 +500,7 @@ class _DashboardTask {
   final Color color;
 
   _DashboardTask({
+    this.appointmentId,
     required this.title,
     required this.startTime,
     required this.endTime,

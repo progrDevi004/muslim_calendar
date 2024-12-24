@@ -96,6 +96,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   // Zeitformat (24h vs. AM/PM)
   bool _use24hFormat = false;
 
+  // >>> NEU: Interne Variable, die die (ggf. frisch erzeugte) Appointment-ID hält.
+  int? _currentAppointmentId;
+
   @override
   void initState() {
     super.initState();
@@ -107,6 +110,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     _loadCategories(); // <-- Kategorien
     _initDefaultValues(); // <-- Standardwerte
     _loadAppointmentData(); // <-- Termin laden (falls Bearbeitung)
+
+    // Wenn wir schon eine appointmentId vom Konstruktor haben,
+    // speichern wir sie lokal, damit wir sie ggf. beim Löschen referenzieren können.
+    _currentAppointmentId = widget.appointmentId;
   }
 
   /// Lädt das Zeitformat aus SharedPreferences
@@ -244,6 +251,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 _selectedCategory = _allCategories[catIndex];
               }
             }
+
+            // NEU: Wir aktualisieren unsere lokale ID-Variable
+            _currentAppointmentId = appointment.id;
           });
         }
       } catch (e) {
@@ -257,7 +267,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   /// Termin löschen
   Future<void> _deleteAppointment() async {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
-    if (widget.appointmentId == null) {
+    if (_currentAppointmentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No appointment to delete.')),
       );
@@ -288,15 +298,17 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     if (confirmDelete) {
       try {
         // Notification stornieren
-        await NotificationService().cancelNotification(widget.appointmentId!);
-        await _appointmentRepo.deleteAppointment(widget.appointmentId!);
+        await NotificationService().cancelNotification(_currentAppointmentId!);
+        await _appointmentRepo.deleteAppointment(_currentAppointmentId!);
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Appointment deleted successfully.')),
         );
+
         Navigator.of(context).pop(true);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting appointment.')),
+          const SnackBar(content: Text('Error deleting appointment.')),
         );
       }
     }
@@ -367,7 +379,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       }
 
       final appointment = AppointmentModel(
-        id: widget.appointmentId,
+        id: _currentAppointmentId, // Hier nutzen wir unsere lokale Variable
         subject: _titleController.text,
         notes: _descriptionController.text.isNotEmpty
             ? _descriptionController.text
@@ -387,12 +399,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         startTime: _startTime,
         endTime: _endTime,
         categoryId: _selectedCategory?.id,
-        // Erinnerung
         reminderMinutesBefore: _selectedReminderMinutes,
       );
 
-      if (widget.appointmentId == null) {
-        // NEU
+      if (_currentAppointmentId == null) {
+        // Neuer Termin
         final newId = await _appointmentRepo.insertAppointment(appointment);
 
         // Notification planen?
@@ -408,9 +419,14 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             dateTime: reminderTime,
           );
         }
+
+        // NEU: interne ID aktualisieren => falls wir anschließend löschen wollen
+        setState(() {
+          _currentAppointmentId = newId;
+        });
       } else {
-        // UPDATE
-        await NotificationService().cancelNotification(widget.appointmentId!);
+        // Update Termin
+        await NotificationService().cancelNotification(_currentAppointmentId!);
         await _appointmentRepo.updateAppointment(appointment);
 
         // Neue Notification (falls gewünscht)
@@ -420,7 +436,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           final reminderTime = appointment.startTime!
               .subtract(Duration(minutes: _selectedReminderMinutes!));
           await NotificationService().scheduleNotification(
-            appointmentId: widget.appointmentId!,
+            appointmentId: _currentAppointmentId!,
             title: '${loc.reminderTitle}: ${appointment.subject}',
             body: loc.reminderBody,
             dateTime: reminderTime,
@@ -754,7 +770,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                     onPressed: _saveAppointment,
                     child: Text(loc.save),
                   ),
-                  if (widget.appointmentId != null) ...[
+                  if (_currentAppointmentId != null) ...[
                     const SizedBox(width: 10),
                     OutlinedButton(
                       onPressed: _deleteAppointment,
