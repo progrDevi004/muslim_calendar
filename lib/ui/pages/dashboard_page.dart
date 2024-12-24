@@ -15,8 +15,9 @@ import 'package:muslim_calendar/models/enums.dart';
 import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
 
-// <<< NEU: Detailseite importieren >>>
+// Detailseite
 import 'package:muslim_calendar/ui/pages/appointment_details_page.dart';
+import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({Key? key}) : super(key: key);
@@ -45,13 +46,16 @@ class DashboardPageState extends State<DashboardPage> {
 
   bool _use24hFormat = false;
 
+  // Hover-Status, um Microinteractions zu steuern
+  int? _hoveredTaskId;
+
   @override
   void initState() {
     super.initState();
     _initData();
   }
 
-  /// >>> Neu: öffentlich, damit wir von außen reloadData() aufrufen können <<<
+  /// Ermöglicht Reload von außen (z. B. HomePage)
   Future<void> reloadData() async {
     await _initData();
   }
@@ -82,7 +86,7 @@ class DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _fetchWeather(String city) async {
-    const apiKey = 'ea71a51c210c3fa6760039a8b592c19c'; // z. B. openweathermap
+    const apiKey = 'ea71a51c210c3fa6760039a8b592c19c'; // example key
     try {
       final url = Uri.parse(
           'https://api.openweathermap.org/data/2.5/weather?q=$city&units=metric&appid=$apiKey');
@@ -175,7 +179,7 @@ class DashboardPageState extends State<DashboardPage> {
 
       tasks.add(
         _DashboardTask(
-          appointmentId: ap.id, // NEU: Halten wir die ID fest
+          appointmentId: ap.id,
           title: ap.subject,
           startTime: _formatDateTime(start),
           endTime: _formatDateTime(end),
@@ -192,7 +196,7 @@ class DashboardPageState extends State<DashboardPage> {
     });
   }
 
-  /// Hilfsfunktion, um totalMinutes in passendes Format umzuwandeln
+  /// Zeitformat
   String _formatTimeFromMinutes(int? totalMinutes) {
     if (totalMinutes == null) return '--:--';
     final h = totalMinutes ~/ 60;
@@ -202,12 +206,12 @@ class DashboardPageState extends State<DashboardPage> {
     return DateFormat(pattern).format(dt);
   }
 
-  /// Start-/Endzeit
   String _formatDateTime(DateTime dt) {
     final pattern = _use24hFormat ? 'HH:mm' : 'h:mm a';
     return DateFormat(pattern).format(dt);
   }
 
+  /// Wetter-Icon
   String _mapWeatherSymbol(String condition) {
     final lower = condition.toLowerCase();
     if (lower.contains('rain')) {
@@ -223,6 +227,7 @@ class DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  /// Sprache -> Code
   String _mapAppLanguageToCode(AppLanguage lang) {
     switch (lang) {
       case AppLanguage.german:
@@ -237,6 +242,12 @@ class DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  /// Erzeugt eine "sinnvolle" Schriftfarbe (schwarz/weiß) anhand der Hintergrundfarbe
+  Color _getContrastingTextColor(Color background) {
+    final brightness = ThemeData.estimateBrightnessForColor(background);
+    return brightness == Brightness.dark ? Colors.white : Colors.black;
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
@@ -248,73 +259,114 @@ class DashboardPageState extends State<DashboardPage> {
     final dateString = dateFormatter.format(now);
     final weekdayString = weekdayFormatter.format(now);
 
+    final Color mainColor = Theme.of(context).colorScheme.primary;
+    final Color accentCardColor = mainColor.withOpacity(0.1);
+    final Color accentTextColor = mainColor.withOpacity(0.7);
+
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: mainColor,
+        onPressed: _createQuickAppointment,
+        child: const Icon(Icons.add),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
-                Text(
-                  '$dateString, $weekdayString',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 8),
-
-                // Wetter + Gebetszeiten
-                IntrinsicHeight(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+              Card(
+                color: Colors.grey.shade200,
+                margin: const EdgeInsets.only(bottom: 16),
+                child: Padding(
+                  // Kompakter
+                  padding: const EdgeInsets.all(6.0),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Wetter-Kachel
-                      Expanded(
-                        child: Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: _buildWeatherTile(context, loc),
-                        ),
+                      Icon(
+                        Icons.calendar_today_outlined,
+                        size: 24,
+                        color: mainColor,
                       ),
-                      // Gebetszeiten-Kachel
+                      const SizedBox(width: 8),
                       Expanded(
-                        child: Container(
-                          margin: const EdgeInsets.only(left: 8),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: _buildPrayerTimeTile(context, loc),
+                        child: Text(
+                          '$dateString, $weekdayString',
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
                   ),
                 ),
+              ),
 
-                const SizedBox(height: 16),
-                Text(
-                  loc.upcomingTasksLabel,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+              // Wetter + Gebetszeiten
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: accentCardColor,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: _buildWeatherTile(context, loc, accentTextColor),
                       ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.only(left: 8),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: accentCardColor,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child:
+                            _buildPrayerTimeTile(context, loc, accentTextColor),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
+              ),
+              const SizedBox(height: 16),
 
-                _isAppointmentsLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : Column(
-                        children: _todayTasks.map((t) {
-                          final tintedColor = t.color.withOpacity(0.15);
-                          return InkWell(
+              Row(
+                children: [
+                  Icon(Icons.task_alt, color: mainColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    loc.upcomingTasksLabel,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              _isAppointmentsLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : Column(
+                      children: _todayTasks.map((t) {
+                        // Exakte Category-Farbe (keine Transparenz)
+                        final backgroundColor = t.color;
+                        final textColor =
+                            _getContrastingTextColor(backgroundColor);
+
+                        return MouseRegion(
+                          onEnter: (_) => _onHoverEnter(t.appointmentId ?? 0),
+                          onExit: (_) => _onHoverExit(t.appointmentId ?? 0),
+                          child: InkWell(
+                            splashColor: backgroundColor.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(16),
                             onTap: () async {
-                              // <<< NEU: Termin-Details anzeigen >>>
                               if (t.appointmentId != null) {
                                 await Navigator.of(context).push(
                                   MaterialPageRoute(
@@ -323,7 +375,6 @@ class DashboardPageState extends State<DashboardPage> {
                                     ),
                                   ),
                                 );
-                                // Nach Rückkehr reload
                                 reloadData();
                               }
                             },
@@ -331,8 +382,19 @@ class DashboardPageState extends State<DashboardPage> {
                               margin: const EdgeInsets.symmetric(vertical: 6),
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: tintedColor,
+                                color: backgroundColor,
                                 borderRadius: BorderRadius.circular(16),
+                                // Leichter Hover-Effekt
+                                boxShadow: _hoveredTaskId == t.appointmentId
+                                    ? [
+                                        BoxShadow(
+                                          color:
+                                              backgroundColor.withOpacity(0.4),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        )
+                                      ]
+                                    : [],
                               ),
                               child: Row(
                                 children: [
@@ -344,20 +406,18 @@ class DashboardPageState extends State<DashboardPage> {
                                       children: [
                                         Text(
                                           _formatDuration(t.durationInMinutes),
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 16,
+                                            color: textColor,
                                           ),
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
                                           '${t.startTime} - ${t.endTime}',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.copyWith(
-                                                color: Colors.grey.shade600,
-                                              ),
+                                          style: TextStyle(
+                                            color: textColor.withOpacity(0.9),
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -370,34 +430,64 @@ class DashboardPageState extends State<DashboardPage> {
                                       children: [
                                         Text(
                                           t.title,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleMedium
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                              ),
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            color: textColor,
+                                          ),
                                         ),
                                         const SizedBox(height: 4),
-                                        Text(t.description),
+                                        Text(
+                                          t.description,
+                                          style: TextStyle(
+                                            color: textColor.withOpacity(0.9),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                          );
-                        }).toList(),
-                      ),
-                const SizedBox(height: 40),
-              ],
-            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+              const SizedBox(height: 40),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildWeatherTile(BuildContext context, AppLocalizations loc) {
+  /// Quick Appointment
+  void _createQuickAppointment() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (ctx) => const AppointmentCreationPage(),
+      ),
+    );
+    reloadData();
+  }
+
+  /// Hover-Handling
+  void _onHoverEnter(int taskId) {
+    setState(() {
+      _hoveredTaskId = taskId;
+    });
+  }
+
+  void _onHoverExit(int taskId) {
+    setState(() {
+      if (_hoveredTaskId == taskId) {
+        _hoveredTaskId = null;
+      }
+    });
+  }
+
+  Widget _buildWeatherTile(
+      BuildContext context, AppLocalizations loc, Color accentTextColor) {
     if (_isWeatherLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -407,38 +497,51 @@ class DashboardPageState extends State<DashboardPage> {
         style: TextStyle(color: Colors.red.shade400),
       );
     }
+
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          loc.weather,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+        Row(
+          children: [
+            Icon(Icons.wb_sunny_outlined, color: accentTextColor),
+            const SizedBox(width: 8),
+            Text(
+              loc.weather,
+              style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: accentTextColor,
               ),
+            ),
+          ],
         ),
         const SizedBox(height: 6),
         Text(
           _weatherTemp ?? '--',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: accentTextColor,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           _weatherSymbol ?? '',
-          style: const TextStyle(fontSize: 28),
+          style: TextStyle(fontSize: 28, color: accentTextColor),
         ),
         const Spacer(),
         Text(
           _weatherLocation ?? '--',
-          style: Theme.of(context).textTheme.bodySmall,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: accentTextColor,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildPrayerTimeTile(BuildContext context, AppLocalizations loc) {
+  Widget _buildPrayerTimeTile(
+      BuildContext context, AppLocalizations loc, Color accentTextColor) {
     if (_isPrayerTimesLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -451,15 +554,23 @@ class DashboardPageState extends State<DashboardPage> {
     if (_todayPrayerTimes.isEmpty) {
       return Text('${loc.prayerTimeDashboard}\n--');
     }
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          loc.prayerTimeDashboard,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.bold),
+        Row(
+          children: [
+            Icon(Icons.access_alarm_outlined, color: accentTextColor),
+            const SizedBox(width: 8),
+            Text(
+              loc.prayerTimeDashboard,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: accentTextColor,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         ..._todayPrayerTimes.entries.map(
@@ -468,8 +579,18 @@ class DashboardPageState extends State<DashboardPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(e.key, style: Theme.of(context).textTheme.bodySmall),
-                Text(e.value, style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  e.key,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: accentTextColor,
+                  ),
+                ),
+                Text(
+                  e.value,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: accentTextColor,
+                  ),
+                ),
               ],
             ),
           ),
