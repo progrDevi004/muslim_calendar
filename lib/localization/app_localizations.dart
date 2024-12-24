@@ -272,6 +272,20 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
+  String get prayerTimeDashboard {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Gebetszeiten';
+      case AppLanguage.turkish:
+        return 'Namaz Vakitleri';
+      case AppLanguage.arabic:
+        return 'اوقات الصلاة';
+      case AppLanguage.english:
+      default:
+        return 'Prayer Times';
+    }
+  }
+
   String get selectDate {
     switch (_currentLanguage) {
       case AppLanguage.german:
@@ -988,20 +1002,6 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.english:
       default:
         return 'Weather';
-    }
-  }
-
-  String get searchHint {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Suche nach Meeting, Aufgabe etc...';
-      case AppLanguage.turkish:
-        return 'Toplantı, görev vb. ara...';
-      case AppLanguage.arabic:
-        return 'ابحث عن اجتماع أو مهمة...';
-      case AppLanguage.english:
-      default:
-        return 'Search meeting, task etc...';
     }
   }
 
