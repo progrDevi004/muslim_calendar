@@ -1,4 +1,4 @@
-// >>> NEW FILE <<<: lib/data/repositories/category_repository.dart
+// lib/data/repositories/category_repository.dart
 
 import 'package:sqflite/sqflite.dart';
 import '../database_helper.dart';

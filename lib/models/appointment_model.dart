@@ -1,4 +1,5 @@
-//models/appointment_model.dart
+// lib/models/appointment_model.dart
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'enums.dart';
@@ -19,9 +20,10 @@ class AppointmentModel {
   final Color color;
   final DateTime? startTime;
   final DateTime? endTime;
-
-  // >>> NEW/UPDATED <<< Kategorie
   final int? categoryId;
+
+  // >>> NEU: Erinnerung X Minuten vor Start
+  final int? reminderMinutesBefore;
 
   AppointmentModel({
     this.id,
@@ -39,7 +41,10 @@ class AppointmentModel {
     required this.color,
     this.startTime,
     this.endTime,
-    this.categoryId, // >>> NEW/UPDATED <<<
+    this.categoryId,
+
+    // >>> NEU
+    this.reminderMinutesBefore,
   });
 
   Map<String, dynamic> toMap() {
@@ -63,7 +68,8 @@ class AppointmentModel {
       'color': color.value,
       'startTime': startTime?.toIso8601String(),
       'endTime': endTime?.toIso8601String(),
-      'categoryId': categoryId, // >>> NEW/UPDATED <<<
+      'categoryId': categoryId,
+      'reminderMinutesBefore': reminderMinutesBefore, // NEU
     };
   }
 
@@ -102,7 +108,10 @@ class AppointmentModel {
       startTime:
           map['startTime'] != null ? DateTime.parse(map['startTime']) : null,
       endTime: map['endTime'] != null ? DateTime.parse(map['endTime']) : null,
-      categoryId: map['categoryId'], // >>> NEW/UPDATED <<<
+      categoryId: map['categoryId'],
+
+      // >>> NEU
+      reminderMinutesBefore: map['reminderMinutesBefore'],
     );
   }
 }

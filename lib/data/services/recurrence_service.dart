@@ -1,4 +1,4 @@
-//data/services/recurrence_service.dart
+//lib/data/services/recurrence_service.dart
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
 

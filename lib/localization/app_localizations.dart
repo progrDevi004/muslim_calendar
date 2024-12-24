@@ -1046,4 +1046,35 @@ class AppLocalizations extends ChangeNotifier {
         return 'Location';
     }
   }
+
+  // ========================================
+  // Reminder-Strings
+  // ========================================
+  String get reminderTitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Erinnerung';
+      case AppLanguage.turkish:
+        return 'Hatırlatma';
+      case AppLanguage.arabic:
+        return 'تذكير';
+      case AppLanguage.english:
+      default:
+        return 'Reminder';
+    }
+  }
+
+  String get reminderBody {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Vergiss deinen Termin nicht!';
+      case AppLanguage.turkish:
+        return 'Randevunuzu unutmayın!';
+      case AppLanguage.arabic:
+        return 'لا تنس موعدك!';
+      case AppLanguage.english:
+      default:
+        return 'Don\'t forget your appointment!';
+    }
+  }
 }

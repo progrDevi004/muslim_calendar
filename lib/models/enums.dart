@@ -1,4 +1,4 @@
-//models/enums.dart
+//lib/models/enums.dart
 enum PrayerTime {
   fajr,
   dhuhr,

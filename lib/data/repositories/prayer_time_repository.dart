@@ -1,4 +1,4 @@
-//data/repositories/prayer_time_repository.dart
+//lib/data/repositories/prayer_time_repository.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';

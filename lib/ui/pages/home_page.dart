@@ -1,4 +1,4 @@
-// ui/pages/home_page.dart
+// lib/ui/pages/home_page.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -73,7 +73,7 @@ class _HomePageState extends State<HomePage> {
   void _updateCalendarViewFromNavIndex() {
     switch (_selectedNavIndex) {
       case 0:
-        // Dashboard, keine Änderung an _selectedView nötig
+        // Dashboard
         break;
       case 1:
         _selectedView = CalendarView.month;
@@ -137,12 +137,18 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: Text(loc.myCalendar),
+        //title: Text(loc.myCalendar),
         actions: [
+          // --------------------------------------------
+          // Ursprünglich gab es hier einen Button für die Sprache.
+          // Gemäß Wunsch haben wir die Sprachwahl jetzt in die Settings verschoben.
+          // Falls du den Button entfernen möchtest, entferne das Kommentar.
+          /*
           IconButton(
             icon: const Icon(Icons.language),
             onPressed: () => _showLanguageSelection(context),
           ),
+          */
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () async {
@@ -288,6 +294,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // ------------------------------------------------
+  // Ursprüngliche Funktion zur Sprache (optional)
+  // ------------------------------------------------
   void _showLanguageSelection(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
     showModalBottomSheet(

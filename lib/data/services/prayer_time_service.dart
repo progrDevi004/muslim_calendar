@@ -1,4 +1,4 @@
-//data/services/prayer_time_service.dart
+//lib/data/services/prayer_time_service.dart
 import 'package:muslim_calendar/models/enums.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
 import '../repositories/prayer_time_repository.dart';

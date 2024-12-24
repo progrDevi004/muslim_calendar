@@ -1,4 +1,5 @@
-//data/database_helper.dart
+// lib/data/database_helper.dart
+
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -17,10 +18,12 @@ class DatabaseHelper {
 
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'appointments.db');
+    // >>> Version auf 3 erhöht
     return await openDatabase(
       path,
-      version: 2, // Version bleibt 2 wie zuvor
+      version: 3,
       onCreate: (db, version) async {
+        // Version 3 bedeutet, wir führen gleich alles an.
         await db.execute('''
           CREATE TABLE appointments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,7 +41,10 @@ class DatabaseHelper {
             color INTEGER,
             startTime TEXT,
             endTime TEXT,
-            categoryId INTEGER
+            categoryId INTEGER,
+
+            -- >>> NEU: Spalte für Reminder (in Minuten)
+            reminderMinutesBefore INTEGER
           )
         ''');
 
@@ -56,7 +62,6 @@ class DatabaseHelper {
           )
         ''');
 
-        // Neue Tabelle "categories"
         await db.execute('''
           CREATE TABLE categories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,18 +71,17 @@ class DatabaseHelper {
         ''');
 
         // >>> Standard-Kategorien einfügen <<<
-        // Du kannst natürlich andere Farben wählen
         await db.insert('categories', {
           'name': 'Privat',
-          'colorValue': 0xFF2196F3, // Blau
+          'colorValue': 0xFF2196F3,
         });
         await db.insert('categories', {
           'name': 'Geschäftlich',
-          'colorValue': 0xFF4CAF50, // Grün
+          'colorValue': 0xFF4CAF50,
         });
         await db.insert('categories', {
           'name': 'Islam',
-          'colorValue': 0xFFF44336, // Rot
+          'colorValue': 0xFFF44336,
         });
       },
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -92,8 +96,6 @@ class DatabaseHelper {
               colorValue INTEGER
             )
           ''');
-
-          // >>> Standard-Kategorien ggf. auch hier einfügen <<<
           await db.insert('categories', {
             'name': 'Privat',
             'colorValue': 0xFF2196F3,
@@ -106,6 +108,13 @@ class DatabaseHelper {
             'name': 'Islam',
             'colorValue': 0xFFF44336,
           });
+        }
+
+        // >>> Neu: Falls alter DB-Stand < 3 => Spalte reminderMinutesBefore hinzufügen
+        if (oldVersion < 3) {
+          await db.execute('''
+            ALTER TABLE appointments ADD COLUMN reminderMinutesBefore INTEGER
+          ''');
         }
       },
     );
