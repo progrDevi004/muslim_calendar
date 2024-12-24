@@ -1,4 +1,4 @@
-//ui/pages/home_page.dart
+// ui/pages/home_page.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,10 +14,10 @@ import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
 import 'package:muslim_calendar/ui/pages/settings_page.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 
-// >>> NEU: Für das Dashboard
+// >>> NEU: DashboardPage importieren
 import 'package:muslim_calendar/ui/pages/dashboard_page.dart';
 
-// >>> NEU: Wir brauchen für die Kategorie-Erstellung (Filter etc.) <<<
+// Für die Kategorie-Verwaltung (Filter etc.)
 import 'package:muslim_calendar/data/repositories/category_repository.dart';
 import 'package:muslim_calendar/models/category_model.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -30,31 +30,39 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // >>> STARTINDEX = 0 => Dashboard <<<
+  /// Index 0 => Dashboard
+  /// Index 1 => Month
+  /// Index 2 => Week
+  /// Index 3 => Day
   int _selectedNavIndex = 0;
 
   CalendarView _selectedView = CalendarView.month;
   late CalendarController _calendarController;
   EventDataSource? _dataSource;
+
   final AppointmentRepository _appointmentRepo = AppointmentRepository();
   final PrayerTimeRepository _prayerTimeRepo = PrayerTimeRepository();
   final PrayerTimeAppointmentAdapter _adapter = PrayerTimeAppointmentAdapter(
     prayerTimeService: PrayerTimeService(PrayerTimeRepository()),
     recurrenceService: RecurrenceService(),
   );
+
   DateTime? _selectedDate;
 
   // Kategorie-Verwaltung
   final CategoryRepository _categoryRepo = CategoryRepository();
   List<CategoryModel> _allCategories = [];
-  Set<int> _selectedCategoryIds = {}; // hält IDs der aktiven Kategorien
+  Set<int> _selectedCategoryIds = {}; // IDs der aktiven Kategorien
+
+  // >>> NEU: Eine finale Instanz von DashboardPage, damit sie nur einmal erzeugt wird
+  final _dashboardPage = const DashboardPage();
 
   @override
   void initState() {
     super.initState();
     _calendarController = CalendarController();
 
-    // >>> Hier legen wir fest, dass beim Start "Dashboard" aktiv ist
+    // Standard: Index 0 => Dashboard
     _selectedNavIndex = 0;
     _updateCalendarViewFromNavIndex();
 
@@ -65,7 +73,7 @@ class _HomePageState extends State<HomePage> {
   void _updateCalendarViewFromNavIndex() {
     switch (_selectedNavIndex) {
       case 0:
-        // Dashboard => Keine Kalender-View
+        // Dashboard, keine Änderung an _selectedView nötig
         break;
       case 1:
         _selectedView = CalendarView.month;
@@ -85,8 +93,7 @@ class _HomePageState extends State<HomePage> {
     final cats = await _categoryRepo.getAllCategories();
     setState(() {
       _allCategories = cats;
-      // Standard: alle Kategorien anzeigen
-      _selectedCategoryIds = cats.map((e) => e.id!).toSet();
+      _selectedCategoryIds = cats.map((e) => e.id!).toSet(); // alle anzeigen
     });
   }
 
@@ -95,10 +102,12 @@ class _HomePageState extends State<HomePage> {
       final List<AppointmentModel> models =
           await _appointmentRepo.getAllAppointments();
       final now = DateTime.now();
+
+      // Geben wir dem Recurrence-Service ein Zeitfenster
       final startRange = DateTime(now.year, now.month - 1, 1);
       final endRange = DateTime(now.year, now.month + 2, 1);
 
-      List<Appointment> allAppointments = [];
+      final List<Appointment> allAppointments = [];
       for (var m in models) {
         // Filter nach Kategorie
         if (m.categoryId == null ||
@@ -113,7 +122,7 @@ class _HomePageState extends State<HomePage> {
         _dataSource = EventDataSource(allAppointments);
       });
     } catch (e) {
-      print('Error loading all appointments: $e');
+      print('Error loading appointments: $e');
     }
   }
 
@@ -121,8 +130,9 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
 
-    // Wenn wir im Dashboard sind, zeigen wir NICHT den FAB
-    final bool showFab = _selectedNavIndex != 0;
+    // Wir zeigen den FloatingActionButton nur in den Kalender-Ansichten
+    // (Month, Week, Day => index 1..3). Im Dashboard (index 0) nicht
+    final bool showFab = (_selectedNavIndex >= 1);
 
     return Scaffold(
       appBar: AppBar(
@@ -131,9 +141,7 @@ class _HomePageState extends State<HomePage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.language),
-            onPressed: () {
-              _showLanguageSelection(context);
-            },
+            onPressed: () => _showLanguageSelection(context),
           ),
           IconButton(
             icon: const Icon(Icons.settings),
@@ -149,12 +157,15 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      // BODY: Dashboard oder Kalender je nach Tab
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
-        child: _selectedNavIndex == 0
-            ? const DashboardPage()
-            : SfCalendar(
+
+      // >>> HIER: Entweder Dashboard oder Kalender
+      body: _selectedNavIndex == 0
+          // Dashboard
+          ? _dashboardPage
+          // Kalender
+          : Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
+              child: SfCalendar(
                 headerStyle: const CalendarHeaderStyle(
                   backgroundColor: Colors.transparent,
                   textAlign: TextAlign.center,
@@ -165,13 +176,46 @@ class _HomePageState extends State<HomePage> {
                 controller: _calendarController,
                 dataSource: _dataSource,
                 showDatePickerButton: true,
-                onSelectionChanged: (calendarSelectionDetails) {
-                  _selectedDate = calendarSelectionDetails.date;
-                },
                 monthViewSettings: const MonthViewSettings(
                   appointmentDisplayMode: MonthAppointmentDisplayMode.indicator,
                   showAgenda: true,
                 ),
+                appointmentBuilder:
+                    (BuildContext context, CalendarAppointmentDetails details) {
+                  if (details.appointments.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  // Monat => Indikatoren
+                  if (_selectedView == CalendarView.month) {
+                    return Container();
+                  } else {
+                    // Woche/Tag => Termin-Titel im farbigen Balken (FittedBox)
+                    final appointment = details.appointments.first;
+                    return Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: appointment.color,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          appointment.subject,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                    );
+                  }
+                },
+                onSelectionChanged: (calendarSelectionDetails) {
+                  _selectedDate = calendarSelectionDetails.date;
+                },
                 onTap: (calendarTapDetails) async {
                   if (calendarTapDetails.targetElement ==
                       CalendarElement.appointment) {
@@ -189,16 +233,17 @@ class _HomePageState extends State<HomePage> {
                     _loadAllAppointments();
                   } else if (calendarTapDetails.targetElement ==
                       CalendarElement.calendarCell) {
+                    // Falls man auf den gleichen Tag tippt => Detailansicht (Day View)
                     if (calendarTapDetails.date == _selectedDate) {
                       setState(() {
-                        _selectedNavIndex = 3; // Day View
+                        _selectedNavIndex = 3; // Day
                         _updateCalendarViewFromNavIndex();
                       });
                     }
                   }
                 },
               ),
-      ),
+            ),
       floatingActionButton: showFab
           ? FloatingActionButton(
               tooltip: 'Neuen Termin hinzufügen',
@@ -316,9 +361,7 @@ class _HomePageState extends State<HomePage> {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-              },
+              onPressed: () => Navigator.of(ctx).pop(),
               child: const Text('Abbrechen'),
             ),
             FilledButton(
