@@ -460,6 +460,7 @@ class DashboardPageState extends State<DashboardPage> {
                                           '${t.startTime} - ${t.endTime}',
                                           style: TextStyle(
                                             color: textColor.withOpacity(0.9),
+                                            fontSize: 10,
                                           ),
                                         ),
                                       ],
