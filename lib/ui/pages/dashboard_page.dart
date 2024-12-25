@@ -1,5 +1,3 @@
-// lib/ui/pages/dashboard_page.dart
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -38,20 +36,28 @@ class DashboardPageState extends State<DashboardPage> {
   String? _weatherSymbol;
   String? _weatherErrorMessage;
 
-  Map<String, String> _todayPrayerTimes = {};
+  // Für die Anzeige im kleinen Kasten oben
+  Map<String, String> _todayPrayerTimesDisplay = {};
   String? _prayerTimeErrorMessage;
+
+  // Für die exakte Zeitberechnung (z. B. 05:12 => 312 Minuten)
+  Map<PrayerTime, int?> _todayPrayerTimesMinutes = {};
 
   List<_DashboardTask> _todayTasks = [];
 
   final PrayerTimeRepository _prayerTimeRepo = PrayerTimeRepository();
   final AppointmentRepository _appointmentRepo = AppointmentRepository();
 
-  // >>> NEU: Berechnete Start-/Endzeiten
+  // Berechnete Start-/Endzeiten
   late final PrayerTimeService _prayerTimeService;
 
+  // 24h- vs AM/PM-Format
   bool _use24hFormat = false;
 
-  // Hover-Status, um Microinteractions zu steuern
+  // Einstellung: Gebetszeiten-Slots anzeigen oder nicht
+  bool _showPrayerSlotsInDashboard = true;
+
+  // Hover-Status (für Animation/Effekt)
   int? _hoveredTaskId;
 
   @override
@@ -74,6 +80,10 @@ class DashboardPageState extends State<DashboardPage> {
     final prefs = await SharedPreferences.getInstance();
     _use24hFormat = prefs.getBool('use24hFormat') ?? false;
 
+    // Gebets-Slots-Einstellung laden
+    _showPrayerSlotsInDashboard =
+        prefs.getBool('showPrayerSlotsInDashboard') ?? true;
+
     setState(() {
       _isWeatherLoading = true;
       _isPrayerTimesLoading = true;
@@ -91,7 +101,7 @@ class DashboardPageState extends State<DashboardPage> {
     setState(() {});
   }
 
-  /// Holt das Wetter
+  /// Wetter abrufen
   Future<void> _fetchWeather(String city) async {
     const apiKey = 'ea71a51c210c3fa6760039a8b592c19c'; // example key
     try {
@@ -131,7 +141,7 @@ class DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  /// Gebetszeiten für "heute"
+  /// Gebetszeiten für heute abrufen
   Future<void> _fetchPrayerTimesForToday(String location) async {
     final now = DateTime.now();
     final loc = Provider.of<AppLocalizations>(context, listen: false);
@@ -147,16 +157,30 @@ class DashboardPageState extends State<DashboardPage> {
       final isha = await _prayerTimeRepo.getPrayerTimeMinutes(
           now, location, PrayerTime.isha);
 
+      // Für die Anzeige oben
+      _todayPrayerTimesDisplay = {
+        loc.getPrayerTimeLabel(PrayerTime.fajr):
+            _formatTimeFromMinutes(fajr ?? -1),
+        loc.getPrayerTimeLabel(PrayerTime.dhuhr):
+            _formatTimeFromMinutes(dhuhr ?? -1),
+        loc.getPrayerTimeLabel(PrayerTime.asr):
+            _formatTimeFromMinutes(asr ?? -1),
+        loc.getPrayerTimeLabel(PrayerTime.maghrib):
+            _formatTimeFromMinutes(maghrib ?? -1),
+        loc.getPrayerTimeLabel(PrayerTime.isha):
+            _formatTimeFromMinutes(isha ?? -1),
+      };
+
+      // Rohwerte zum Einsortieren
+      _todayPrayerTimesMinutes = {
+        PrayerTime.fajr: fajr,
+        PrayerTime.dhuhr: dhuhr,
+        PrayerTime.asr: asr,
+        PrayerTime.maghrib: maghrib,
+        PrayerTime.isha: isha,
+      };
+
       setState(() {
-        _todayPrayerTimes = {
-          loc.getPrayerTimeLabel(PrayerTime.fajr): _formatTimeFromMinutes(fajr),
-          loc.getPrayerTimeLabel(PrayerTime.dhuhr):
-              _formatTimeFromMinutes(dhuhr),
-          loc.getPrayerTimeLabel(PrayerTime.asr): _formatTimeFromMinutes(asr),
-          loc.getPrayerTimeLabel(PrayerTime.maghrib):
-              _formatTimeFromMinutes(maghrib),
-          loc.getPrayerTimeLabel(PrayerTime.isha): _formatTimeFromMinutes(isha),
-        };
         _prayerTimeErrorMessage = null;
       });
     } catch (e) {
@@ -168,7 +192,7 @@ class DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  /// Berechnete Start-/Endzeiten für heutige Termine
+  /// Heutige Termine + (optional) Gebetszeiten-Slots laden
   Future<void> _loadTodaysAppointments() async {
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day, 0, 0);
@@ -177,6 +201,7 @@ class DashboardPageState extends State<DashboardPage> {
     final all = await _appointmentRepo.getAllAppointments();
     final tasks = <_DashboardTask>[];
 
+    // 1) Normale Termine berechnen und hinzufügen
     for (var ap in all) {
       final calculatedStart =
           await _prayerTimeService.getCalculatedStartTime(ap, now);
@@ -193,9 +218,10 @@ class DashboardPageState extends State<DashboardPage> {
         tasks.add(
           _DashboardTask(
             appointmentId: ap.id,
+            isPrayerSlot: false,
             title: ap.subject,
-            startTime: _formatDateTime(s),
-            endTime: _formatDateTime(e),
+            start: s,
+            end: e,
             durationInMinutes: diff,
             description: desc,
             color: ap.color,
@@ -204,8 +230,41 @@ class DashboardPageState extends State<DashboardPage> {
       }
     }
 
-    // NEU: Sortierung nach startDateTime
-    tasks.sort((a, b) => a.startTime.compareTo(b.startTime));
+    // 2) Gebetszeiten-Slots einsortieren (falls Einstellung aktiv)
+    if (_showPrayerSlotsInDashboard) {
+      final baseDay = DateTime(now.year, now.month, now.day);
+      for (final entry in _todayPrayerTimesMinutes.entries) {
+        final prayerTime = entry.key;
+        final minutes = entry.value;
+        if (minutes == null) continue; // Keine Daten => skip
+        if (minutes < 0) continue; // Fehler oder invalid => skip
+
+        final dtStart = baseDay.add(Duration(minutes: minutes));
+        if (dtStart.isAfter(endOfDay) || dtStart.isBefore(startOfDay)) {
+          // Außerhalb des heutigen Tages
+          continue;
+        }
+
+        // Wählen wir hier 0 oder 1 Minute => minimal
+        final dtEnd = dtStart.add(const Duration(minutes: 1));
+
+        tasks.add(
+          _DashboardTask(
+            appointmentId: null,
+            isPrayerSlot: true,
+            title: _prayerTimeLabel(prayerTime), // z.B. "Fajr"
+            start: dtStart,
+            end: dtEnd,
+            durationInMinutes: 1,
+            description: '', // Kein extra Text
+            color: Colors.teal, // Einheitliche Farbe für Gebets-Slots
+          ),
+        );
+      }
+    }
+
+    // 3) Sortierung nach Startzeit
+    tasks.sort((a, b) => a.start.compareTo(b.start));
 
     setState(() {
       _todayTasks = tasks;
@@ -213,9 +272,28 @@ class DashboardPageState extends State<DashboardPage> {
     });
   }
 
-  /// Zeitformat
+  /// Gibt den Label-Text für den Gebets-Slot zurück
+  String _prayerTimeLabel(PrayerTime pt) {
+    switch (pt) {
+      case PrayerTime.fajr:
+        return 'Fajr';
+      case PrayerTime.dhuhr:
+        return 'Dhuhr';
+      case PrayerTime.asr:
+        return 'Asr';
+      case PrayerTime.maghrib:
+        return 'Maghrib';
+      case PrayerTime.isha:
+        return 'Isha';
+    }
+  }
+
+  /// Erzeugt ein Zeit-String aus totalMinutes
+  /// Falls -1 oder null => "--:--"
   String _formatTimeFromMinutes(int? totalMinutes) {
-    if (totalMinutes == null) return '--:--';
+    if (totalMinutes == null || totalMinutes < 0) {
+      return '--:--';
+    }
     final h = totalMinutes ~/ 60;
     final m = totalMinutes % 60;
     final dt = DateTime(2000, 1, 1, h, m);
@@ -223,28 +301,7 @@ class DashboardPageState extends State<DashboardPage> {
     return DateFormat(pattern).format(dt);
   }
 
-  String _formatDateTime(DateTime dt) {
-    final pattern = _use24hFormat ? 'HH:mm' : 'h:mm a';
-    return DateFormat(pattern).format(dt);
-  }
-
-  /// Wetter-Symbol
-  String _mapWeatherSymbol(String condition) {
-    final lower = condition.toLowerCase();
-    if (lower.contains('rain')) {
-      return '🌧';
-    } else if (lower.contains('cloud')) {
-      return '☁';
-    } else if (lower.contains('clear')) {
-      return '☀';
-    } else if (lower.contains('snow')) {
-      return '❄';
-    } else {
-      return '🌤';
-    }
-  }
-
-  /// Sprache -> Code
+  /// Konvertiert in z. B. "en", "de" ...
   String _mapAppLanguageToCode(AppLanguage lang) {
     switch (lang) {
       case AppLanguage.german:
@@ -259,10 +316,20 @@ class DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  /// Kontrastierende Textfarbe je nach Hintergrund
-  Color _getContrastingTextColor(Color background) {
-    final brightness = ThemeData.estimateBrightnessForColor(background);
-    return brightness == Brightness.dark ? Colors.white : Colors.black;
+  /// Wetter-Symbol anhand einfacher Schlagwörter
+  String _mapWeatherSymbol(String condition) {
+    final lower = condition.toLowerCase();
+    if (lower.contains('rain')) {
+      return '🌧';
+    } else if (lower.contains('cloud')) {
+      return '☁';
+    } else if (lower.contains('clear')) {
+      return '☀';
+    } else if (lower.contains('snow')) {
+      return '❄';
+    } else {
+      return '🌤';
+    }
   }
 
   /// Neuer Termin
@@ -290,6 +357,18 @@ class DashboardPageState extends State<DashboardPage> {
     });
   }
 
+  /// Kontrastfarbe für Text
+  Color _getContrastingTextColor(Color background) {
+    final brightness = ThemeData.estimateBrightnessForColor(background);
+    return brightness == Brightness.dark ? Colors.white : Colors.black;
+  }
+
+  /// Formatierung einer DateTime zu String (z. B. "14:30")
+  String _formatDateTime(DateTime dt) {
+    final pattern = _use24hFormat ? 'HH:mm' : 'h:mm a';
+    return DateFormat(pattern).format(dt);
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
@@ -302,7 +381,7 @@ class DashboardPageState extends State<DashboardPage> {
     final weekdayString = weekdayFormatter.format(now);
 
     final Color mainColor = Theme.of(context).colorScheme.primary;
-    // Für Dark Mode etwas höhere Opazität bei den farbigen Kacheln
+    // Dark Mode => höhere Opazität für Kacheln
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color accentCardColor = mainColor.withOpacity(isDark ? 0.3 : 0.1);
     final Color accentTextColor = mainColor.withOpacity(isDark ? 0.9 : 0.7);
@@ -321,7 +400,7 @@ class DashboardPageState extends State<DashboardPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 16),
-              // Datum-Karte mit Theme-Anpassung
+              // Datum-Karte
               Card(
                 color: Theme.of(context).cardColor,
                 margin: const EdgeInsets.only(bottom: 16),
@@ -403,101 +482,12 @@ class DashboardPageState extends State<DashboardPage> {
                   ? const Center(child: CircularProgressIndicator())
                   : Column(
                       children: _todayTasks.map((t) {
-                        final backgroundColor = t.color;
-                        final textColor =
-                            _getContrastingTextColor(backgroundColor);
-
-                        return MouseRegion(
-                          onEnter: (_) => _onHoverEnter(t.appointmentId ?? 0),
-                          onExit: (_) => _onHoverExit(t.appointmentId ?? 0),
-                          child: InkWell(
-                            splashColor: backgroundColor.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(16),
-                            onTap: () async {
-                              if (t.appointmentId != null) {
-                                await Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (ctx) => AppointmentDetailsPage(
-                                      appointmentId: t.appointmentId!,
-                                    ),
-                                  ),
-                                );
-                                reloadData();
-                              }
-                            },
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 6),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: backgroundColor,
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: _hoveredTaskId == t.appointmentId
-                                    ? [
-                                        BoxShadow(
-                                          color:
-                                              backgroundColor.withOpacity(0.4),
-                                          blurRadius: 6,
-                                          offset: const Offset(0, 2),
-                                        )
-                                      ]
-                                    : [],
-                              ),
-                              child: Row(
-                                children: [
-                                  SizedBox(
-                                    width: 60,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          _formatDuration(t.durationInMinutes),
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                            color: textColor,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          '${t.startTime} - ${t.endTime}',
-                                          style: TextStyle(
-                                            color: textColor.withOpacity(0.9),
-                                            fontSize: 10,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          t.title,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                            color: textColor,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          t.description,
-                                          style: TextStyle(
-                                            color: textColor.withOpacity(0.9),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
+                        if (t.isPrayerSlot) {
+                          // Spezielle Darstellung
+                          return _buildPrayerSlotItem(t);
+                        } else {
+                          return _buildAppointmentItem(t);
+                        }
                       }).toList(),
                     ),
               const SizedBox(height: 40),
@@ -508,6 +498,150 @@ class DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  /// UI-Element für einen normalen Termin (kein Gebetsslot)
+  Widget _buildAppointmentItem(_DashboardTask t) {
+    final backgroundColor = t.color;
+    final textColor = _getContrastingTextColor(backgroundColor);
+    final startStr = _formatDateTime(t.start);
+    final endStr = _formatDateTime(t.end);
+
+    return MouseRegion(
+      onEnter: (_) => _onHoverEnter(t.appointmentId ?? 0),
+      onExit: (_) => _onHoverExit(t.appointmentId ?? 0),
+      child: InkWell(
+        splashColor: backgroundColor.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(16),
+        onTap: () async {
+          if (t.appointmentId != null) {
+            await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (ctx) => AppointmentDetailsPage(
+                  appointmentId: t.appointmentId!,
+                ),
+              ),
+            );
+            reloadData();
+          }
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: _hoveredTaskId == t.appointmentId
+                ? [
+                    BoxShadow(
+                      color: backgroundColor.withOpacity(0.4),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    )
+                  ]
+                : [],
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 60,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _formatDuration(t.durationInMinutes),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$startStr - $endStr',
+                      style: TextStyle(
+                        color: textColor.withOpacity(0.9),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      t.title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      t.description,
+                      style: TextStyle(
+                        color: textColor.withOpacity(0.9),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// UI-Element für einen Gebetsslot (nicht klickbar)
+  Widget _buildPrayerSlotItem(_DashboardTask t) {
+    final timeStr = _formatDateTime(t.start);
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.grey.shade400,
+          style: BorderStyle.solid,
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.star, color: Colors.teal),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // z.B. "Fajr"
+                Text(
+                  t.title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.teal,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // z.B. "05:30 am"
+                Text(
+                  timeStr,
+                  style: const TextStyle(color: Colors.black87),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Baut das kleine Wetter-Kästchen
   Widget _buildWeatherTile(
       BuildContext context, AppLocalizations loc, Color accentTextColor) {
     if (_isWeatherLoading) {
@@ -521,7 +655,6 @@ class DashboardPageState extends State<DashboardPage> {
     }
 
     final theme = Theme.of(context);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -565,6 +698,7 @@ class DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  /// Baut das kleine Gebetszeiten-Kästchen
   Widget _buildPrayerTimeTile(
       BuildContext context, AppLocalizations loc, Color accentTextColor) {
     if (_isPrayerTimesLoading) {
@@ -576,11 +710,11 @@ class DashboardPageState extends State<DashboardPage> {
         style: TextStyle(color: Colors.red.shade400),
       );
     }
-    if (_todayPrayerTimes.isEmpty) {
+    if (_todayPrayerTimesDisplay.isEmpty) {
       return Text('${loc.prayerTimeDashboard}\n--');
     }
-    final theme = Theme.of(context);
 
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -598,7 +732,7 @@ class DashboardPageState extends State<DashboardPage> {
           ],
         ),
         const SizedBox(height: 8),
-        ..._todayPrayerTimes.entries.map(
+        ..._todayPrayerTimesDisplay.entries.map(
           (e) => Padding(
             padding: const EdgeInsets.symmetric(vertical: 2.0),
             child: Row(
@@ -625,6 +759,7 @@ class DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  /// Menschliche Anzeige für die Dauer (z. B. "1h 30m")
   String _formatDuration(int minutes) {
     if (minutes >= 60) {
       final h = minutes ~/ 60;
@@ -638,18 +773,20 @@ class DashboardPageState extends State<DashboardPage> {
 
 class _DashboardTask {
   final int? appointmentId;
+  final bool isPrayerSlot;
   final String title;
-  final String startTime;
-  final String endTime;
+  final DateTime start;
+  final DateTime end;
   final int durationInMinutes;
   final String description;
   final Color color;
 
   _DashboardTask({
     this.appointmentId,
+    required this.isPrayerSlot,
     required this.title,
-    required this.startTime,
-    required this.endTime,
+    required this.start,
+    required this.end,
     required this.durationInMinutes,
     required this.description,
     required this.color,

@@ -1,5 +1,3 @@
-// lib/ui/pages/settings_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -34,6 +32,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
   // >>> 24h/AM-PM
   bool _use24hFormat = false;
+
+  // >>> NEU: Gebetszeiten-Slots auf dem Dashboard anzeigen
+  bool _showPrayerSlotsInDashboard = true;
 
   final List<String> _availableCountries = [
     'Germany',
@@ -85,6 +86,10 @@ class _SettingsPageState extends State<SettingsPage> {
           .setLanguage(_selectedLanguage);
     }
 
+    // >>> NEU: Gebetsslot in Dashboard
+    _showPrayerSlotsInDashboard =
+        prefs.getBool('showPrayerSlotsInDashboard') ?? true;
+
     setState(() {});
   }
 
@@ -105,6 +110,10 @@ class _SettingsPageState extends State<SettingsPage> {
       await prefs.setString('defaultCity', _defaultCity!);
     }
     await prefs.setInt('selectedLanguageIndex', _selectedLanguage.index);
+
+    // NEU: In die Preferences speichern
+    await prefs.setBool(
+        'showPrayerSlotsInDashboard', _showPrayerSlotsInDashboard);
   }
 
   @override
@@ -282,6 +291,31 @@ class _SettingsPageState extends State<SettingsPage> {
                     .toList(),
               ),
           ],
+          const Divider(height: 40),
+
+          // NEU: Schalter "Gebetszeiten als Termin-Slots"
+          Text(
+            'Gebetszeiten-Slots',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            activeColor: Colors.green,
+            activeTrackColor: Colors.greenAccent,
+            title: const Text('Gebetszeiten-Slots anzeigen'),
+            subtitle: const Text(
+                'Zeigt die heutigen Gebetszeiten zusätzlich als separaten Terminblock im Dashboard an'),
+            value: _showPrayerSlotsInDashboard,
+            onChanged: (bool val) async {
+              setState(() {
+                _showPrayerSlotsInDashboard = val;
+              });
+              await _saveSettings();
+            },
+          ),
+
           const SizedBox(height: 40),
 
           Center(

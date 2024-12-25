@@ -158,7 +158,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
       // Gebetszeit-Defaults
       _selectedPrayerTime = PrayerTime.dhuhr;
-      _minutesBeforeAfter = 0;
+      _minutesBeforeAfter = 15;
       _selectedTimeRelation = TimeRelation.after;
       _duration = const Duration(minutes: 30);
       _isAllDay = false;
