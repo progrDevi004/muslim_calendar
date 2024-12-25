@@ -119,7 +119,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
           // Sprache
           ListTile(
-            title: const Text('Language'),
+            title: Text(loc.language),
             subtitle: Text(
               Provider.of<AppLocalizations>(context, listen: false)
                   .getLanguageName(_selectedLanguage),
@@ -168,9 +168,9 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const Divider(height: 40),
 
-          // >>> NEU: 24h-Format
+          // Zeitformat
           Text(
-            'Zeitformat',
+            loc.timeFormat,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -179,10 +179,10 @@ class _SettingsPageState extends State<SettingsPage> {
           SwitchListTile(
             activeColor: Colors.green,
             activeTrackColor: Colors.greenAccent,
-            title: const Text('24-Stunden-Format'),
+            title: Text(loc.timeFormat24),
             subtitle: Text(_use24hFormat
-                ? 'Aktuell ist das 24h-Format aktiv'
-                : 'Aktuell ist das AM/PM-Format aktiv'),
+                ? loc.timeFormat24Active
+                : loc.timeFormatAmPmActive),
             value: _use24hFormat,
             onChanged: (bool val) async {
               setState(() {

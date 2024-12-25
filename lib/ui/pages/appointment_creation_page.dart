@@ -257,8 +257,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           });
         }
       } catch (e) {
+        final loc = Provider.of<AppLocalizations>(context, listen: false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading appointment: $e')),
+          SnackBar(content: Text('${loc.errorLoadingAppointment}: $e')),
         );
       }
     }
@@ -269,7 +270,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
     if (_currentAppointmentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No appointment to delete.')),
+        SnackBar(content: Text(loc.noAppointmentToDelete)),
       );
       return;
     }
@@ -302,13 +303,13 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         await _appointmentRepo.deleteAppointment(_currentAppointmentId!);
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Appointment deleted successfully.')),
+          SnackBar(content: Text(loc.appointmentDeletedSuccessfully)),
         );
 
         Navigator.of(context).pop(true);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error deleting appointment.')),
+          SnackBar(content: Text(loc.errorDeletingAppointment)),
         );
       }
     }
@@ -316,12 +317,12 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
   /// Termin speichern (Neu oder Update)
   void _saveAppointment() async {
-    if (_formKey.currentState!.validate()) {
-      final loc = Provider.of<AppLocalizations>(context, listen: false);
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
 
+    if (_formKey.currentState!.validate()) {
       if (_startTime == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bitte wähle eine Startzeit aus.')),
+          SnackBar(content: Text(loc.pleaseSelectStartTimeError)),
         );
         return;
       }
@@ -630,7 +631,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                     child: DropdownButtonFormField<CategoryModel>(
                       value: _selectedCategory,
                       decoration:
-                          const InputDecoration(labelText: 'Kategorie wählen'),
+                          InputDecoration(labelText: loc.selectCategoryLabel),
                       items: _allCategories.map((cat) {
                         return DropdownMenuItem<CategoryModel>(
                           value: cat,
@@ -705,8 +706,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               // Erinnerung
               DropdownButtonFormField<int?>(
                 value: _selectedReminderMinutes,
-                decoration: const InputDecoration(
-                    labelText: 'Erinnerung (Min. vorher)'),
+                decoration: InputDecoration(labelText: loc.reminderInMinutes),
                 onChanged: (val) {
                   setState(() {
                     _selectedReminderMinutes = val;
@@ -714,26 +714,26 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 },
                 items: _reminderOptions.map((option) {
                   if (option == null) {
-                    return const DropdownMenuItem<int?>(
+                    return DropdownMenuItem<int?>(
                       value: null,
-                      child: Text('Keine Erinnerung'),
+                      child: Text(loc.noReminder),
                     );
                   } else if (option < 60) {
                     return DropdownMenuItem<int?>(
                       value: option,
-                      child: Text('$option Min. vorher'),
+                      child: Text(loc.minutesBefore(option)),
                     );
                   } else if (option < 1440) {
                     final h = option ~/ 60;
                     return DropdownMenuItem<int?>(
                       value: option,
-                      child: Text('$h Std. vorher'),
+                      child: Text(loc.hoursBefore(h)),
                     );
                   } else {
                     final d = option ~/ 1440;
                     return DropdownMenuItem<int?>(
                       value: option,
-                      child: Text('$d Tag(e) vorher'),
+                      child: Text(loc.daysBefore(d)),
                     );
                   }
                 }).toList(),
@@ -748,9 +748,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   });
                 },
                 child: Text(
-                  _showAdvancedOptions
-                      ? 'Weniger Optionen'
-                      : 'Erweiterte Optionen',
+                  _showAdvancedOptions ? loc.fewerOptions : loc.advancedOptions,
                 ),
               ),
               const SizedBox(height: 8),

@@ -1077,4 +1077,262 @@ class AppLocalizations extends ChangeNotifier {
         return 'Don\'t forget your appointment!';
     }
   }
+
+  // ------------------------------
+  // >>> Neue Strings für SettingsPage
+  // ------------------------------
+  String get language {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Sprache';
+      case AppLanguage.turkish:
+        return 'Dil';
+      case AppLanguage.arabic:
+        return 'اللغة';
+      case AppLanguage.english:
+      default:
+        return 'Language';
+    }
+  }
+
+  String get timeFormat {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Zeitformat';
+      case AppLanguage.turkish:
+        return 'Zaman Formatı';
+      case AppLanguage.arabic:
+        return 'تنسيق الوقت';
+      case AppLanguage.english:
+      default:
+        return 'Time Format';
+    }
+  }
+
+  String get timeFormat24 {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return '24-Stunden-Format';
+      case AppLanguage.turkish:
+        return '24 Saat Formatı';
+      case AppLanguage.arabic:
+        return 'تنسيق 24 ساعة';
+      case AppLanguage.english:
+      default:
+        return '24-hour format';
+    }
+  }
+
+  String get timeFormat24Active {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Aktuell ist das 24h-Format aktiv';
+      case AppLanguage.turkish:
+        return 'Şu anda 24 saat formatı etkin';
+      case AppLanguage.arabic:
+        return 'حاليًا يتم استخدام تنسيق 24 ساعة';
+      case AppLanguage.english:
+      default:
+        return 'Currently, 24-hour format is active';
+    }
+  }
+
+  String get timeFormatAmPmActive {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Aktuell ist das AM/PM-Format aktiv';
+      case AppLanguage.turkish:
+        return 'Şu anda AM/PM formatı etkin';
+      case AppLanguage.arabic:
+        return 'حاليًا يتم استخدام تنسيق ص / م';
+      case AppLanguage.english:
+      default:
+        return 'Currently, AM/PM format is active';
+    }
+  }
+
+  // ------------------------------
+  // >>> NEUE STRINGS FÜR APPOINTMENT_CREATION_PAGE
+  // ------------------------------
+  String get pleaseSelectStartTimeError {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Bitte wähle eine Startzeit aus.';
+      case AppLanguage.turkish:
+        return 'Lütfen bir başlangıç zamanı seçin.';
+      case AppLanguage.arabic:
+        return 'من فضلك اختر وقت البدء.';
+      case AppLanguage.english:
+      default:
+        return 'Please select a start time.';
+    }
+  }
+
+  String get advancedOptions {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Erweiterte Optionen';
+      case AppLanguage.turkish:
+        return 'Gelişmiş Seçenekler';
+      case AppLanguage.arabic:
+        return 'خيارات متقدمة';
+      case AppLanguage.english:
+      default:
+        return 'Advanced Options';
+    }
+  }
+
+  String get fewerOptions {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Weniger Optionen';
+      case AppLanguage.turkish:
+        return 'Daha Az Seçenek';
+      case AppLanguage.arabic:
+        return 'خيارات أقل';
+      case AppLanguage.english:
+      default:
+        return 'Fewer Options';
+    }
+  }
+
+  String get reminderInMinutes {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Erinnerung (Min. vorher)';
+      case AppLanguage.turkish:
+        return 'Hatırlatma (Dakika önce)';
+      case AppLanguage.arabic:
+        return 'تذكير (دقائق قبل الموعد)';
+      case AppLanguage.english:
+      default:
+        return 'Reminder (min. before)';
+    }
+  }
+
+  String get selectCategoryLabel {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Kategorie wählen';
+      case AppLanguage.turkish:
+        return 'Kategori Seçiniz';
+      case AppLanguage.arabic:
+        return 'اختر الفئة';
+      case AppLanguage.english:
+      default:
+        return 'Select Category';
+    }
+  }
+
+  String get noReminder {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Keine Erinnerung';
+      case AppLanguage.turkish:
+        return 'Hatırlatma Yok';
+      case AppLanguage.arabic:
+        return 'بدون تذكير';
+      case AppLanguage.english:
+      default:
+        return 'No Reminder';
+    }
+  }
+
+  String minutesBefore(int val) {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return '$val Min. vorher';
+      case AppLanguage.turkish:
+        return '$val Dakika önce';
+      case AppLanguage.arabic:
+        return '$val دقيقة قبل الموعد';
+      case AppLanguage.english:
+      default:
+        return '$val min. before';
+    }
+  }
+
+  String hoursBefore(int h) {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return '$h Std. vorher';
+      case AppLanguage.turkish:
+        return '$h Saat önce';
+      case AppLanguage.arabic:
+        return '$h ساعة قبل الموعد';
+      case AppLanguage.english:
+      default:
+        return '$h hour(s) before';
+    }
+  }
+
+  String daysBefore(int d) {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return '$d Tag(e) vorher';
+      case AppLanguage.turkish:
+        return '$d Gün önce';
+      case AppLanguage.arabic:
+        return '$d يوم قبل الموعد';
+      case AppLanguage.english:
+      default:
+        return '$d day(s) before';
+    }
+  }
+
+  String get errorLoadingAppointment {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Fehler beim Laden des Termins';
+      case AppLanguage.turkish:
+        return 'Randevu yüklenirken hata oluştu';
+      case AppLanguage.arabic:
+        return 'حدث خطأ أثناء تحميل الموعد';
+      case AppLanguage.english:
+      default:
+        return 'Error loading appointment';
+    }
+  }
+
+  String get noAppointmentToDelete {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Kein Termin zu löschen.';
+      case AppLanguage.turkish:
+        return 'Silinecek bir randevu yok.';
+      case AppLanguage.arabic:
+        return 'لا يوجد موعد للحذف.';
+      case AppLanguage.english:
+      default:
+        return 'No appointment to delete.';
+    }
+  }
+
+  String get errorDeletingAppointment {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Fehler beim Löschen des Termins.';
+      case AppLanguage.turkish:
+        return 'Randevu silinirken hata oluştu.';
+      case AppLanguage.arabic:
+        return 'حدث خطأ أثناء حذف الموعد.';
+      case AppLanguage.english:
+      default:
+        return 'Error deleting appointment.';
+    }
+  }
+
+  String get appointmentDeletedSuccessfully {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Termin erfolgreich gelöscht.';
+      case AppLanguage.turkish:
+        return 'Randevu başarıyla silindi.';
+      case AppLanguage.arabic:
+        return 'تم حذف الموعد بنجاح.';
+      case AppLanguage.english:
+      default:
+        return 'Appointment deleted successfully.';
+    }
+  }
 }
