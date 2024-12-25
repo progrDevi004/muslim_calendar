@@ -46,8 +46,7 @@ class DashboardPageState extends State<DashboardPage> {
   final PrayerTimeRepository _prayerTimeRepo = PrayerTimeRepository();
   final AppointmentRepository _appointmentRepo = AppointmentRepository();
 
-  // >>> NEU: Wir initialisieren zusätzlich den PrayerTimeService,
-  // um die "berechneten" Start-/Endzeiten zu bekommen:
+  // >>> NEU: Berechnete Start-/Endzeiten
   late final PrayerTimeService _prayerTimeService;
 
   bool _use24hFormat = false;
@@ -169,7 +168,7 @@ class DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  /// WICHTIG: Hier korrigieren wir, damit wir die "berechneten" Zeiten bekommen
+  /// Berechnete Start-/Endzeiten für heutige Termine
   Future<void> _loadTodaysAppointments() async {
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day, 0, 0);
@@ -179,7 +178,6 @@ class DashboardPageState extends State<DashboardPage> {
     final tasks = <_DashboardTask>[];
 
     for (var ap in all) {
-      // => Start-/Endzeit berechnen (falls isRelatedToPrayerTimes)
       final calculatedStart =
           await _prayerTimeService.getCalculatedStartTime(ap, now);
       final s = calculatedStart ?? (ap.startTime ?? now);
@@ -188,8 +186,6 @@ class DashboardPageState extends State<DashboardPage> {
           await _prayerTimeService.getCalculatedEndTime(ap, now);
       final e = calculatedEnd ?? s.add(const Duration(minutes: 30));
 
-      // Nur Termine, die heute (zwischen startOfDay und endOfDay) liegen
-      // => wir checken: e > startOfDay && s < endOfDay
       if (e.isAfter(startOfDay) && s.isBefore(endOfDay)) {
         final diff = e.difference(s).inMinutes;
         final desc = ap.notes ?? '';
@@ -266,6 +262,31 @@ class DashboardPageState extends State<DashboardPage> {
     return brightness == Brightness.dark ? Colors.white : Colors.black;
   }
 
+  /// Neuer Termin
+  void _createQuickAppointment() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (ctx) => const AppointmentCreationPage(),
+      ),
+    );
+    reloadData();
+  }
+
+  /// Hover-Handling
+  void _onHoverEnter(int taskId) {
+    setState(() {
+      _hoveredTaskId = taskId;
+    });
+  }
+
+  void _onHoverExit(int taskId) {
+    setState(() {
+      if (_hoveredTaskId == taskId) {
+        _hoveredTaskId = null;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
@@ -278,12 +299,15 @@ class DashboardPageState extends State<DashboardPage> {
     final weekdayString = weekdayFormatter.format(now);
 
     final Color mainColor = Theme.of(context).colorScheme.primary;
-    final Color accentCardColor = mainColor.withOpacity(0.1);
-    final Color accentTextColor = mainColor.withOpacity(0.7);
+    // Für Dark Mode etwas höhere Opazität bei den farbigen Kacheln
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color accentCardColor = mainColor.withOpacity(isDark ? 0.3 : 0.1);
+    final Color accentTextColor = mainColor.withOpacity(isDark ? 0.9 : 0.7);
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         backgroundColor: mainColor,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         onPressed: _createQuickAppointment,
         child: const Icon(Icons.add),
       ),
@@ -294,8 +318,9 @@ class DashboardPageState extends State<DashboardPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 16),
+              // Datum-Karte mit Theme-Anpassung
               Card(
-                color: Colors.grey.shade200,
+                color: Theme.of(context).cardColor,
                 margin: const EdgeInsets.only(bottom: 16),
                 child: Padding(
                   padding: const EdgeInsets.all(6.0),
@@ -313,7 +338,10 @@ class DashboardPageState extends State<DashboardPage> {
                           style: Theme.of(context)
                               .textTheme
                               .headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.bold),
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                              ),
                         ),
                       ),
                     ],
@@ -476,31 +504,6 @@ class DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  /// Quick Appointment
-  void _createQuickAppointment() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (ctx) => const AppointmentCreationPage(),
-      ),
-    );
-    reloadData();
-  }
-
-  /// Hover-Handling
-  void _onHoverEnter(int taskId) {
-    setState(() {
-      _hoveredTaskId = taskId;
-    });
-  }
-
-  void _onHoverExit(int taskId) {
-    setState(() {
-      if (_hoveredTaskId == taskId) {
-        _hoveredTaskId = null;
-      }
-    });
-  }
-
   Widget _buildWeatherTile(
       BuildContext context, AppLocalizations loc, Color accentTextColor) {
     if (_isWeatherLoading) {
@@ -542,7 +545,10 @@ class DashboardPageState extends State<DashboardPage> {
         const SizedBox(height: 4),
         Text(
           _weatherSymbol ?? '',
-          style: TextStyle(fontSize: 28, color: accentTextColor),
+          style: TextStyle(
+            fontSize: 28,
+            color: accentTextColor,
+          ),
         ),
         const Spacer(),
         Text(

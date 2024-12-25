@@ -74,15 +74,13 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
       final appt = await _appointmentRepo.getAppointment(widget.appointmentId);
       if (appt != null) {
         // NEU: Computed Times
-        // Wir nehmen den Tag aus appt.startTime (falls vorhanden),
-        // damit wir "fajr + x" für das korrekte Datum berechnen
         final baseDate = appt.startTime != null
             ? DateTime(
                 appt.startTime!.year,
                 appt.startTime!.month,
                 appt.startTime!.day,
               )
-            : DateTime.now(); // Fallback
+            : DateTime.now();
 
         final start = await _prayerTimeService.getCalculatedStartTime(
           appt,
@@ -142,14 +140,12 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
     if (confirmDelete && _appointment?.id != null) {
       try {
-        // Notification ggf. stornieren
         await NotificationService().cancelNotification(_appointment!.id!);
         await _appointmentRepo.deleteAppointment(_appointment!.id!);
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(loc.appointmentDeletedSuccessfully)),
         );
-        // Nach dem Löschen zurück
         Navigator.of(context).pop(true);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -163,7 +159,6 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   Future<void> _editAppointment() async {
     if (_appointment?.id == null) return;
 
-    // Navigiert zur AppointmentCreationPage mit der vorhandenen ID
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => AppointmentCreationPage(
@@ -172,7 +167,6 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
       ),
     );
 
-    // Nach Rückkehr: Reload, damit Änderungen sichtbar sind
     _loadAppointment();
   }
 
@@ -201,7 +195,6 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   }
 
   Widget _buildDetailsContent(AppLocalizations loc) {
-    // Wir packen die Infos in ein Card-Layout, damit es ansprechender aussieht
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -217,7 +210,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         // Beschreibung
         if ((_appointment!.notes?.isNotEmpty ?? false))
           Card(
-            color: Colors.grey.shade50,
+            color: Theme.of(context).cardColor,
             margin: const EdgeInsets.symmetric(vertical: 8),
             child: Padding(
               padding: const EdgeInsets.all(12.0),
@@ -240,7 +233,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
         // Start/End Times
         Card(
-          color: Colors.grey.shade50,
+          color: Theme.of(context).cardColor,
           margin: const EdgeInsets.symmetric(vertical: 8),
           child: Padding(
             padding: const EdgeInsets.all(12.0),
@@ -281,7 +274,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         if (_appointment!.location != null &&
             _appointment!.location!.isNotEmpty)
           Card(
-            color: Colors.grey.shade50,
+            color: Theme.of(context).cardColor,
             margin: const EdgeInsets.symmetric(vertical: 8),
             child: Padding(
               padding: const EdgeInsets.all(12.0),
@@ -302,7 +295,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
         // Gebetszeiten-Info + Ganztägig
         Card(
-          color: Colors.grey.shade50,
+          color: Theme.of(context).cardColor,
           margin: const EdgeInsets.symmetric(vertical: 8),
           child: Padding(
             padding: const EdgeInsets.all(12.0),
@@ -332,7 +325,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
         const SizedBox(height: 16),
 
-        // Buttons (Löschen & Bearbeiten)
+        // Buttons
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

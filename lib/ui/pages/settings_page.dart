@@ -25,7 +25,12 @@ class _SettingsPageState extends State<SettingsPage> {
   String? _defaultCountry;
   String? _defaultCity;
   bool _notificationsEnabled = true;
+
+  // War bisher unser Dark Mode
   bool _darkModeEnabled = false;
+
+  // >>> Neu: System-Theme
+  bool _useSystemTheme = false;
 
   // >>> 24h/AM-PM
   bool _use24hFormat = false;
@@ -53,7 +58,12 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs = await SharedPreferences.getInstance();
 
     _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
-    _darkModeEnabled = prefs.getBool('darkModeEnabled') ?? false;
+
+    // Aus unserem ThemeNotifier => kann hier gespiegelt werden
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    _darkModeEnabled = themeNotifier.isDarkMode;
+    _useSystemTheme = themeNotifier.useSystemTheme;
+
     _use24hFormat = prefs.getBool('use24hFormat') ?? false;
 
     final modeString = prefs.getString('locationMode') ?? 'automatic';
@@ -82,7 +92,6 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs = await SharedPreferences.getInstance();
 
     await prefs.setBool('notificationsEnabled', _notificationsEnabled);
-    await prefs.setBool('darkModeEnabled', _darkModeEnabled);
     await prefs.setBool('use24hFormat', _use24hFormat);
 
     await prefs.setString(
@@ -101,6 +110,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -129,6 +139,26 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: 16),
 
+          // >>> System-Theme-Option
+          SwitchListTile(
+            activeColor: Colors.green,
+            activeTrackColor: Colors.greenAccent,
+            title: const Text('System Theme verwenden'),
+            subtitle: const Text(
+                'Automatisch auf Dunkel/Hell schalten, wenn das Gerät in den Nachtmodus wechselt'),
+            value: _useSystemTheme,
+            onChanged: (bool value) async {
+              setState(() {
+                _useSystemTheme = value;
+                if (value) {
+                  _darkModeEnabled = false;
+                }
+              });
+              themeNotifier.toggleSystemTheme(value);
+              await _saveSettings();
+            },
+          ),
+
           // Dark Mode
           SwitchListTile(
             activeColor: Colors.green,
@@ -136,14 +166,15 @@ class _SettingsPageState extends State<SettingsPage> {
             title: Text(loc.darkMode),
             subtitle: Text(loc.darkModeSubtitle),
             value: _darkModeEnabled,
-            onChanged: (bool value) async {
-              setState(() {
-                _darkModeEnabled = value;
-              });
-              await _saveSettings();
-              Provider.of<ThemeNotifier>(context, listen: false)
-                  .toggleTheme(value);
-            },
+            onChanged: _useSystemTheme
+                ? null // Deaktiviert wenn System-Theme an
+                : (bool value) async {
+                    setState(() {
+                      _darkModeEnabled = value;
+                    });
+                    themeNotifier.toggleTheme(value);
+                    await _saveSettings();
+                  },
           ),
           const SizedBox(height: 16),
 
