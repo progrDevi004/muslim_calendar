@@ -10,6 +10,8 @@ enum LocationMode {
   manual,
 }
 
+/// Optional könntest du hier ein eigenes Enum definieren, wenn du möchtest.
+/// Wir lösen es aber einfach über int -> Name.
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
 
@@ -33,8 +35,26 @@ class _SettingsPageState extends State<SettingsPage> {
   // >>> 24h/AM-PM
   bool _use24hFormat = false;
 
-  // >>> NEU: Gebetszeiten-Slots auf dem Dashboard anzeigen
+  // >>> Gebetszeiten-Slots auf dem Dashboard
   bool _showPrayerSlotsInDashboard = true;
+
+  // >>> NEU: Gebets-Berechnungsmethode (Default = 13, Diyanet)
+  int _selectedCalcMethod = 13;
+
+  /// Definiere hier ein Mapping zwischen Methode und Anzeigenamen
+  /// Quelle: https://aladhan.com/calculation-methods
+  final Map<int, String> _calcMethodMap = {
+    13: 'Diyanet (Turkey)', // Standard
+    3: 'MWL (Muslim World League)',
+    4: 'Umm Al-Qura, Makkah',
+    5: 'Egypt (GAS)',
+    2: 'ISNA (N. America)',
+    1: 'Karachi',
+    7: 'Tehran (Univ. of Geophysics)',
+    8: 'Gulf Region',
+    9: 'Kuwait',
+    10: 'Qatar',
+  };
 
   final List<String> _availableCountries = [
     'Germany',
@@ -86,9 +106,12 @@ class _SettingsPageState extends State<SettingsPage> {
           .setLanguage(_selectedLanguage);
     }
 
-    // >>> NEU: Gebetsslot in Dashboard
     _showPrayerSlotsInDashboard =
         prefs.getBool('showPrayerSlotsInDashboard') ?? true;
+
+    // >>> NEU: Gebets-Berechnungsmethode
+    _selectedCalcMethod =
+        prefs.getInt('calculationMethod') ?? 13; // Diyanet default
 
     setState(() {});
   }
@@ -103,17 +126,21 @@ class _SettingsPageState extends State<SettingsPage> {
       'locationMode',
       _locationMode == LocationMode.manual ? 'manual' : 'automatic',
     );
+
     if (_defaultCountry != null) {
       await prefs.setString('defaultCountry', _defaultCountry!);
     }
     if (_defaultCity != null) {
       await prefs.setString('defaultCity', _defaultCity!);
     }
+
     await prefs.setInt('selectedLanguageIndex', _selectedLanguage.index);
 
-    // NEU: In die Preferences speichern
     await prefs.setBool(
         'showPrayerSlotsInDashboard', _showPrayerSlotsInDashboard);
+
+    // >>> Speichern der Berechnungsmethode
+    await prefs.setInt('calculationMethod', _selectedCalcMethod);
   }
 
   @override
@@ -148,7 +175,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: 16),
 
-          // >>> System-Theme-Option
+          // System-Theme
           SwitchListTile(
             activeColor: Colors.green,
             activeTrackColor: Colors.greenAccent,
@@ -176,7 +203,7 @@ class _SettingsPageState extends State<SettingsPage> {
             subtitle: Text(loc.darkModeSubtitle),
             value: _darkModeEnabled,
             onChanged: _useSystemTheme
-                ? null // Deaktiviert wenn System-Theme an
+                ? null
                 : (bool value) async {
                     setState(() {
                       _darkModeEnabled = value;
@@ -233,7 +260,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const Divider(height: 40),
 
-          // Erweitert: Standort
+          // Standort
           Text(
             loc.locationSettings,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -293,7 +320,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
           const Divider(height: 40),
 
-          // NEU: Schalter "Gebetszeiten als Termin-Slots"
+          // Gebetszeiten-Slots
           Text(
             'Gebetszeiten-Slots',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -306,7 +333,7 @@ class _SettingsPageState extends State<SettingsPage> {
             activeTrackColor: Colors.greenAccent,
             title: const Text('Gebetszeiten-Slots anzeigen'),
             subtitle: const Text(
-                'Zeigt die heutigen Gebetszeiten zusätzlich als separaten Terminblock im Dashboard an'),
+                'Zeigt die heutigen Gebetszeiten zusätzlich als eigene Slots im Dashboard an'),
             value: _showPrayerSlotsInDashboard,
             onChanged: (bool val) async {
               setState(() {
@@ -315,9 +342,38 @@ class _SettingsPageState extends State<SettingsPage> {
               await _saveSettings();
             },
           ),
+          const Divider(height: 40),
+
+          // >>> NEU: Dropdown für die Aladhan-Berechnungsmethode
+          Text(
+            'Gebetszeiten-Berechnung',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<int>(
+            decoration: const InputDecoration(
+              labelText: 'Kalkulationsmethode',
+              border: OutlineInputBorder(),
+            ),
+            value: _selectedCalcMethod,
+            onChanged: (value) async {
+              if (value == null) return;
+              setState(() {
+                _selectedCalcMethod = value;
+              });
+              await _saveSettings();
+            },
+            items: _calcMethodMap.entries.map((entry) {
+              return DropdownMenuItem<int>(
+                value: entry.key,
+                child: Text(entry.value),
+              );
+            }).toList(),
+          ),
 
           const SizedBox(height: 40),
-
           Center(
             child: FilledButton(
               onPressed: () async {
