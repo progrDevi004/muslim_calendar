@@ -10,6 +10,10 @@ import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// NEU: Für berechnete Start-/Endzeiten
+import 'package:muslim_calendar/data/services/prayer_time_service.dart';
+import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
+
 class AppointmentDetailsPage extends StatefulWidget {
   final int appointmentId;
 
@@ -30,6 +34,12 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   // Neu: für Zeitformat
   bool _use24hFormat = false;
 
+  // NEU: Für berechnete Zeiten
+  final PrayerTimeService _prayerTimeService =
+      PrayerTimeService(PrayerTimeRepository());
+  DateTime? _computedStartTime;
+  DateTime? _computedEndTime;
+
   @override
   void initState() {
     super.initState();
@@ -47,8 +57,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   /// Hilfsfunktion, um das Datum/Uhrzeit im richtigen Format zu zeigen
   String _formatDateTime(DateTime? dt) {
     if (dt == null) return '--';
-    // Datum und Uhrzeit zusammen
-    final datePattern = 'yyyy-MM-dd'; // z.B. "2024-12-24"
+    final datePattern = 'yyyy-MM-dd';
     final timePattern = _use24hFormat ? 'HH:mm' : 'h:mm a';
 
     final dateStr = DateFormat(datePattern).format(dt);
@@ -63,10 +72,39 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
     });
     try {
       final appt = await _appointmentRepo.getAppointment(widget.appointmentId);
-      setState(() {
-        _appointment = appt;
-        _isLoading = false;
-      });
+      if (appt != null) {
+        // NEU: Computed Times
+        // Wir nehmen den Tag aus appt.startTime (falls vorhanden),
+        // damit wir "fajr + x" für das korrekte Datum berechnen
+        final baseDate = appt.startTime != null
+            ? DateTime(
+                appt.startTime!.year,
+                appt.startTime!.month,
+                appt.startTime!.day,
+              )
+            : DateTime.now(); // Fallback
+
+        final start = await _prayerTimeService.getCalculatedStartTime(
+          appt,
+          baseDate,
+        );
+        final end = await _prayerTimeService.getCalculatedEndTime(
+          appt,
+          baseDate,
+        );
+
+        setState(() {
+          _appointment = appt;
+          _computedStartTime = start ?? appt.startTime;
+          _computedEndTime = end ?? appt.endTime;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _appointment = null;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -109,13 +147,13 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         await _appointmentRepo.deleteAppointment(_appointment!.id!);
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Appointment deleted successfully.')),
+          SnackBar(content: Text(loc.appointmentDeletedSuccessfully)),
         );
         // Nach dem Löschen zurück
         Navigator.of(context).pop(true);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error deleting appointment.')),
+          SnackBar(content: Text(loc.errorDeletingAppointment)),
         );
       }
     }
@@ -214,7 +252,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '${loc.startTime}: ${_formatDateTime(_appointment!.startTime)}',
+                        '${loc.startTime}: ${_formatDateTime(_computedStartTime)}',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ),
@@ -227,7 +265,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '${loc.endTime}: ${_formatDateTime(_appointment!.endTime)}',
+                        '${loc.endTime}: ${_formatDateTime(_computedEndTime)}',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ),
