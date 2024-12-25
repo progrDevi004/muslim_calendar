@@ -853,7 +853,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             items: PrayerTime.values.map((pt) {
               return DropdownMenuItem<PrayerTime>(
                 value: pt,
-                child: Text(pt.toString().split('.').last),
+                // >>> NEU: Gebetszeiten mit lokalisierter Bezeichnung
+                child: Text(loc.getPrayerTimeLabel(pt)),
               );
             }).toList(),
           ),
@@ -864,7 +865,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             items: TimeRelation.values.map((timeRelation) {
               return DropdownMenuItem<TimeRelation>(
                 value: timeRelation,
-                child: Text(timeRelation.toString().split('.').last),
+                // >>> NEU: before/after mit lokalisierter Bezeichnung
+                child: Text(loc.getTimeRelationLabel(timeRelation)),
               );
             }).toList(),
             onChanged: (value) {
@@ -964,9 +966,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               });
             },
             items: RecurrenceType.values.map((type) {
+              // >>> NEU: statt .toString().split('.') => loc.getRecurrenceTypeLabel(...)
               return DropdownMenuItem<RecurrenceType>(
                 value: type,
-                child: Text(type.toString().split('.').last),
+                child: Text(loc.getRecurrenceTypeLabel(type)),
               );
             }).toList(),
           ),
@@ -1021,9 +1024,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               });
             },
             items: RecurrenceRange.values.map((range) {
+              // >>> NEU: statt .toString().split('.') => loc.getRecurrenceRangeLabel(...)
               return DropdownMenuItem<RecurrenceRange>(
                 value: range,
-                child: Text(range.toString().split('.').last),
+                child: Text(loc.getRecurrenceRangeLabel(range)),
               );
             }).toList(),
           ),

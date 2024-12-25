@@ -272,7 +272,7 @@ class DashboardPageState extends State<DashboardPage> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 10.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -297,7 +297,10 @@ class DashboardPageState extends State<DashboardPage> {
                           style: Theme.of(context)
                               .textTheme
                               .headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.bold),
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                              ),
                         ),
                       ),
                     ],

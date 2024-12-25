@@ -1,6 +1,7 @@
 // lib/localization/app_localizations.dart
 
 import 'package:flutter/material.dart';
+import 'package:muslim_calendar/models/enums.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 
 enum AppLanguage { english, german, turkish, arabic }
@@ -325,6 +326,102 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.english:
       default:
         return 'Prayer Time';
+    }
+  }
+
+  // >>> NEU: Übersetzungen für die Gebetszeiten
+  String getPrayerTimeLabel(PrayerTime pt) {
+    // Hinweis: Für Deutsch und Englisch bleibt es "Fajr, Dhuhr, Asr, Maghrib, Isha"
+    // Für Türkisch => "Sabah, Öğlen, İkindi, Akşam, Yatsı"
+    // Für Arabisch => 'فجر', 'ظهر', 'عصر', 'مغرب', 'عشاء'
+    switch (pt) {
+      case PrayerTime.fajr:
+        switch (_currentLanguage) {
+          case AppLanguage.turkish:
+            return 'Sabah';
+          case AppLanguage.arabic:
+            return 'فجر';
+          case AppLanguage.german: // => "Fajr"
+          case AppLanguage.english:
+          default:
+            return 'Fajr';
+        }
+      case PrayerTime.dhuhr:
+        switch (_currentLanguage) {
+          case AppLanguage.turkish:
+            return 'Öğlen';
+          case AppLanguage.arabic:
+            return 'ظهر';
+          case AppLanguage.german:
+          case AppLanguage.english:
+          default:
+            return 'Dhuhr';
+        }
+      case PrayerTime.asr:
+        switch (_currentLanguage) {
+          case AppLanguage.turkish:
+            return 'İkindi';
+          case AppLanguage.arabic:
+            return 'عصر';
+          case AppLanguage.german:
+          case AppLanguage.english:
+          default:
+            return 'Asr';
+        }
+      case PrayerTime.maghrib:
+        switch (_currentLanguage) {
+          case AppLanguage.turkish:
+            return 'Akşam';
+          case AppLanguage.arabic:
+            return 'مغرب';
+          case AppLanguage.german:
+          case AppLanguage.english:
+          default:
+            return 'Maghrib';
+        }
+      case PrayerTime.isha:
+        switch (_currentLanguage) {
+          case AppLanguage.turkish:
+            return 'Yatsı';
+          case AppLanguage.arabic:
+            return 'عشاء';
+          case AppLanguage.german:
+          case AppLanguage.english:
+          default:
+            return 'Isha';
+        }
+    }
+  }
+
+  // >>> NEU: Übersetzungen für TimeRelation (before, after)
+  String getTimeRelationLabel(TimeRelation tr) {
+    // "before" => z. B. Deutsch = "Vorher", Türkisch = "Önce"
+    // "after"  => z. B. Deutsch = "Nachher", Türkisch = "Sonra"
+    switch (tr) {
+      case TimeRelation.before:
+        switch (_currentLanguage) {
+          case AppLanguage.german:
+            return 'Vorher';
+          case AppLanguage.turkish:
+            return 'Önce';
+          case AppLanguage.arabic:
+            return 'قبل';
+          case AppLanguage.english:
+          default:
+            return 'Before';
+        }
+      case TimeRelation.after:
+        switch (_currentLanguage) {
+          case AppLanguage.german:
+            return 'Nachher';
+          case AppLanguage.turkish:
+            return 'Sonra';
+          case AppLanguage.arabic:
+            return 'بعد';
+          case AppLanguage.english:
+          default:
+            return 'After';
+        }
     }
   }
 
@@ -709,111 +806,99 @@ class AppLocalizations extends ChangeNotifier {
   // ------------------------------
   // Wiederholungs-Logik (für Dropdown)
   // ------------------------------
+  // Schon vorhanden: daily, weekly, monthly, yearly
   String getRecurrenceTypeLabel(RecurrenceType type) {
     switch (type) {
       case RecurrenceType.daily:
-        return _currentLanguage == AppLanguage.german
-            ? 'Täglich'
-            : _currentLanguage == AppLanguage.turkish
-                ? 'Günlük'
-                : _currentLanguage == AppLanguage.arabic
-                    ? 'يومي'
-                    : 'Daily';
+        switch (_currentLanguage) {
+          case AppLanguage.german:
+            return 'Täglich';
+          case AppLanguage.turkish:
+            return 'Günlük';
+          case AppLanguage.arabic:
+            return 'يومي';
+          case AppLanguage.english:
+          default:
+            return 'Daily';
+        }
       case RecurrenceType.weekly:
-        return _currentLanguage == AppLanguage.german
-            ? 'Wöchentlich'
-            : _currentLanguage == AppLanguage.turkish
-                ? 'Haftalık'
-                : _currentLanguage == AppLanguage.arabic
-                    ? 'أسبوعي'
-                    : 'Weekly';
+        switch (_currentLanguage) {
+          case AppLanguage.german:
+            return 'Wöchentlich';
+          case AppLanguage.turkish:
+            return 'Haftalık';
+          case AppLanguage.arabic:
+            return 'أسبوعي';
+          case AppLanguage.english:
+          default:
+            return 'Weekly';
+        }
       case RecurrenceType.monthly:
-        return _currentLanguage == AppLanguage.german
-            ? 'Monatlich'
-            : _currentLanguage == AppLanguage.turkish
-                ? 'Aylık'
-                : _currentLanguage == AppLanguage.arabic
-                    ? 'شهري'
-                    : 'Monthly';
+        switch (_currentLanguage) {
+          case AppLanguage.german:
+            return 'Monatlich';
+          case AppLanguage.turkish:
+            return 'Aylık';
+          case AppLanguage.arabic:
+            return 'شهري';
+          case AppLanguage.english:
+          default:
+            return 'Monthly';
+        }
       case RecurrenceType.yearly:
-        return _currentLanguage == AppLanguage.german
-            ? 'Jährlich'
-            : _currentLanguage == AppLanguage.turkish
-                ? 'Yıllık'
-                : _currentLanguage == AppLanguage.arabic
-                    ? 'سنوي'
-                    : 'Yearly';
+        switch (_currentLanguage) {
+          case AppLanguage.german:
+            return 'Jährlich';
+          case AppLanguage.turkish:
+            return 'Yıllık';
+          case AppLanguage.arabic:
+            return 'سنوي';
+          case AppLanguage.english:
+          default:
+            return 'Yearly';
+        }
     }
   }
 
+  // Schon vorhanden: noEndDate, endDate, count
   String getRecurrenceRangeLabel(RecurrenceRange range) {
     switch (range) {
       case RecurrenceRange.noEndDate:
-        return _currentLanguage == AppLanguage.german
-            ? 'Ohne Enddatum'
-            : _currentLanguage == AppLanguage.turkish
-                ? 'Bitiş Tarihi Yok'
-                : _currentLanguage == AppLanguage.arabic
-                    ? 'بدون تاريخ انتهاء'
-                    : 'No End Date';
+        switch (_currentLanguage) {
+          case AppLanguage.german:
+            return 'Ohne Enddatum';
+          case AppLanguage.turkish:
+            return 'Bitiş Tarihi Yok';
+          case AppLanguage.arabic:
+            return 'بدون تاريخ انتهاء';
+          case AppLanguage.english:
+          default:
+            return 'No End Date';
+        }
       case RecurrenceRange.endDate:
-        return _currentLanguage == AppLanguage.german
-            ? 'Endet an bestimmtem Tag'
-            : _currentLanguage == AppLanguage.turkish
-                ? 'Belirli bir tarihte sona erer'
-                : _currentLanguage == AppLanguage.arabic
-                    ? 'ينتهي بتاريخ معين'
-                    : 'End On Specific Day';
+        switch (_currentLanguage) {
+          case AppLanguage.german:
+            return 'Endet an bestimmtem Tag';
+          case AppLanguage.turkish:
+            return 'Belirli bir tarihte sona erer';
+          case AppLanguage.arabic:
+            return 'ينتهي بتاريخ معين';
+          case AppLanguage.english:
+          default:
+            return 'End On Specific Day';
+        }
       case RecurrenceRange.count:
-        return _currentLanguage == AppLanguage.german
-            ? 'Endet nach Anzahl'
-            : _currentLanguage == AppLanguage.turkish
-                ? 'Belirli bir sayıda sona erer'
-                : _currentLanguage == AppLanguage.arabic
-                    ? 'ينتهي بعد عدد محدد'
-                    : 'End After Count';
-    }
-  }
-
-  String get recurrenceOptionNoEndDate {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Ohne Enddatum';
-      case AppLanguage.turkish:
-        return 'Bitiş Tarihi Yok';
-      case AppLanguage.arabic:
-        return 'بدون تاريخ انتهاء';
-      case AppLanguage.english:
-      default:
-        return 'No End Date';
-    }
-  }
-
-  String get recurrenceOptionEndDate {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Endet an bestimmtem Tag';
-      case AppLanguage.turkish:
-        return 'Belirli bir tarihte sona erer';
-      case AppLanguage.arabic:
-        return 'ينتهي بتاريخ معين';
-      case AppLanguage.english:
-      default:
-        return 'Specific End Date';
-    }
-  }
-
-  String get recurrenceOptionCount {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Endet nach Anzahl';
-      case AppLanguage.turkish:
-        return 'Belirli bir sayıda sona erer';
-      case AppLanguage.arabic:
-        return 'ينتهي بعد عدد محدد';
-      case AppLanguage.english:
-      default:
-        return 'End After Count';
+        switch (_currentLanguage) {
+          case AppLanguage.german:
+            return 'Endet nach Anzahl';
+          case AppLanguage.turkish:
+            return 'Belirli bir sayıda sona erer';
+          case AppLanguage.arabic:
+            return 'ينتهي بعد عدد محدد';
+          case AppLanguage.english:
+          default:
+            return 'End After Count';
+        }
     }
   }
 
