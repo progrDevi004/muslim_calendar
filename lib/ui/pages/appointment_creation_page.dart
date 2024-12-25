@@ -1,5 +1,3 @@
-// lib/ui/pages/appointment_creation_page.dart
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -28,7 +26,7 @@ import 'package:muslim_calendar/data/services/notification_service.dart';
 // Für das Zeitformat
 import 'package:intl/intl.dart';
 
-// >>> NEU: Unser AutomaticCategoryService
+// AutomaticCategoryService
 import 'package:muslim_calendar/data/services/automatic_category_service.dart';
 
 class AppointmentCreationPage extends StatefulWidget {
@@ -117,7 +115,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     _initDefaultValues();
     _loadAppointmentData();
 
-    // >>> Neu: Listeners zur automatischen Kategorisierung
+    // Neu: Listeners zur automatischen Kategorisierung
     _titleController.addListener(_autoCategorizeIfNeeded);
     _descriptionController.addListener(_autoCategorizeIfNeeded);
 
@@ -139,6 +137,17 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _use24hFormat = prefs.getBool('use24hFormat') ?? false;
+    });
+  }
+
+  /// Land/Stadt-JSON laden
+  Future<void> _loadCountryCityData() async {
+    final String response =
+        await rootBundle.loadString('assets/country_city_data.json');
+    final Map<String, dynamic> data = json.decode(response);
+    setState(() {
+      _countryCityData = data.map((key, value) =>
+          MapEntry<String, List<String>>(key, List<String>.from(value)));
     });
   }
 
@@ -178,16 +187,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       final index = (_startTime!.weekday - 1) % 7;
       _selectedWeekDays[index] = true;
     }
-  }
-
-  Future<void> _loadCountryCityData() async {
-    final String response =
-        await rootBundle.loadString('assets/country_city_data.json');
-    final Map<String, dynamic> data = json.decode(response);
-    setState(() {
-      _countryCityData = data.map((key, value) =>
-          MapEntry<String, List<String>>(key, List<String>.from(value)));
-    });
   }
 
   Future<void> _loadCategories() async {
@@ -346,6 +345,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           SnackBar(content: Text(loc.appointmentDeletedSuccessfully)),
         );
 
+        // >>> Neu: Wir geben true zurück, damit z. B. Dashboard/HomePage reloaden können.
+        if (!mounted) return;
         Navigator.of(context).pop(true);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -481,7 +482,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         }
       }
 
-      Navigator.pop(context);
+      // >>> Neu: wir geben true zurück, damit aufrufende Pages reloaden können
+      if (!mounted) return;
+      Navigator.pop(context, true);
     }
   }
 

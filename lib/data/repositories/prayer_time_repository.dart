@@ -22,10 +22,12 @@ class PrayerTimeRepository {
     );
 
     if (result.isNotEmpty && result.first.values.first != null) {
+      // Wir haben bereits einen Eintrag für diesen Tag
       return int.tryParse(result.first.values.first.toString());
     } else {
-      // Falls nicht vorhanden => wir laden die Daten neu
+      // Daten fehlen => wir laden (falls nicht schon vorhanden) die Daten neu
       await _fetchAndSaveMonthlyPrayerTimes(date.year, date.month, location);
+
       final newResult = await db.query(
         'prayer_times',
         columns: [prayerName],
@@ -41,13 +43,24 @@ class PrayerTimeRepository {
   }
 
   /// Lädt über die Aladhan-API die Gebetszeiten für den gesamten Monat [year]/[month]
-  /// und speichert sie in die lokale DB. Berücksichtigt die hinterlegte Berechnungsmethode.
+  /// und speichert sie in die lokale DB – allerdings nur, wenn wir noch NICHT
+  /// alle Datensätze für diesen Monat in der DB haben (monatsweises Caching).
   Future<void> _fetchAndSaveMonthlyPrayerTimes(
-      int year, int month, String location) async {
-    // >>> NEU: Berechnungsmethode aus SharedPreferences
+    int year,
+    int month,
+    String location,
+  ) async {
+    // Zunächst prüfen wir, ob wir schon alle Tage des Monats in der DB haben.
+    // Wenn ja, brechen wir ab => monatsweises Caching
+    final hasData = await _hasFullMonthInDB(year, month, location);
+    if (hasData) {
+      // Kein Download nötig
+      return;
+    }
+
+    // Berechnungsmethode aus SharedPreferences (Default: 13 = Diyanet)
     final prefs = await SharedPreferences.getInstance();
-    final calcMethod =
-        prefs.getInt('calculationMethod') ?? 13; // Standard: Diyanet
+    final calcMethod = prefs.getInt('calculationMethod') ?? 13;
 
     final url =
         'https://api.aladhan.com/v1/calendarByAddress/$year/$month?address=$location&method=$calcMethod';
@@ -69,12 +82,49 @@ class PrayerTimeRepository {
       }
       await _savePrayerTimesToDatabase(prayerTimes, location);
     } else {
-      throw Exception('Failed to load prayer times from API');
+      throw Exception(
+          'Failed to load prayer times from API (status code: ${response.statusCode}).');
     }
   }
 
+  /// Prüft, ob wir bereits ALLE Tage eines Monats in der DB gespeichert haben.
+  /// Ist dies der Fall, ersparen wir uns den API-Request (monatsweiser Cache).
+  Future<bool> _hasFullMonthInDB(int year, int month, String location) async {
+    final db = await dbHelper.database;
+
+    // Anzahl Tage im Monat ermitteln (auch Schaltjahr beachten).
+    final daysInMonth = _getDaysInMonth(year, month);
+
+    // Wir erstellen ein Prefix, z. B. "2024-05-"
+    final monthPrefix =
+        '$year-${month.toString().padLeft(2, '0')}-'; // "YYYY-MM-"
+
+    // Zähle, wie viele Zeilen es in prayer_times für location UND date = 'YYYY-MM-xx' gibt.
+    final countQuery = await db.rawQuery(
+      "SELECT COUNT(*) as cnt FROM prayer_times "
+      "WHERE location = ? AND date LIKE ?",
+      [location, '$monthPrefix%'],
+    );
+
+    final dbCount = countQuery.first['cnt'] as int? ?? 0;
+    // Wenn wir >= daysInMonth haben, gehen wir davon aus, dass der Monat vollständig ist.
+    return dbCount >= daysInMonth;
+  }
+
+  /// Hilfsfunktion: liefert die Anzahl Tage im [month] eines [year].
+  int _getDaysInMonth(int year, int month) {
+    // Erzeuge das Datum am 1. des nächsten Monats, dann -1 Tag => letzter Tag
+    final firstNextMonth =
+        (month == 12) ? DateTime(year + 1, 1, 1) : DateTime(year, month + 1, 1);
+    final lastDayCurrentMonth =
+        firstNextMonth.subtract(const Duration(days: 1)).day;
+    return lastDayCurrentMonth;
+  }
+
   Future<void> _savePrayerTimesToDatabase(
-      Map<String, Map<String, String>> prayerTimes, String location) async {
+    Map<String, Map<String, String>> prayerTimes,
+    String location,
+  ) async {
     final Database db = await dbHelper.database;
     final Batch batch = db.batch();
 
@@ -114,8 +164,8 @@ class PrayerTimeRepository {
     return '$y-$m-$d';
   }
 
+  /// Konvertiert z.B. "18-05-2024" zu "2024-05-18".
   String _formatDateString(String inputDate) {
-    // "18-05-2024" => "2024-05-18"
     final parts = inputDate.split('-');
     final dd = parts[0].padLeft(2, '0');
     final mm = parts[1].padLeft(2, '0');

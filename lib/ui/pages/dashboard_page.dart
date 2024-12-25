@@ -405,7 +405,7 @@ class DashboardPageState extends State<DashboardPage> {
                 color: Theme.of(context).cardColor,
                 margin: const EdgeInsets.only(bottom: 16),
                 child: Padding(
-                  padding: const EdgeInsets.all(6.0),
+                  padding: const EdgeInsets.all(16.0),
                   child: Row(
                     children: [
                       Icon(

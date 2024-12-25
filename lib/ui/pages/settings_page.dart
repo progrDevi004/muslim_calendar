@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
@@ -56,25 +58,20 @@ class _SettingsPageState extends State<SettingsPage> {
     10: 'Qatar',
   };
 
-  final List<String> _availableCountries = [
-    'Germany',
-    'Türkiye',
-    'Egypt',
-    'USA'
-  ];
-  final Map<String, List<String>> _cityData = {
-    'Germany': ['Berlin', 'Munich', 'Hamburg'],
-    'Türkiye': ['Istanbul', 'Ankara', 'Izmir'],
-    'Egypt': ['Cairo', 'Alexandria'],
-    'USA': ['New York', 'San Francisco', 'Miami'],
-  };
+  // >>> NEU: Anstelle hartkodierter Listen lesen wir aus JSON
+  bool _isLoadingCountries = true;
+  String? _loadError;
+
+  Map<String, List<String>> _countryCityData = {};
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    _loadCountryCityData();
   }
 
+  /// Lädt das Zeitformat, DarkMode etc.
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -114,6 +111,35 @@ class _SettingsPageState extends State<SettingsPage> {
         prefs.getInt('calculationMethod') ?? 13; // Diyanet default
 
     setState(() {});
+  }
+
+  /// Lädt die Country-City-Daten aus dem JSON
+  Future<void> _loadCountryCityData() async {
+    setState(() {
+      _isLoadingCountries = true;
+      _loadError = null;
+    });
+
+    try {
+      final jsonString =
+          await rootBundle.loadString('assets/country_city_data.json');
+      final Map<String, dynamic> jsonMap = json.decode(jsonString);
+
+      final Map<String, List<String>> parsed = jsonMap.map((k, v) {
+        final list = (v as List).map((e) => e.toString()).toList();
+        return MapEntry(k, list);
+      });
+
+      setState(() {
+        _countryCityData = parsed;
+        _isLoadingCountries = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loadError = 'Fehler beim Laden der Länderliste: $e';
+        _isLoadingCountries = false;
+      });
+    }
   }
 
   Future<void> _saveSettings() async {
@@ -281,43 +307,8 @@ class _SettingsPageState extends State<SettingsPage> {
               });
             },
           ),
-          if (_locationMode == LocationMode.manual) ...[
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: _defaultCountry,
-              decoration: InputDecoration(labelText: loc.country),
-              onChanged: (value) {
-                setState(() {
-                  _defaultCountry = value;
-                  _defaultCity = null;
-                });
-              },
-              items: _availableCountries.map((country) {
-                return DropdownMenuItem<String>(
-                  value: country,
-                  child: Text(country),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 12),
-            if (_defaultCountry != null &&
-                _cityData.containsKey(_defaultCountry))
-              DropdownButtonFormField<String>(
-                value: _defaultCity,
-                decoration: InputDecoration(labelText: loc.city),
-                onChanged: (value) {
-                  setState(() {
-                    _defaultCity = value;
-                  });
-                },
-                items: _cityData[_defaultCountry]!
-                    .map((city) => DropdownMenuItem<String>(
-                          value: city,
-                          child: Text(city),
-                        ))
-                    .toList(),
-              ),
-          ],
+          if (_locationMode == LocationMode.manual)
+            ..._buildManualLocationFields(),
           const Divider(height: 40),
 
           // Gebetszeiten-Slots
@@ -378,6 +369,7 @@ class _SettingsPageState extends State<SettingsPage> {
             child: FilledButton(
               onPressed: () async {
                 await _saveSettings();
+                if (!mounted) return;
                 Navigator.pop(context);
               },
               child: Text(loc.save),
@@ -386,6 +378,64 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
+  }
+
+  /// Baut das UI für die manuelle Standort-Auswahl
+  List<Widget> _buildManualLocationFields() {
+    if (_isLoadingCountries) {
+      return [
+        const SizedBox(height: 16),
+        const Center(child: CircularProgressIndicator()),
+      ];
+    }
+    if (_loadError != null) {
+      return [
+        const SizedBox(height: 16),
+        Text(
+          _loadError!,
+          style: const TextStyle(color: Colors.red),
+        ),
+      ];
+    }
+
+    final countries = _countryCityData.keys.toList()..sort();
+    return [
+      const SizedBox(height: 8),
+      DropdownButtonFormField<String>(
+        value: _defaultCountry,
+        decoration: const InputDecoration(labelText: 'Land'),
+        onChanged: (value) {
+          setState(() {
+            _defaultCountry = value;
+            _defaultCity = null;
+          });
+        },
+        items: countries.map((country) {
+          return DropdownMenuItem<String>(
+            value: country,
+            child: Text(country),
+          );
+        }).toList(),
+      ),
+      const SizedBox(height: 12),
+      if (_defaultCountry != null &&
+          _countryCityData.containsKey(_defaultCountry))
+        DropdownButtonFormField<String>(
+          value: _defaultCity,
+          decoration: const InputDecoration(labelText: 'Stadt'),
+          onChanged: (value) {
+            setState(() {
+              _defaultCity = value;
+            });
+          },
+          items: _countryCityData[_defaultCountry]!
+              .map((city) => DropdownMenuItem<String>(
+                    value: city,
+                    child: Text(city),
+                  ))
+              .toList(),
+        ),
+    ];
   }
 
   void _showLanguageSelector(BuildContext context) {

@@ -1,13 +1,16 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 // Deine Localization
-import 'localization/app_localizations.dart';
+import 'package:muslim_calendar/localization/app_localizations.dart';
 // Deine HomePage
-import 'ui/pages/home_page.dart';
+import 'package:muslim_calendar/ui/pages/home_page.dart';
 // Dein ThemeNotifier
 import 'package:muslim_calendar/providers/theme_notifier.dart';
+
+// NEU: Für Standort-Erstabfrage
+import 'package:muslim_calendar/ui/pages/initial_location_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(
@@ -27,8 +30,30 @@ void main() {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  // Wir prüfen hier, ob der Nutzer bereits einen Standort festgelegt hat.
+  late Future<bool> _locationCheckFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _locationCheckFuture = _checkInitialLocation();
+  }
+
+  /// Prüft in SharedPreferences, ob 'wasLocationAsked' bereits true ist.
+  /// Falls nicht, führen wir den Nutzer zuerst durch die Standort-Abfrage.
+  Future<bool> _checkInitialLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    final wasAsked = prefs.getBool('wasLocationAsked') ?? false;
+    return wasAsked;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,8 +90,8 @@ class MyApp extends StatelessWidget {
         fillColor: Color.fromARGB(255, 245, 245, 245),
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.all(seedColor),
-        trackColor: WidgetStateProperty.all(seedColor.withOpacity(0.5)),
+        thumbColor: MaterialStateProperty.all(seedColor),
+        trackColor: MaterialStateProperty.all(seedColor.withOpacity(0.5)),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -86,16 +111,16 @@ class MyApp extends StatelessWidget {
         indicatorColor: seedColor.withOpacity(0.1),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         elevation: 0,
-        iconTheme: WidgetStateProperty.resolveWith(
+        iconTheme: MaterialStateProperty.resolveWith(
           (states) => IconThemeData(
-            color: states.contains(WidgetState.selected)
+            color: states.contains(MaterialState.selected)
                 ? seedColor
                 : Colors.black54,
           ),
         ),
-        labelTextStyle: WidgetStateProperty.resolveWith(
+        labelTextStyle: MaterialStateProperty.resolveWith(
           (states) => TextStyle(
-            color: states.contains(WidgetState.selected)
+            color: states.contains(MaterialState.selected)
                 ? seedColor
                 : Colors.black54,
             fontWeight: FontWeight.w500,
@@ -142,16 +167,16 @@ class MyApp extends StatelessWidget {
         indicatorColor: seedColor.withOpacity(0.1),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         elevation: 0,
-        iconTheme: WidgetStateProperty.resolveWith(
+        iconTheme: MaterialStateProperty.resolveWith(
           (states) => IconThemeData(
-            color: states.contains(WidgetState.selected)
+            color: states.contains(MaterialState.selected)
                 ? seedColor
                 : Colors.white70,
           ),
         ),
-        labelTextStyle: WidgetStateProperty.resolveWith(
+        labelTextStyle: MaterialStateProperty.resolveWith(
           (states) => TextStyle(
-            color: states.contains(WidgetState.selected)
+            color: states.contains(MaterialState.selected)
                 ? seedColor
                 : Colors.white70,
             fontWeight: FontWeight.w500,
@@ -170,8 +195,27 @@ class MyApp extends StatelessWidget {
       theme: lightTheme,
       darkTheme: darkTheme,
 
-      // Starte mit HomePage
-      home: const HomePage(),
+      // FutureBuilder, um herauszufinden, ob wir InitialLocationPage oder HomePage anzeigen
+      home: FutureBuilder<bool>(
+        future: _locationCheckFuture,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            // Noch laden wir
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final wasAsked = snapshot.data ?? false;
+          if (!wasAsked) {
+            // Standort noch nicht festgelegt => zum Auswahldialog
+            return const InitialLocationPage();
+          } else {
+            // Standort schon da => direkt zur HomePage
+            return const HomePage();
+          }
+        },
+      ),
     );
   }
 }
