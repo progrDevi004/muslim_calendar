@@ -204,6 +204,9 @@ class DashboardPageState extends State<DashboardPage> {
       }
     }
 
+    // NEU: Sortierung nach startDateTime
+    tasks.sort((a, b) => a.startTime.compareTo(b.startTime));
+
     setState(() {
       _todayTasks = tasks;
       _isAppointmentsLoading = false;

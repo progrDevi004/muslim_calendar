@@ -28,6 +28,9 @@ import 'package:muslim_calendar/data/services/notification_service.dart';
 // Für das Zeitformat
 import 'package:intl/intl.dart';
 
+// >>> NEU: Unser AutomaticCategoryService
+import 'package:muslim_calendar/data/services/automatic_category_service.dart';
+
 class AppointmentCreationPage extends StatefulWidget {
   final int? appointmentId;
   final DateTime? selectedDate;
@@ -99,6 +102,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   // Interne Variable, die die (ggf. frisch erzeugte) Appointment-ID hält
   int? _currentAppointmentId;
 
+  //AZIZ: isCategoryDropdownClicked
+  bool _isCategoryDropdownClicked = false;
+
   @override
   void initState() {
     super.initState();
@@ -111,9 +117,21 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     _initDefaultValues();
     _loadAppointmentData();
 
-    // Wenn wir schon eine appointmentId vom Konstruktor haben,
-    // speichern wir sie lokal, damit wir sie ggf. beim Löschen referenzieren können.
+    // >>> Neu: Listeners zur automatischen Kategorisierung
+    _titleController.addListener(_autoCategorizeIfNeeded);
+    _descriptionController.addListener(_autoCategorizeIfNeeded);
+
     _currentAppointmentId = widget.appointmentId;
+  }
+
+  @override
+  void dispose() {
+    _titleController.removeListener(_autoCategorizeIfNeeded);
+    _descriptionController.removeListener(_autoCategorizeIfNeeded);
+
+    _titleController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
   }
 
   /// Lädt das Zeitformat aus SharedPreferences
@@ -206,7 +224,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             _color = appointment.color;
             _selectedReminderMinutes = appointment.reminderMinutesBefore;
 
-            // Location
             if (appointment.location != null) {
               final parts = appointment.location!.split(',');
               if (parts.length == 2) {
@@ -252,7 +269,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               }
             }
 
-            // NEU: Wir aktualisieren unsere lokale ID-Variable
+            // NEU: Unsere lokale ID-Variable
             _currentAppointmentId = appointment.id;
           });
         }
@@ -261,6 +278,30 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${loc.errorLoadingAppointment}: $e')),
         );
+      }
+    }
+  }
+
+  /// NEU: automatische Kategorisierung, wenn noch keine manuelle Kategorie gewählt wurde
+  void _autoCategorizeIfNeeded() {
+    // Falls User schon manuell ausgewählt hat => nicht überschreiben
+    if (!_isCategoryDropdownClicked) {
+      final title = _titleController.text.trim();
+      final notes = _descriptionController.text.trim();
+      final suggestion = AutomaticCategoryService.suggestCategoryName(
+          title, notes.isEmpty ? null : notes);
+
+      if (suggestion != null) {
+        // Gibt es in _allCategories einen Eintrag mit .name == suggestion?
+        final idx = _allCategories.indexWhere(
+          (cat) => cat.name.toUpperCase() == suggestion.toUpperCase(),
+        );
+        if (idx != -1) {
+          setState(() {
+            _selectedCategory = _allCategories[idx];
+            _color = _selectedCategory!.color;
+          });
+        }
       }
     }
   }
@@ -298,7 +339,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
     if (confirmDelete) {
       try {
-        // Notification stornieren
         await NotificationService().cancelNotification(_currentAppointmentId!);
         await _appointmentRepo.deleteAppointment(_currentAppointmentId!);
 
@@ -327,7 +367,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         return;
       }
 
-      // Falls Endzeit nicht gesetzt => Start+30 min
       _endTime ??= _startTime!.add(const Duration(minutes: 30));
 
       final location = (_isRelatedToPrayerTimes &&
@@ -407,7 +446,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         // Neuer Termin
         final newId = await _appointmentRepo.insertAppointment(appointment);
 
-        // Notification planen?
         if (_selectedReminderMinutes != null &&
             _selectedReminderMinutes! > 0 &&
             appointment.startTime != null) {
@@ -429,7 +467,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         await NotificationService().cancelNotification(_currentAppointmentId!);
         await _appointmentRepo.updateAppointment(appointment);
 
-        // Neue Notification (falls gewünscht)
         if (_selectedReminderMinutes != null &&
             _selectedReminderMinutes! > 0 &&
             appointment.startTime != null) {
@@ -470,7 +507,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     required DateTime initial,
     required bool isAllDay,
   }) async {
-    // 1) Datum wählen
     final date = await showDatePicker(
       context: context,
       initialDate: initial,
@@ -479,12 +515,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     );
     if (date == null) return null;
 
-    // Falls ganztägig => keine Zeitabfrage
     if (isAllDay) {
       return date;
     }
 
-    // 2) Zeit wählen
     final newDateTime = await _pickTime(date);
     return newDateTime ?? date;
   }
@@ -569,7 +603,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                         if (picked != null) {
                           setState(() {
                             _startTime = picked;
-                            // Endzeit auf Start+30 min anpassen
                             if (_isAllDay) {
                               _endTime =
                                   _startTime!.add(const Duration(hours: 1));
@@ -652,6 +685,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                       onChanged: (value) {
                         setState(() {
                           _selectedCategory = value;
+                          _isCategoryDropdownClicked = true;
                           if (_selectedCategory != null) {
                             _color = _selectedCategory!.color;
                           }
@@ -1084,7 +1118,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     );
   }
 
-  /// UI-Baustein für Datum/Zeit – jetzt Dark-Mode-tauglich
+  /// UI-Baustein für Datum/Zeit
   Widget _buildDateTimeDisplay({
     required String label,
     required DateTime? dateTime,
@@ -1109,7 +1143,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Nutzt Theme-Farben, damit Text auch im Dark Mode passt
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
