@@ -237,8 +237,9 @@ class DashboardPageState extends State<DashboardPage> {
       case AppLanguage.arabic:
         return 'ar';
       case AppLanguage.english:
-      default:
         return 'en';
+      default:
+        return 'de';
     }
   }
 

@@ -60,8 +60,8 @@ class MyApp extends StatelessWidget {
         fillColor: Color.fromARGB(255, 245, 245, 245),
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: MaterialStateProperty.all(seedColor),
-        trackColor: MaterialStateProperty.all(seedColor.withOpacity(0.5)),
+        thumbColor: WidgetStateProperty.all(seedColor),
+        trackColor: WidgetStateProperty.all(seedColor.withOpacity(0.5)),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -81,12 +81,12 @@ class MyApp extends StatelessWidget {
         indicatorColor: seedColor.withOpacity(0.1),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         elevation: 0,
-        iconTheme: MaterialStateProperty.resolveWith((states) => IconThemeData(
-            color: states.contains(MaterialState.selected)
+        iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
                 ? seedColor
                 : Colors.black54)),
-        labelTextStyle: MaterialStateProperty.resolveWith((states) => TextStyle(
-              color: states.contains(MaterialState.selected)
+        labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+              color: states.contains(WidgetState.selected)
                   ? seedColor
                   : Colors.black54,
               fontWeight: FontWeight.w500,
@@ -130,12 +130,12 @@ class MyApp extends StatelessWidget {
         indicatorColor: seedColor.withOpacity(0.1),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         elevation: 0,
-        iconTheme: MaterialStateProperty.resolveWith((states) => IconThemeData(
-            color: states.contains(MaterialState.selected)
+        iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
                 ? seedColor
                 : Colors.white70)),
-        labelTextStyle: MaterialStateProperty.resolveWith((states) => TextStyle(
-              color: states.contains(MaterialState.selected)
+        labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+              color: states.contains(WidgetState.selected)
                   ? seedColor
                   : Colors.white70,
               fontWeight: FontWeight.w500,

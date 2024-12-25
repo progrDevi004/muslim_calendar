@@ -5,11 +5,12 @@ import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 // Repositories & Services
 import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
-import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
 import 'package:muslim_calendar/data/repositories/category_repository.dart';
+import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 import 'package:muslim_calendar/data/services/recurrence_service.dart';
 
@@ -24,11 +25,11 @@ import 'package:muslim_calendar/ui/widgets/prayer_time_appointment_adapter.dart'
 import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
 import 'package:muslim_calendar/ui/pages/settings_page.dart';
 import 'package:muslim_calendar/ui/pages/dashboard_page.dart';
-import 'package:muslim_calendar/ui/pages/appointment_details_page.dart'; // <<< NEU: Import der Detail-Seite
+import 'package:muslim_calendar/ui/pages/appointment_details_page.dart';
+import 'package:muslim_calendar/ui/pages/qibla_compass_page.dart';
 
 // Localization
 import 'package:muslim_calendar/localization/app_localizations.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -66,13 +67,13 @@ class _HomePageState extends State<HomePage> {
       GlobalKey<DashboardPageState>();
   late final _dashboardPage = DashboardPage(key: _dashboardKey);
 
-  bool _use24hFormat = false; // Zeitformat
+  bool _use24hFormat = false;
 
   @override
   void initState() {
     super.initState();
     _calendarController = CalendarController();
-    _selectedNavIndex = 0;
+    _selectedNavIndex = 0; // Standard: Dashboard
     _updateCalendarViewFromNavIndex();
 
     _loadUserPrefs();
@@ -91,15 +92,16 @@ class _HomePageState extends State<HomePage> {
   void _updateCalendarViewFromNavIndex() {
     switch (_selectedNavIndex) {
       case 0:
-        break; // Dashboard
+        // Dashboard
+        break;
       case 1:
-        _selectedView = CalendarView.month;
+        _selectedView = CalendarView.day;
         break;
       case 2:
         _selectedView = CalendarView.week;
         break;
       case 3:
-        _selectedView = CalendarView.day;
+        _selectedView = CalendarView.month;
         break;
     }
     _calendarController.view = _selectedView;
@@ -150,7 +152,15 @@ class _HomePageState extends State<HomePage> {
     }
 
     // Zeitformat ggf. neu laden
-    _loadUserPrefs();
+    await _loadUserPrefs();
+    setState(() {});
+  }
+
+  // Qibla Kompass
+  Future<void> _openQiblaCompass() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const QiblaCompassPage()),
+    );
   }
 
   @override
@@ -162,6 +172,10 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.explore),
+            onPressed: _openQiblaCompass,
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: _openSettings,
@@ -187,8 +201,6 @@ class _HomePageState extends State<HomePage> {
                 controller: _calendarController,
                 dataSource: _dataSource,
                 showDatePickerButton: true,
-
-                // MonthView: Agenda
                 monthViewSettings: const MonthViewSettings(
                   appointmentDisplayMode: MonthAppointmentDisplayMode.indicator,
                   showAgenda: true,
@@ -198,12 +210,9 @@ class _HomePageState extends State<HomePage> {
                         Color.fromARGB(0, 165, 165, 165),
                   ),
                 ),
-
-                // Tages-/Wochen-Ansicht: mehr Höhe für Zeitintervalle
                 timeSlotViewSettings: const TimeSlotViewSettings(
                   timeIntervalHeight: 80,
                 ),
-
                 appointmentBuilder:
                     (BuildContext context, CalendarAppointmentDetails details) {
                   if (details.appointments.isEmpty) {
@@ -211,7 +220,7 @@ class _HomePageState extends State<HomePage> {
                   }
                   final Appointment appointment = details.appointments.first;
 
-                  // MonthView => kleines Layout
+                  // Monat -> Kennzeichen: Minimales Layout
                   if (_selectedView == CalendarView.month) {
                     return Container(
                       decoration: BoxDecoration(
@@ -221,7 +230,7 @@ class _HomePageState extends State<HomePage> {
                             const BorderRadius.all(Radius.circular(4)),
                       ),
                       alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                       child: appointment.isAllDay
                           ? Text(
                               appointment.subject,
@@ -241,7 +250,6 @@ class _HomePageState extends State<HomePage> {
                                     fontSize: 12,
                                   ),
                                 ),
-                                // Zeitformat
                                 Text(
                                   '${_formatTime(appointment.startTime)} - '
                                   '${_formatTime(appointment.endTime)}',
@@ -255,7 +263,7 @@ class _HomePageState extends State<HomePage> {
                     );
                   }
 
-                  // Week/Day => Container mit Text
+                  // Week/Day => Container
                   return Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
@@ -281,7 +289,6 @@ class _HomePageState extends State<HomePage> {
                   _selectedDate = details.date;
                 },
                 onTap: (calendarTapDetails) async {
-                  // Auf Termin getippt => Detailseite öffnen
                   if (calendarTapDetails.targetElement ==
                       CalendarElement.appointment) {
                     final appId = calendarTapDetails.appointments?.first.id;
@@ -298,9 +305,7 @@ class _HomePageState extends State<HomePage> {
                         _loadAllAppointments();
                       }
                     }
-                  }
-                  // Auf freies Kalenderfeld getippt => evtl. Day-View bei Doppelklick
-                  else if (calendarTapDetails.targetElement ==
+                  } else if (calendarTapDetails.targetElement ==
                       CalendarElement.calendarCell) {
                     if (calendarTapDetails.date == _selectedDate) {
                       setState(() {
@@ -340,89 +345,94 @@ class _HomePageState extends State<HomePage> {
             label: 'Dashboard',
           ),
           NavigationDestination(
-            icon: const Icon(Icons.calendar_month),
-            label: loc.month,
+            icon: const Icon(Icons.view_day),
+            label: loc.day,
           ),
           NavigationDestination(
             icon: const Icon(Icons.view_week),
             label: loc.week,
           ),
           NavigationDestination(
-            icon: const Icon(Icons.view_day),
-            label: loc.day,
+            icon: const Icon(Icons.calendar_month),
+            label: loc.month,
           ),
         ],
       ),
     );
   }
 
-  /// Zeitformat für Termin-Anzeige
+  /// Zeitformat
   String _formatTime(DateTime dt) {
     final pattern = _use24hFormat ? 'HH:mm' : 'h:mm a';
     return DateFormat(pattern).format(dt);
   }
 
+  /// Hier korrigiert: Dialog via StatefulBuilder
   void _showCategoryFilterDialog() {
     showDialog(
       context: context,
       builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Kategorien filtern'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (var cat in _allCategories)
-                  CheckboxListTile(
-                    title: Row(
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                            color: cat.color,
-                            shape: BoxShape.circle,
-                          ),
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Kategorien filtern'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var cat in _allCategories)
+                      CheckboxListTile(
+                        title: Row(
+                          children: [
+                            Container(
+                              width: 12,
+                              height: 12,
+                              margin: const EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                color: cat.color,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            Text(cat.name),
+                          ],
                         ),
-                        Text(cat.name),
-                      ],
-                    ),
-                    value: _selectedCategoryIds.contains(cat.id),
-                    onChanged: (val) {
-                      setState(() {
-                        if (val == true) {
-                          _selectedCategoryIds.add(cat.id!);
-                        } else {
-                          _selectedCategoryIds.remove(cat.id!);
-                        }
-                      });
-                    },
-                  ),
-                const Divider(),
+                        value: _selectedCategoryIds.contains(cat.id),
+                        onChanged: (val) {
+                          setStateDialog(() {
+                            if (val == true) {
+                              _selectedCategoryIds.add(cat.id!);
+                            } else {
+                              _selectedCategoryIds.remove(cat.id!);
+                            }
+                          });
+                        },
+                      ),
+                    const Divider(),
+                    FilledButton(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        _showAddCategoryDialog();
+                      },
+                      child: const Text('+ Neue Kategorie'),
+                    )
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Abbrechen'),
+                ),
                 FilledButton(
                   onPressed: () {
                     Navigator.of(ctx).pop();
-                    _showAddCategoryDialog();
+                    _loadAllAppointments();
                   },
-                  child: const Text('+ Neue Kategorie'),
-                )
+                  child: const Text('Übernehmen'),
+                ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Abbrechen'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                _loadAllAppointments();
-              },
-              child: const Text('Übernehmen'),
-            ),
-          ],
+            );
+          },
         );
       },
     );

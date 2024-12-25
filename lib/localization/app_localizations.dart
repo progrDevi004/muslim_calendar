@@ -1008,14 +1008,14 @@ class AppLocalizations extends ChangeNotifier {
   String get upcomingTasksLabel {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return 'Aufgaben heute';
+        return 'Termine heute';
       case AppLanguage.turkish:
-        return 'Bugünkü Görevler';
+        return 'Bugünkü Randevular';
       case AppLanguage.arabic:
         return 'المهمة القادمة';
       case AppLanguage.english:
       default:
-        return 'Tasks today';
+        return 'Appointments today';
     }
   }
 
