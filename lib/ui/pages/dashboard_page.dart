@@ -19,6 +19,8 @@ import 'package:muslim_calendar/models/appointment_model.dart';
 import 'package:muslim_calendar/ui/pages/appointment_details_page.dart';
 import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
 
+import 'package:muslim_calendar/data/services/prayer_time_service.dart'; // <-- Für getCalculatedStartTime / getCalculatedEndTime
+
 class DashboardPage extends StatefulWidget {
   const DashboardPage({Key? key}) : super(key: key);
 
@@ -44,6 +46,10 @@ class DashboardPageState extends State<DashboardPage> {
   final PrayerTimeRepository _prayerTimeRepo = PrayerTimeRepository();
   final AppointmentRepository _appointmentRepo = AppointmentRepository();
 
+  // >>> NEU: Wir initialisieren zusätzlich den PrayerTimeService,
+  // um die "berechneten" Start-/Endzeiten zu bekommen:
+  late final PrayerTimeService _prayerTimeService;
+
   bool _use24hFormat = false;
 
   // Hover-Status, um Microinteractions zu steuern
@@ -52,6 +58,7 @@ class DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
+    _prayerTimeService = PrayerTimeService(_prayerTimeRepo);
     _initData();
   }
 
@@ -85,6 +92,7 @@ class DashboardPageState extends State<DashboardPage> {
     setState(() {});
   }
 
+  /// Holt das Wetter
   Future<void> _fetchWeather(String city) async {
     const apiKey = 'ea71a51c210c3fa6760039a8b592c19c'; // example key
     try {
@@ -124,8 +132,10 @@ class DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  /// Gebetszeiten für "heute"
   Future<void> _fetchPrayerTimesForToday(String location) async {
     final now = DateTime.now();
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
     try {
       final fajr = await _prayerTimeRepo.getPrayerTimeMinutes(
           now, location, PrayerTime.fajr);
@@ -140,11 +150,13 @@ class DashboardPageState extends State<DashboardPage> {
 
       setState(() {
         _todayPrayerTimes = {
-          'Fajr': _formatTimeFromMinutes(fajr),
-          'Dhuhr': _formatTimeFromMinutes(dhuhr),
-          'Asr': _formatTimeFromMinutes(asr),
-          'Maghrib': _formatTimeFromMinutes(maghrib),
-          'Isha': _formatTimeFromMinutes(isha),
+          loc.getPrayerTimeLabel(PrayerTime.fajr): _formatTimeFromMinutes(fajr),
+          loc.getPrayerTimeLabel(PrayerTime.dhuhr):
+              _formatTimeFromMinutes(dhuhr),
+          loc.getPrayerTimeLabel(PrayerTime.asr): _formatTimeFromMinutes(asr),
+          loc.getPrayerTimeLabel(PrayerTime.maghrib):
+              _formatTimeFromMinutes(maghrib),
+          loc.getPrayerTimeLabel(PrayerTime.isha): _formatTimeFromMinutes(isha),
         };
         _prayerTimeErrorMessage = null;
       });
@@ -157,37 +169,43 @@ class DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  /// WICHTIG: Hier korrigieren wir, damit wir die "berechneten" Zeiten bekommen
   Future<void> _loadTodaysAppointments() async {
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day, 0, 0);
     final endOfDay = DateTime(now.year, now.month, now.day, 23, 59);
 
     final all = await _appointmentRepo.getAllAppointments();
-
-    final todayAppointments = all.where((appt) {
-      final s = appt.startTime ?? now;
-      final e = appt.endTime ?? now;
-      return (e.isAfter(startOfDay) && s.isBefore(endOfDay));
-    }).toList();
-
     final tasks = <_DashboardTask>[];
-    for (var ap in todayAppointments) {
-      final start = ap.startTime ?? now;
-      final end = ap.endTime ?? start.add(const Duration(minutes: 30));
-      final diff = end.difference(start).inMinutes;
-      final desc = ap.notes ?? '';
 
-      tasks.add(
-        _DashboardTask(
-          appointmentId: ap.id,
-          title: ap.subject,
-          startTime: _formatDateTime(start),
-          endTime: _formatDateTime(end),
-          durationInMinutes: diff,
-          description: desc,
-          color: ap.color,
-        ),
-      );
+    for (var ap in all) {
+      // => Start-/Endzeit berechnen (falls isRelatedToPrayerTimes)
+      final calculatedStart =
+          await _prayerTimeService.getCalculatedStartTime(ap, now);
+      final s = calculatedStart ?? (ap.startTime ?? now);
+
+      final calculatedEnd =
+          await _prayerTimeService.getCalculatedEndTime(ap, now);
+      final e = calculatedEnd ?? s.add(const Duration(minutes: 30));
+
+      // Nur Termine, die heute (zwischen startOfDay und endOfDay) liegen
+      // => wir checken: e > startOfDay && s < endOfDay
+      if (e.isAfter(startOfDay) && s.isBefore(endOfDay)) {
+        final diff = e.difference(s).inMinutes;
+        final desc = ap.notes ?? '';
+
+        tasks.add(
+          _DashboardTask(
+            appointmentId: ap.id,
+            title: ap.subject,
+            startTime: _formatDateTime(s),
+            endTime: _formatDateTime(e),
+            durationInMinutes: diff,
+            description: desc,
+            color: ap.color,
+          ),
+        );
+      }
     }
 
     setState(() {
@@ -211,7 +229,7 @@ class DashboardPageState extends State<DashboardPage> {
     return DateFormat(pattern).format(dt);
   }
 
-  /// Wetter-Icon
+  /// Wetter-Symbol
   String _mapWeatherSymbol(String condition) {
     final lower = condition.toLowerCase();
     if (lower.contains('rain')) {
@@ -237,13 +255,12 @@ class DashboardPageState extends State<DashboardPage> {
       case AppLanguage.arabic:
         return 'ar';
       case AppLanguage.english:
-        return 'en';
       default:
-        return 'de';
+        return 'en';
     }
   }
 
-  /// Erzeugt eine "sinnvolle" Schriftfarbe (schwarz/weiß) anhand der Hintergrundfarbe
+  /// Kontrastierende Textfarbe je nach Hintergrund
   Color _getContrastingTextColor(Color background) {
     final brightness = ThemeData.estimateBrightnessForColor(background);
     return brightness == Brightness.dark ? Colors.white : Colors.black;
@@ -272,7 +289,7 @@ class DashboardPageState extends State<DashboardPage> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 10.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -281,7 +298,6 @@ class DashboardPageState extends State<DashboardPage> {
                 color: Colors.grey.shade200,
                 margin: const EdgeInsets.only(bottom: 16),
                 child: Padding(
-                  // Kompakter
                   padding: const EdgeInsets.all(6.0),
                   child: Row(
                     children: [
@@ -297,10 +313,7 @@ class DashboardPageState extends State<DashboardPage> {
                           style: Theme.of(context)
                               .textTheme
                               .headlineSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 20,
-                              ),
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -359,7 +372,6 @@ class DashboardPageState extends State<DashboardPage> {
                   ? const Center(child: CircularProgressIndicator())
                   : Column(
                       children: _todayTasks.map((t) {
-                        // Exakte Category-Farbe (keine Transparenz)
                         final backgroundColor = t.color;
                         final textColor =
                             _getContrastingTextColor(backgroundColor);
@@ -388,7 +400,6 @@ class DashboardPageState extends State<DashboardPage> {
                               decoration: BoxDecoration(
                                 color: backgroundColor,
                                 borderRadius: BorderRadius.circular(16),
-                                // Leichter Hover-Effekt
                                 boxShadow: _hoveredTaskId == t.appointmentId
                                     ? [
                                         BoxShadow(
