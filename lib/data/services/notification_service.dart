@@ -4,6 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+// >>> NEU: Für Zeitzonen-Init
+import 'package:timezone/data/latest.dart' as tzData;
+import 'package:flutter_native_timezone/flutter_native_timezone.dart';
+
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
@@ -13,6 +17,9 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   bool _initialized = false;
+
+  // >>> NEU: gesondertes Flag für Zeitzonen-Init
+  bool _timeZoneInitialized = false;
 
   Future<void> enableNotifications() async {
     if (kDebugMode) {
@@ -32,8 +39,6 @@ class NotificationService {
     required int appointmentId,
     required String title,
     required DateTime dateTime,
-
-    // >>> NEU: Wir übergeben auch den Body, damit wir z. B. unterschiedliche Sprachen unterstützen können
     required String body,
   }) async {
     await _initIfNeeded();
@@ -64,7 +69,6 @@ class NotificationService {
       platformDetails,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      // Wähle den passenden Modus
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.dateAndTime,
     );
@@ -92,20 +96,40 @@ class NotificationService {
     }
   }
 
+  /// >>> NEU: An einer zentralen Stelle initialisieren wir (falls nicht schon geschehen)
+  /// sowohl das FlutterLocalNotificationsPlugin als auch die Zeitzonendaten.
   Future<void> _initIfNeeded() async {
-    if (_initialized) return;
-    const androidInitSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initSettings = InitializationSettings(
-      android: androidInitSettings,
-    );
-    await _flutterLocalNotificationsPlugin.initialize(initSettings);
-    _initialized = true;
+    if (!_timeZoneInitialized) {
+      // Zeitzonen-Daten laden
+      tzData.initializeTimeZones();
+      final localTimeZoneName = await FlutterNativeTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(localTimeZoneName));
+      _timeZoneInitialized = true;
+
+      if (kDebugMode) {
+        print(
+            "[NotificationService] Time zone initialized: $localTimeZoneName");
+      }
+    }
+
+    if (!_initialized) {
+      const androidInitSettings =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+      const initSettings = InitializationSettings(
+        android: androidInitSettings,
+      );
+      await _flutterLocalNotificationsPlugin.initialize(initSettings);
+      _initialized = true;
+
+      if (kDebugMode) {
+        print("[NotificationService] LocalNotifications initialized.");
+      }
+    }
   }
 
+  /// >>> Wichtig: Wir wandeln das DateTime in ein 'tz.TZDateTime' um,
+  /// nachdem wir 'tz.local' korrekt gesetzt haben.
   tz.TZDateTime _convertTimeToTZDateTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final localDiff = dateTime.timeZoneOffset - now.timeZoneOffset;
-    return tz.TZDateTime.from(dateTime.subtract(localDiff), tz.local);
+    return tz.TZDateTime.from(dateTime, tz.local);
   }
 }

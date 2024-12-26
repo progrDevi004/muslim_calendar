@@ -1420,4 +1420,18 @@ class AppLocalizations extends ChangeNotifier {
         return 'Appointment deleted successfully.';
     }
   }
+
+  String get errorSavingAppointment {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Termin konnte nicht gespeichert werden.';
+      case AppLanguage.turkish:
+        return 'Randevu kaydedilemedi.';
+      case AppLanguage.arabic:
+        return 'تعذر حفظ الموعد.';
+      case AppLanguage.english:
+      default:
+        return 'Failed to save the appointment.';
+    }
+  }
 }

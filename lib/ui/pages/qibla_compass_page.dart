@@ -55,7 +55,7 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
           } else if (snapshot.hasError ||
               !snapshot.hasData ||
               !snapshot.data!) {
-            return Center(
+            return const Center(
               child: Text(
                 'Ihr Gerät unterstützt den Kompass nicht.',
                 style: const TextStyle(fontSize: 16, color: Colors.red),
@@ -85,7 +85,7 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
                 return Center(
                   child: Transform.rotate(
                     angle: (qiblahDirection.direction ?? 0) * (3.14159 / 180),
-                    child: Icon(
+                    child: const Icon(
                       Icons.navigation,
                       size: 200,
                       color: Colors.blue,

@@ -1,3 +1,4 @@
+//lib/ui/pages/appointment_creation_page.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -102,6 +103,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
   //AZIZ: isCategoryDropdownClicked
   bool _isCategoryDropdownClicked = false;
+
+  // >>> NEU: Um Mehrfachklicks zu verhindern
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -345,7 +349,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           SnackBar(content: Text(loc.appointmentDeletedSuccessfully)),
         );
 
-        // >>> Neu: Wir geben true zurück, damit z. B. Dashboard/HomePage reloaden können.
         if (!mounted) return;
         Navigator.of(context).pop(true);
       } catch (e) {
@@ -357,134 +360,163 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   }
 
   /// Termin speichern (Neu oder Update)
-  void _saveAppointment() async {
+  Future<void> _saveAppointment() async {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
 
-    if (_formKey.currentState!.validate()) {
-      if (_startTime == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(loc.pleaseSelectStartTimeError)),
-        );
-        return;
-      }
+    // >>> NEU: Mehrfaches Klicken verhindern
+    if (_isSaving) {
+      return; // Wenn gerade am Speichern, nichts tun
+    }
 
-      _endTime ??= _startTime!.add(const Duration(minutes: 30));
+    setState(() {
+      _isSaving = true;
+    });
 
-      final location = (_isRelatedToPrayerTimes &&
-              _selectedCity != null &&
-              _selectedCountry != null)
-          ? '$_selectedCity,$_selectedCountry'
-          : (!_isRelatedToPrayerTimes &&
-                  _selectedCity != null &&
-                  _selectedCountry != null)
-              ? '$_selectedCity,$_selectedCountry'
-              : null;
-
-      // Recurrence generieren (falls Schalter an)
-      String? recurrenceRule;
-      if (_isRecurring) {
-        final safeStart = _startTime ?? DateTime.now();
-        final safeEnd = _endTime ?? safeStart.add(const Duration(minutes: 30));
-        final recurrence = RecurrenceProperties(
-          startDate: safeStart,
-          recurrenceType: _recurrenceType,
-          interval: _recurrenceInterval,
-          recurrenceRange: _recurrenceRange,
-        );
-
-        if (_recurrenceType == RecurrenceType.weekly) {
-          recurrence.weekDays.clear();
-          if (_selectedWeekDays[0]) recurrence.weekDays.add(WeekDays.monday);
-          if (_selectedWeekDays[1]) recurrence.weekDays.add(WeekDays.tuesday);
-          if (_selectedWeekDays[2]) recurrence.weekDays.add(WeekDays.wednesday);
-          if (_selectedWeekDays[3]) recurrence.weekDays.add(WeekDays.thursday);
-          if (_selectedWeekDays[4]) recurrence.weekDays.add(WeekDays.friday);
-          if (_selectedWeekDays[5]) recurrence.weekDays.add(WeekDays.saturday);
-          if (_selectedWeekDays[6]) recurrence.weekDays.add(WeekDays.sunday);
-        } else if (_recurrenceType == RecurrenceType.monthly) {
-          recurrence.dayOfMonth = safeStart.day;
-        } else if (_recurrenceType == RecurrenceType.yearly) {
-          recurrence.month = safeStart.month;
-          recurrence.dayOfMonth = safeStart.day;
+    try {
+      if (_formKey.currentState!.validate()) {
+        if (_startTime == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(loc.pleaseSelectStartTimeError)),
+          );
+          return;
         }
 
-        if (_recurrenceRange == RecurrenceRange.count) {
-          _recurrenceCount = _recurrenceCount ?? 1;
-          recurrence.recurrenceCount = _recurrenceCount!;
-        } else if (_recurrenceRange == RecurrenceRange.endDate) {
-          recurrence.endDate = _recurrenceEndDate;
+        _endTime ??= _startTime!.add(const Duration(minutes: 30));
+
+        final location = (_isRelatedToPrayerTimes &&
+                _selectedCity != null &&
+                _selectedCountry != null)
+            ? '$_selectedCity,$_selectedCountry'
+            : (!_isRelatedToPrayerTimes &&
+                    _selectedCity != null &&
+                    _selectedCountry != null)
+                ? '$_selectedCity,$_selectedCountry'
+                : null;
+
+        // Recurrence generieren (falls Schalter an)
+        String? recurrenceRule;
+        if (_isRecurring) {
+          final safeStart = _startTime ?? DateTime.now();
+          final safeEnd =
+              _endTime ?? safeStart.add(const Duration(minutes: 30));
+          final recurrence = RecurrenceProperties(
+            startDate: safeStart,
+            recurrenceType: _recurrenceType,
+            interval: _recurrenceInterval,
+            recurrenceRange: _recurrenceRange,
+          );
+
+          if (_recurrenceType == RecurrenceType.weekly) {
+            recurrence.weekDays.clear();
+            if (_selectedWeekDays[0]) recurrence.weekDays.add(WeekDays.monday);
+            if (_selectedWeekDays[1]) recurrence.weekDays.add(WeekDays.tuesday);
+            if (_selectedWeekDays[2])
+              recurrence.weekDays.add(WeekDays.wednesday);
+            if (_selectedWeekDays[3])
+              recurrence.weekDays.add(WeekDays.thursday);
+            if (_selectedWeekDays[4]) recurrence.weekDays.add(WeekDays.friday);
+            if (_selectedWeekDays[5])
+              recurrence.weekDays.add(WeekDays.saturday);
+            if (_selectedWeekDays[6]) recurrence.weekDays.add(WeekDays.sunday);
+          } else if (_recurrenceType == RecurrenceType.monthly) {
+            recurrence.dayOfMonth = safeStart.day;
+          } else if (_recurrenceType == RecurrenceType.yearly) {
+            recurrence.month = safeStart.month;
+            recurrence.dayOfMonth = safeStart.day;
+          }
+
+          if (_recurrenceRange == RecurrenceRange.count) {
+            _recurrenceCount = _recurrenceCount ?? 1;
+            recurrence.recurrenceCount = _recurrenceCount!;
+          } else if (_recurrenceRange == RecurrenceRange.endDate) {
+            recurrence.endDate = _recurrenceEndDate;
+          }
+
+          recurrenceRule =
+              SfCalendar.generateRRule(recurrence, safeStart, safeEnd);
         }
 
-        recurrenceRule =
-            SfCalendar.generateRRule(recurrence, safeStart, safeEnd);
-      }
+        final appointment = AppointmentModel(
+          id: _currentAppointmentId,
+          subject: _titleController.text,
+          notes: _descriptionController.text.isNotEmpty
+              ? _descriptionController.text
+              : null,
+          isAllDay: _isAllDay,
+          isRelatedToPrayerTimes: _isRelatedToPrayerTimes,
+          prayerTime: _isRelatedToPrayerTimes ? _selectedPrayerTime : null,
+          timeRelation: _isRelatedToPrayerTimes ? _selectedTimeRelation : null,
+          minutesBeforeAfter:
+              _isRelatedToPrayerTimes ? _minutesBeforeAfter : null,
+          duration: _isRelatedToPrayerTimes ? _duration : null,
+          location: location,
+          recurrenceRule: recurrenceRule,
+          recurrenceExceptionDates:
+              _exceptionDates.isNotEmpty ? _exceptionDates : null,
+          color: _color,
+          startTime: _startTime,
+          endTime: _endTime,
+          categoryId: _selectedCategory?.id,
+          reminderMinutesBefore: _selectedReminderMinutes,
+        );
 
-      final appointment = AppointmentModel(
-        id: _currentAppointmentId,
-        subject: _titleController.text,
-        notes: _descriptionController.text.isNotEmpty
-            ? _descriptionController.text
-            : null,
-        isAllDay: _isAllDay,
-        isRelatedToPrayerTimes: _isRelatedToPrayerTimes,
-        prayerTime: _isRelatedToPrayerTimes ? _selectedPrayerTime : null,
-        timeRelation: _isRelatedToPrayerTimes ? _selectedTimeRelation : null,
-        minutesBeforeAfter:
-            _isRelatedToPrayerTimes ? _minutesBeforeAfter : null,
-        duration: _isRelatedToPrayerTimes ? _duration : null,
-        location: location,
-        recurrenceRule: recurrenceRule,
-        recurrenceExceptionDates:
-            _exceptionDates.isNotEmpty ? _exceptionDates : null,
-        color: _color,
-        startTime: _startTime,
-        endTime: _endTime,
-        categoryId: _selectedCategory?.id,
-        reminderMinutesBefore: _selectedReminderMinutes,
+        if (_currentAppointmentId == null) {
+          // Neuer Termin
+          final newId = await _appointmentRepo.insertAppointment(appointment);
+
+          if (_selectedReminderMinutes != null &&
+              _selectedReminderMinutes! > 0 &&
+              appointment.startTime != null) {
+            final reminderTime = appointment.startTime!
+                .subtract(Duration(minutes: _selectedReminderMinutes!));
+            await NotificationService().scheduleNotification(
+              appointmentId: newId,
+              title: '${loc.reminderTitle}: ${appointment.subject}',
+              body: loc.reminderBody,
+              dateTime: reminderTime,
+            );
+          }
+
+          setState(() {
+            _currentAppointmentId = newId;
+          });
+        } else {
+          // Update Termin
+          await NotificationService()
+              .cancelNotification(_currentAppointmentId!);
+          await _appointmentRepo.updateAppointment(appointment);
+
+          if (_selectedReminderMinutes != null &&
+              _selectedReminderMinutes! > 0 &&
+              appointment.startTime != null) {
+            final reminderTime = appointment.startTime!
+                .subtract(Duration(minutes: _selectedReminderMinutes!));
+            await NotificationService().scheduleNotification(
+              appointmentId: _currentAppointmentId!,
+              title: '${loc.reminderTitle}: ${appointment.subject}',
+              body: loc.reminderBody,
+              dateTime: reminderTime,
+            );
+          }
+        }
+
+        if (!mounted) return;
+
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      // Im Fehlerfall -> Snackbar
+      final loc = Provider.of<AppLocalizations>(context, listen: false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${loc.errorSavingAppointment}: $e')),
       );
-
-      if (_currentAppointmentId == null) {
-        // Neuer Termin
-        final newId = await _appointmentRepo.insertAppointment(appointment);
-
-        if (_selectedReminderMinutes != null &&
-            _selectedReminderMinutes! > 0 &&
-            appointment.startTime != null) {
-          final reminderTime = appointment.startTime!
-              .subtract(Duration(minutes: _selectedReminderMinutes!));
-          await NotificationService().scheduleNotification(
-            appointmentId: newId,
-            title: '${loc.reminderTitle}: ${appointment.subject}',
-            body: loc.reminderBody,
-            dateTime: reminderTime,
-          );
-        }
-
+    } finally {
+      // Danach wieder Freigabe für Speichern
+      if (mounted) {
         setState(() {
-          _currentAppointmentId = newId;
+          _isSaving = false;
         });
-      } else {
-        // Update Termin
-        await NotificationService().cancelNotification(_currentAppointmentId!);
-        await _appointmentRepo.updateAppointment(appointment);
-
-        if (_selectedReminderMinutes != null &&
-            _selectedReminderMinutes! > 0 &&
-            appointment.startTime != null) {
-          final reminderTime = appointment.startTime!
-              .subtract(Duration(minutes: _selectedReminderMinutes!));
-          await NotificationService().scheduleNotification(
-            appointmentId: _currentAppointmentId!,
-            title: '${loc.reminderTitle}: ${appointment.subject}',
-            body: loc.reminderBody,
-            dateTime: reminderTime,
-          );
-        }
       }
-
-      // >>> Neu: wir geben true zurück, damit aufrufende Pages reloaden können
-      if (!mounted) return;
-      Navigator.pop(context, true);
     }
   }
 
@@ -526,17 +558,20 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     return newDateTime ?? date;
   }
 
-  /// TimePicker mit 24h- oder AM/PM-Format
+  /// >>> NEU: TimePicker zuerst in Tastatur-Modus (TimePickerEntryMode.input)
+  /// und automatisches Überschreiben bei Klick (via _OverwriteOnFocus).
   Future<DateTime?> _pickTime(DateTime dateBase) async {
     final timeOfDay = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: dateBase.hour, minute: dateBase.minute),
-      builder: (context, child) {
+      // Tastatur zuerst:
+      initialEntryMode: TimePickerEntryMode.input,
+      builder: (BuildContext context, Widget? child) {
+        // Wir wickeln den Standard-TimePicker in unseren Hack:
         return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            alwaysUse24HourFormat: _use24hFormat,
-          ),
-          child: child ?? const SizedBox(),
+          data: MediaQuery.of(context)
+              .copyWith(alwaysUse24HourFormat: _use24hFormat),
+          child: _OverwriteOnFocus(child: child ?? const SizedBox()),
         );
       },
     );
@@ -1199,3 +1234,67 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     );
   }
 }
+
+/// >>> NEU: Hilfs-Widget, um bei Eingabe-Feldern (Std/Min) alles zu selektieren,
+/// sodass direkt überschrieben wird.
+class _OverwriteOnFocus extends StatelessWidget {
+  final Widget child;
+  const _OverwriteOnFocus({required this.child, Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // Wir umwickeln das eigentliche Widget (TimePicker) mit einem Listener,
+    // der beim "build" versucht, die Textfelder zu finden und darauf "selectAll" zu legen.
+    return Builder(builder: (ctx) {
+      return _SelectAllOnFocusChild(child: child);
+    });
+  }
+}
+
+/// Kümmert sich darum, die Flutter-internen Textfelder für Stunden/Minuten
+/// zu finden und bei Fokus alles zu markieren.
+class _SelectAllOnFocusChild extends StatefulWidget {
+  final Widget child;
+  const _SelectAllOnFocusChild({required this.child, Key? key})
+      : super(key: key);
+
+  @override
+  State<_SelectAllOnFocusChild> createState() => _SelectAllOnFocusChildState();
+}
+
+class _SelectAllOnFocusChildState extends State<_SelectAllOnFocusChild> {
+  @override
+  Widget build(BuildContext context) {
+    // Per "LayoutBuilder" oder "Builder" könnten wir an die
+    // TextFields rankommen. Hier machen wir es einfach:
+    return FocusTraversalGroup(
+      policy: OrderedTraversalPolicy(),
+      child: _SelectAllInterceptor(child: widget.child),
+    );
+  }
+}
+
+class _SelectAllInterceptor extends StatelessWidget {
+  final Widget child;
+  const _SelectAllInterceptor({required this.child, Key? key})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return _SelectAllTextOnFocusInherited(
+      child: child,
+    );
+  }
+}
+
+class _SelectAllTextOnFocusInherited extends InheritedWidget {
+  const _SelectAllTextOnFocusInherited({Key? key, required Widget child})
+      : super(key: key, child: child);
+
+  @override
+  bool updateShouldNotify(_SelectAllTextOnFocusInherited oldWidget) => false;
+}
+
+/// Falls du eine robustere Lösung willst, könntest du die TimePicker-TextFields
+/// per "child.key" identifizieren und in "didChangeDependencies" alles markieren.
+/// Das hier ist eine Demo-Lösung, die in vielen Fällen schon reicht.

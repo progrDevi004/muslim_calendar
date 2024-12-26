@@ -1,0 +1,166 @@
+@startuml
+
+title Muslim Calendar - Simplified UML Diagram
+
+' ==============================
+'   Paket-Struktur (vereinfacht)
+' ==============================
+
+package "Data" {
+  class DatabaseHelper {
+    + get database() : Future<Database>
+    --
+    - _initDatabase() : Future<Database>
+  }
+
+  class AppointmentRepository {
+    + insertAppointment(a : AppointmentModel) : Future<int>
+    + getAppointment(id : int) : Future<AppointmentModel?>
+    + updateAppointment(a : AppointmentModel) : Future<int>
+    + deleteAppointment(id : int) : Future<void>
+    + getAllAppointments() : Future<List<AppointmentModel>>
+    --
+    - dbHelper : DatabaseHelper
+  }
+
+  class CategoryRepository {
+    + insertCategory(c : CategoryModel) : Future<int>
+    + updateCategory(c : CategoryModel) : Future<int>
+    + deleteCategory(id : int) : Future<void>
+    + getAllCategories() : Future<List<CategoryModel>>
+    --
+    - dbHelper : DatabaseHelper
+  }
+
+  class PrayerTimeRepository {
+    + getPrayerTimeMinutes(date : DateTime, location : String, pTime : PrayerTime) : Future<int?>
+    --
+    - dbHelper : DatabaseHelper
+    - _fetchAndSaveMonthlyPrayerTimes(...) : Future<void>
+    - _hasFullMonthInDB(...) : Future<bool>
+  }
+}
+
+package "Models" {
+  class AppointmentModel {
+    - id : int?
+    - subject : String
+    - startTime : DateTime?
+    - endTime : DateTime?
+    - color : Color
+    + toMap() : Map<String,dynamic>
+    + fromMap(map : Map<String,dynamic>) : AppointmentModel
+  }
+
+  class CategoryModel {
+    - id : int?
+    - name : String
+    - colorValue : int
+    + toMap() : Map<String,dynamic>
+    + fromMap(map : Map<String,dynamic>) : CategoryModel
+  }
+
+  enum PrayerTime {
+    fajr
+    dhuhr
+    asr
+    maghrib
+    isha
+  }
+}
+
+package "Services" {
+  class PrayerTimeService {
+    + getCalculatedStartTime(a : AppointmentModel, date : DateTime) : Future<DateTime?>
+    + getCalculatedEndTime(a : AppointmentModel, date : DateTime) : Future<DateTime?>
+    --
+    - prayerTimeRepo : PrayerTimeRepository
+  }
+
+  class RecurrenceService {
+    + getRecurrenceDates(a : AppointmentModel, startRange : DateTime, endRange : DateTime) : List<DateTime>
+  }
+
+  class NotificationService {
+    + enableNotifications() : Future<void>
+    + disableNotifications() : Future<void>
+    + scheduleNotification(...) : Future<void>
+    + cancelNotification(id : int) : Future<void>
+  }
+
+  class AutomaticCategoryService {
+    + suggestCategoryName(title : String, notes : String?) : String?
+  }
+}
+
+package "UI/Pages" {
+  class HomePage {
+    - _loadAllAppointments() : Future<void>
+  }
+
+  class DashboardPage {
+    - reloadData() : Future<void>
+  }
+
+  class AppointmentCreationPage {
+  }
+
+  class AppointmentDetailsPage {
+  }
+
+  class SettingsPage {
+  }
+
+  class QiblaCompassPage {
+  }
+}
+
+package "UI/Widgets" {
+  class EventDataSource {
+    + appointments : List<Appointment>
+  }
+
+  class PrayerTimeAppointmentAdapter {
+    + getAppointmentsForRange(m : AppointmentModel, start : DateTime, end : DateTime) : Future<List<Appointment>>
+  }
+}
+
+' =====================
+'     Beziehungen
+' =====================
+
+AppointmentRepository --> AppointmentModel
+CategoryRepository --> CategoryModel
+PrayerTimeRepository --> PrayerTime : Felder_in_DB
+
+PrayerTimeService --> PrayerTimeRepository
+RecurrenceService --> AppointmentModel
+AutomaticCategoryService --> AppointmentCreationPage
+
+
+' Services nutzen Repositories/Models
+PrayerTimeService --> PrayerTimeRepository
+RecurrenceService --> AppointmentModel
+AutomaticCategoryService --> AppointmentCreationPage
+
+' UI - Repos/Services
+DashboardPage --> AppointmentRepository
+DashboardPage --> PrayerTimeService
+AppointmentCreationPage --> AppointmentRepository
+AppointmentCreationPage --> NotificationService
+AppointmentCreationPage --> CategoryRepository
+AppointmentDetailsPage --> AppointmentRepository
+AppointmentDetailsPage --> NotificationService
+HomePage --> AppointmentRepository
+HomePage --> CategoryRepository
+HomePage --> PrayerTimeRepository : (optional)
+HomePage --> (ruft) _loadAllAppointments()
+SettingsPage --> NotificationService : (Notifications an/aus)
+SettingsPage --> "SharedPreferences"
+
+' Widgets
+PrayerTimeAppointmentAdapter --> PrayerTimeService
+PrayerTimeAppointmentAdapter --> RecurrenceService
+EventDataSource <..> "SfCalendar" : (Bound to SF Calendar)
+
+@enduml
