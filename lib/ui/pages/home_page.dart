@@ -35,15 +35,15 @@ class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<HomePage> createState() => HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class HomePageState extends State<HomePage> {
   /// Navigation:
   /// 0 => Dashboard
-  /// 1 => Month
+  /// 1 => Day
   /// 2 => Week
-  /// 3 => Day
+  /// 3 => Month
   int _selectedNavIndex = 0;
 
   CalendarView _selectedView = CalendarView.month;
@@ -78,7 +78,7 @@ class _HomePageState extends State<HomePage> {
 
     _loadUserPrefs();
     _loadAllCategories();
-    _loadAllAppointments();
+    loadAllAppointments();
   }
 
   /// Zeitformat aus SharedPreferences laden
@@ -116,7 +116,8 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  Future<void> _loadAllAppointments() async {
+  /// Wird u. a. vom Dashboard aufgerufen, wenn ein Termin neu erstellt wurde.
+  Future<void> loadAllAppointments() async {
     try {
       final models = await _appointmentRepo.getAllAppointments();
       final now = DateTime.now();
@@ -302,14 +303,15 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                         );
-                        _loadAllAppointments();
+                        loadAllAppointments();
                       }
                     }
                   } else if (calendarTapDetails.targetElement ==
                       CalendarElement.calendarCell) {
                     if (calendarTapDetails.date == _selectedDate) {
                       setState(() {
-                        _selectedNavIndex = 3; // Day
+                        _selectedNavIndex =
+                            1; // Day (oder 3 => Month, anpassen nach Bedarf)
                         _updateCalendarViewFromNavIndex();
                       });
                     }
@@ -321,14 +323,18 @@ class _HomePageState extends State<HomePage> {
           ? FloatingActionButton(
               tooltip: 'Neuen Termin hinzufügen',
               onPressed: () async {
-                await Navigator.of(context).push(
+                // Neuer Termin => aufrunden, ob Day, Week oder Month => egal
+                final result = await Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => AppointmentCreationPage(
                       selectedDate: _selectedDate,
                     ),
                   ),
                 );
-                _loadAllAppointments();
+                if (result == true) {
+                  // Nach dem Speichern => Reload
+                  loadAllAppointments();
+                }
               },
               child: const Icon(Icons.add),
             )
@@ -426,7 +432,7 @@ class _HomePageState extends State<HomePage> {
                 FilledButton(
                   onPressed: () {
                     Navigator.of(ctx).pop();
-                    _loadAllAppointments();
+                    loadAllAppointments();
                   },
                   child: const Text('Übernehmen'),
                 ),
@@ -478,7 +484,7 @@ class _HomePageState extends State<HomePage> {
                   await _categoryRepo.insertCategory(newCategory);
                   await _loadAllCategories();
                   Navigator.of(ctx).pop();
-                  _loadAllAppointments();
+                  loadAllAppointments();
                 }
               },
               child: const Text('Speichern'),
