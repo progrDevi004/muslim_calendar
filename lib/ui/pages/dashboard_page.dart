@@ -43,9 +43,9 @@ class DashboardPageState extends State<DashboardPage> {
 
   Map<String, String> _todayPrayerTimesDisplay = {};
   String? _prayerTimeErrorMessage;
-
   Map<PrayerTime, int?> _todayPrayerTimesMinutes = {};
 
+  // Hier sammeln wir ausschließlich die heutigen Termine / Slots
   List<_DashboardTask> _todayTasks = [];
 
   final PrayerTimeRepository _prayerTimeRepo = PrayerTimeRepository();
@@ -70,6 +70,7 @@ class DashboardPageState extends State<DashboardPage> {
     await _initData();
   }
 
+  /// Lädt alle Daten für das Dashboard: Wetter, Gebetszeiten, heutige Termine
   Future<void> _initData() async {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
     final languageCode = _mapAppLanguageToCode(loc.currentLanguage);
@@ -90,8 +91,11 @@ class DashboardPageState extends State<DashboardPage> {
     final defaultCity = prefs.getString('defaultCity') ?? 'Istanbul';
     final locationString = '$defaultCity,$defaultCountry';
 
+    // 1) Wetter
     await _fetchWeather(defaultCity);
+    // 2) Gebetszeiten
     await _fetchPrayerTimesForToday(locationString);
+    // 3) Nur heutige Termine
     await _loadTodaysAppointments();
 
     setState(() {});
@@ -99,10 +103,12 @@ class DashboardPageState extends State<DashboardPage> {
 
   /// Wetter abrufen
   Future<void> _fetchWeather(String city) async {
-    const apiKey = 'ea71a51c210c3fa6760039a8b592c19c'; // example key
+    // Beispiel-API-Key
+    const apiKey = 'ea71a51c210c3fa6760039a8b592c19c';
     try {
       final url = Uri.parse(
-          'https://api.openweathermap.org/data/2.5/weather?q=$city&units=metric&appid=$apiKey');
+        'https://api.openweathermap.org/data/2.5/weather?q=$city&units=metric&appid=$apiKey',
+      );
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -137,6 +143,7 @@ class DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  /// Gebetszeiten nur für HEUTE
   Future<void> _fetchPrayerTimesForToday(String location) async {
     final now = DateTime.now();
     final loc = Provider.of<AppLocalizations>(context, listen: false);
@@ -185,8 +192,10 @@ class DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  /// **Nur** die Termine des heutigen Tages laden
   Future<void> _loadTodaysAppointments() async {
     final now = DateTime.now();
+    // Start und Ende des heutigen Tages (bis 23:59)
     final startOfDay = DateTime(now.year, now.month, now.day, 0, 0);
     final endOfDay = DateTime(now.year, now.month, now.day, 23, 59);
 
@@ -194,17 +203,25 @@ class DashboardPageState extends State<DashboardPage> {
     final tasks = <_DashboardTask>[];
 
     // 1) Normale Termine
+    //    Prüfen wir über die berechneten Start-/Endzeiten,
+    //    falls das Appointment mit Gebetszeiten verknüpft ist.
     for (var ap in all) {
-      final calculatedStart =
+      /* final calculatedStart =
           await _prayerTimeService.getCalculatedStartTime(ap, now);
-      final s = calculatedStart ?? (ap.startTime ?? now);
+      final start = calculatedStart ?? (ap.startTime ?? now);
 
       final calculatedEnd =
           await _prayerTimeService.getCalculatedEndTime(ap, now);
-      final e = calculatedEnd ?? s.add(const Duration(minutes: 30));
+      final end = calculatedEnd ?? start.add(const Duration(minutes: 30));
+      */
+      final start = ap.startTime;
+      final end = ap.endTime;
 
-      if (e.isAfter(startOfDay) && s.isBefore(endOfDay)) {
-        final diff = e.difference(s).inMinutes;
+      // Termin ist heute relevant, wenn (end >= startOfDay) && (start <= endOfDay)
+      final bool isToday =
+          end!.isAfter(startOfDay) && start!.isBefore(endOfDay);
+      if (isToday) {
+        final diff = end.difference(start).inMinutes;
         final desc = ap.notes ?? '';
 
         tasks.add(
@@ -212,8 +229,8 @@ class DashboardPageState extends State<DashboardPage> {
             appointmentId: ap.id,
             isPrayerSlot: false,
             title: ap.subject,
-            start: s,
-            end: e,
+            start: start,
+            end: end,
             durationInMinutes: diff,
             description: desc,
             color: ap.color,
@@ -222,17 +239,17 @@ class DashboardPageState extends State<DashboardPage> {
       }
     }
 
-    // 2) Gebetszeiten-Slots
+    // 2) Gebetszeiten-Slots (falls gewünscht)
     if (_showPrayerSlotsInDashboard) {
       final baseDay = DateTime(now.year, now.month, now.day);
       for (final entry in _todayPrayerTimesMinutes.entries) {
         final prayerTime = entry.key;
         final minutes = entry.value;
-        if (minutes == null) continue;
-        if (minutes < 0) continue;
+        if (minutes == null || minutes < 0) continue;
 
         final dtStart = baseDay.add(Duration(minutes: minutes));
-        if (dtStart.isAfter(endOfDay) || dtStart.isBefore(startOfDay)) {
+        // Prüfen, ob sie wirklich in den Tag fällt
+        if (dtStart.isBefore(startOfDay) || dtStart.isAfter(endOfDay)) {
           continue;
         }
 
@@ -253,6 +270,7 @@ class DashboardPageState extends State<DashboardPage> {
       }
     }
 
+    // Sortieren
     tasks.sort((a, b) => a.start.compareTo(b.start));
 
     setState(() {
@@ -323,7 +341,7 @@ class DashboardPageState extends State<DashboardPage> {
       ),
     );
     if (result == true) {
-      // Lokale Reload
+      // Lokales Reload
       await reloadData();
       // + Kalender in der HomePage updaten
       final homePageState = context.findAncestorStateOfType<HomePageState>();
@@ -335,6 +353,7 @@ class DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
     final now = DateTime.now();
+
     final dateFormatter =
         DateFormat('d MMMM yyyy', _mapAppLanguageToCode(loc.currentLanguage));
     final weekdayFormatter =
@@ -581,6 +600,7 @@ class DashboardPageState extends State<DashboardPage> {
         borderRadius: BorderRadius.circular(16),
         onTap: () async {
           if (t.appointmentId != null) {
+            // Termin-Details öffnen
             await Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (ctx) => AppointmentDetailsPage(
@@ -589,7 +609,7 @@ class DashboardPageState extends State<DashboardPage> {
               ),
             );
             reloadData();
-            // Ebenfalls: HomePage-Kalender aktualisieren
+            // HomePage-Kalender aktualisieren
             final homePageState =
                 context.findAncestorStateOfType<HomePageState>();
             homePageState?.loadAllAppointments();
@@ -702,7 +722,8 @@ class DashboardPageState extends State<DashboardPage> {
                 Text(
                   timeStr,
                   style: TextStyle(
-                      color: isDark ? Colors.white70 : Colors.black87),
+                    color: isDark ? Colors.white70 : Colors.black87,
+                  ),
                 ),
               ],
             ),
