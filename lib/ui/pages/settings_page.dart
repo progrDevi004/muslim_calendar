@@ -12,8 +12,6 @@ enum LocationMode {
   manual,
 }
 
-/// Optional könntest du hier ein eigenes Enum definieren, wenn du möchtest.
-/// Wir lösen es aber einfach über int -> Name.
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
 
@@ -31,20 +29,23 @@ class _SettingsPageState extends State<SettingsPage> {
   // War bisher unser Dark Mode
   bool _darkModeEnabled = false;
 
-  // >>> Neu: System-Theme
+  // System-Theme
   bool _useSystemTheme = false;
 
-  // >>> 24h/AM-PM
+  // 24h/AM-PM
   bool _use24hFormat = false;
 
-  // >>> Gebetszeiten-Slots auf dem Dashboard
+  // Gebetszeiten-Slots auf dem Dashboard
   bool _showPrayerSlotsInDashboard = true;
 
-  // >>> NEU: Gebets-Berechnungsmethode (Default = 13, Diyanet)
+  // >>> NEU: Gebetszeiten in Daily / Weekly View
+  bool _showPrayerTimesInDayView = true;
+  bool _showPrayerTimesInWeekView = true;
+
+  // Gebets-Berechnungsmethode (Default = 13, Diyanet)
   int _selectedCalcMethod = 13;
 
-  /// Definiere hier ein Mapping zwischen Methode und Anzeigenamen
-  /// Quelle: https://aladhan.com/calculation-methods
+  /// Mapping zwischen Methode und Anzeigenamen (Quelle: https://aladhan.com/calculation-methods)
   final Map<int, String> _calcMethodMap = {
     13: 'Diyanet (Turkey)', // Standard
     3: 'MWL (Muslim World League)',
@@ -58,10 +59,8 @@ class _SettingsPageState extends State<SettingsPage> {
     10: 'Qatar',
   };
 
-  // >>> NEU: Anstelle hartkodierter Listen lesen wir aus JSON
   bool _isLoadingCountries = true;
   String? _loadError;
-
   Map<String, List<String>> _countryCityData = {};
 
   @override
@@ -77,7 +76,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
 
-    // Aus unserem ThemeNotifier => kann hier gespiegelt werden
+    // Aus unserem ThemeNotifier => hier gespiegelt
     final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
     _darkModeEnabled = themeNotifier.isDarkMode;
     _useSystemTheme = themeNotifier.useSystemTheme;
@@ -103,12 +102,18 @@ class _SettingsPageState extends State<SettingsPage> {
           .setLanguage(_selectedLanguage);
     }
 
+    // Dashboard-Slots
     _showPrayerSlotsInDashboard =
         prefs.getBool('showPrayerSlotsInDashboard') ?? true;
 
-    // >>> NEU: Gebets-Berechnungsmethode
-    _selectedCalcMethod =
-        prefs.getInt('calculationMethod') ?? 13; // Diyanet default
+    // NEU: Gebetszeiten in Daily/Weekly
+    _showPrayerTimesInDayView =
+        prefs.getBool('showPrayerTimesInDayView') ?? true;
+    _showPrayerTimesInWeekView =
+        prefs.getBool('showPrayerTimesInWeekView') ?? true;
+
+    // Gebets-Berechnungsmethode
+    _selectedCalcMethod = prefs.getInt('calculationMethod') ?? 13; // Diyanet
 
     setState(() {});
   }
@@ -165,7 +170,12 @@ class _SettingsPageState extends State<SettingsPage> {
     await prefs.setBool(
         'showPrayerSlotsInDashboard', _showPrayerSlotsInDashboard);
 
-    // >>> Speichern der Berechnungsmethode
+    // NEU: Daily/Week
+    await prefs.setBool('showPrayerTimesInDayView', _showPrayerTimesInDayView);
+    await prefs.setBool(
+        'showPrayerTimesInWeekView', _showPrayerTimesInWeekView);
+
+    // Gebets-Berechnungsmethode
     await prefs.setInt('calculationMethod', _selectedCalcMethod);
   }
 
@@ -309,9 +319,10 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           if (_locationMode == LocationMode.manual)
             ..._buildManualLocationFields(),
+
           const Divider(height: 40),
 
-          // Gebetszeiten-Slots
+          // Gebetszeiten-Slots (Dashboard)
           Text(
             'Gebetszeiten-Slots',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -322,9 +333,9 @@ class _SettingsPageState extends State<SettingsPage> {
           SwitchListTile(
             activeColor: Colors.green,
             activeTrackColor: Colors.greenAccent,
-            title: const Text('Gebetszeiten-Slots anzeigen'),
+            title: const Text('Gebetszeiten-Slots im Dashboard'),
             subtitle: const Text(
-                'Zeigt die heutigen Gebetszeiten zusätzlich als eigene Slots im Dashboard an'),
+                'Zeigt die heutigen Gebetszeiten zusätzlich als Slots im Dashboard an'),
             value: _showPrayerSlotsInDashboard,
             onChanged: (bool val) async {
               setState(() {
@@ -333,9 +344,38 @@ class _SettingsPageState extends State<SettingsPage> {
               await _saveSettings();
             },
           ),
+
+          // >>> NEU: Gebetszeiten in Daily und Weekly View
+          SwitchListTile(
+            activeColor: Colors.green,
+            activeTrackColor: Colors.greenAccent,
+            title: const Text('Gebetszeiten in Daily-View anzeigen'),
+            subtitle: const Text('Zeigt Gebetszeiten in der Tagesansicht'),
+            value: _showPrayerTimesInDayView,
+            onChanged: (bool val) async {
+              setState(() {
+                _showPrayerTimesInDayView = val;
+              });
+              await _saveSettings();
+            },
+          ),
+          SwitchListTile(
+            activeColor: Colors.green,
+            activeTrackColor: Colors.greenAccent,
+            title: const Text('Gebetszeiten in Weekly-View anzeigen'),
+            subtitle: const Text('Zeigt Gebetszeiten in der Wochenansicht'),
+            value: _showPrayerTimesInWeekView,
+            onChanged: (bool val) async {
+              setState(() {
+                _showPrayerTimesInWeekView = val;
+              });
+              await _saveSettings();
+            },
+          ),
+
           const Divider(height: 40),
 
-          // >>> NEU: Dropdown für die Aladhan-Berechnungsmethode
+          // Berechnungsmethode
           Text(
             'Gebetszeiten-Berechnung',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(

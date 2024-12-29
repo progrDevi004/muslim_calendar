@@ -72,6 +72,11 @@ class HomePageState extends State<HomePage> {
   // Dezenter Farbton für Gebetszeiten
   static const Color _prayerTimeColor = Color(0xFF90A4AE); // BlueGrey 300
 
+  // >>> Flags aus den Settings (EIN/AUS-Schalter in SettingsPage)
+  bool _showPrayerSlotsInDashboard = true;
+  bool _showPrayerTimesInDayView = true;
+  bool _showPrayerTimesInWeekView = true;
+
   @override
   void initState() {
     super.initState();
@@ -79,44 +84,49 @@ class HomePageState extends State<HomePage> {
     _selectedNavIndex = 0; // Standard: Dashboard
     _updateCalendarViewFromNavIndex();
 
-    _loadUserPrefs();
+    _loadUserPrefs(); // Lädt bools + Zeiteinstellungen
     _loadAllCategories();
-
-    // Wir laden für das gesamte Jahr Gebetszeiten (falls nicht vorhanden),
-    // und erst NACHDEM das abgeschlossen ist, ziehen wir unsere Appointments.
     _fetchYearlyPrayerTimesIfNeeded().then((_) {
       loadAllAppointments();
     });
   }
 
-  /// Zeitformat aus SharedPreferences laden
+  /// Zeitformat und Gebetszeiteinstellungen aus SharedPreferences laden
   Future<void> _loadUserPrefs() async {
     final prefs = await SharedPreferences.getInstance();
+
     setState(() {
       _use24hFormat = prefs.getBool('use24hFormat') ?? false;
+
+      // Dashboard
+      _showPrayerSlotsInDashboard =
+          prefs.getBool('showPrayerSlotsInDashboard') ?? true;
+      // Day
+      _showPrayerTimesInDayView =
+          prefs.getBool('showPrayerTimesInDayView') ?? true;
+      // Week
+      _showPrayerTimesInWeekView =
+          prefs.getBool('showPrayerTimesInWeekView') ?? true;
     });
   }
 
-  /// Prüfen, ob wir schon das ganze Jahr an Gebetszeiten für den Standort gespeichert haben
+  /// Prüfen, ob wir schon das ganze Jahr an Gebetszeiten gespeichert haben
   Future<void> _fetchYearlyPrayerTimesIfNeeded() async {
     final prefs = await SharedPreferences.getInstance();
     final country = prefs.getString('defaultCountry');
     final city = prefs.getString('defaultCity');
-
-    // Falls kein Standard-Ort existiert, machen wir nichts
     if (country == null || city == null) return;
 
     final location = '${city.trim()},${country.trim()}'.toLowerCase();
     final now = DateTime.now();
-    final year = now.year;
-
-    await _prayerTimeRepo.fetchAndSaveYearlyPrayerTimes(year, location);
+    await _prayerTimeRepo.fetchAndSaveYearlyPrayerTimes(now.year, location);
   }
 
+  /// Updated den `CalendarView` und lädt neu
   void _updateCalendarViewFromNavIndex() {
     switch (_selectedNavIndex) {
       case 0:
-        // Dashboard
+        // Dashboard => kein CalendarView
         break;
       case 1:
         _selectedView = CalendarView.day;
@@ -130,6 +140,11 @@ class HomePageState extends State<HomePage> {
     }
     _calendarController.view = _selectedView;
     setState(() {});
+
+    // >>> Neu: Jedes Mal, wenn sich die Ansicht ändert, holen wir neu die Daten
+    if (_selectedNavIndex != 0) {
+      loadAllAppointments();
+    }
   }
 
   Future<void> _loadAllCategories() async {
@@ -140,7 +155,7 @@ class HomePageState extends State<HomePage> {
     });
   }
 
-  // NEU: Hilfsfunktion, um aus dynamischen Werten (String/int) sauber int? zu machen
+  // Hilfsfunktion, um DB-Werte in int? zu konvertieren
   int? _toInt(dynamic value) {
     if (value == null) return null;
     if (value is int) return value;
@@ -148,7 +163,7 @@ class HomePageState extends State<HomePage> {
     return null;
   }
 
-  /// Lädt alle Appointments + Gebetszeiten
+  /// Lädt alle normalen Appointments + Gebetszeiten (falls aktiviert)
   Future<void> loadAllAppointments() async {
     try {
       final models = await _appointmentRepo.getAllAppointments();
@@ -170,62 +185,80 @@ class HomePageState extends State<HomePage> {
         }
       }
 
-      // 2) Gebetszeiten aus DB
-      final prayerTimeEntries = await _prayerTimeRepo.getPrayerTimesInRange(
-        startRange,
-        endRange,
-      );
+      // 2) Gebetszeiten
+      //    - Falls wir in der Day-Ansicht sind, nur hinzufügen, wenn _showPrayerTimesInDayView = true
+      //    - Falls wir in der Week-Ansicht sind, nur hinzufügen, wenn _showPrayerTimesInWeekView = true
+      //    - In Month -> ggf. immer anzeigen (nach Belieben) oder du fügst einen Schalter in SettingsPage ein
+      //    - In Dashboard (index = 0) -> wir laden NICHT den SfCalendar, also egal
 
-      final prefs = await SharedPreferences.getInstance();
-      final country = prefs.getString('defaultCountry');
-      final city = prefs.getString('defaultCity');
-      if (country != null && city != null) {
-        final userLocation = '${city.trim()},${country.trim()}'.toLowerCase();
+      bool addPrayers = true;
+      if (_selectedView == CalendarView.day && !_showPrayerTimesInDayView) {
+        addPrayers = false;
+      } else if (_selectedView == CalendarView.week &&
+          !_showPrayerTimesInWeekView) {
+        addPrayers = false;
+      }
+      // Falls du im Monat gar nicht zeigen willst, könntest du hier einfügen:
+      // else if (_selectedView == CalendarView.month) addPrayers = false;
+      // (aber nur wenn du willst.)
 
-        final filteredEntries = prayerTimeEntries.where((row) {
-          final dbLoc = (row['location'] as String).toLowerCase();
-          return dbLoc == userLocation;
-        }).toList();
+      if (addPrayers && _selectedNavIndex != 0) {
+        final prayerTimeEntries = await _prayerTimeRepo.getPrayerTimesInRange(
+          startRange,
+          endRange,
+        );
+        final prefs = await SharedPreferences.getInstance();
+        final country = prefs.getString('defaultCountry');
+        final city = prefs.getString('defaultCity');
+        if (country != null && city != null) {
+          final userLocation = '${city.trim()},${country.trim()}'.toLowerCase();
+          final filteredEntries = prayerTimeEntries.where((row) {
+            final dbLoc = (row['location'] as String).toLowerCase();
+            return dbLoc == userLocation;
+          }).toList();
 
-        for (var row in filteredEntries) {
-          final dateStr = row['date'].toString(); // z. B. "2024-05-18"
-          final parts = dateStr.split('-');
-          final year = int.parse(parts[0]);
-          final month = int.parse(parts[1]);
-          final day = int.parse(parts[2]);
-          final baseDay = DateTime(year, month, day);
+          for (var row in filteredEntries) {
+            final dateStr = row['date'].toString();
+            final parts = dateStr.split('-');
+            final year = int.parse(parts[0]);
+            final month = int.parse(parts[1]);
+            final day = int.parse(parts[2]);
+            final baseDay = DateTime(year, month, day);
 
-          Appointment? createPrayerAppointment(String name, int? minutes) {
-            if (minutes == null) return null;
-            final start = baseDay.add(Duration(minutes: minutes));
-            final end = start.add(const Duration(minutes: 15));
-            return Appointment(
-              id: 'prayer_${name}_${baseDay.toIso8601String()}',
-              subject: name,
-              notes: 'prayerTime',
-              startTime: start,
-              endTime: end,
-              isAllDay: false,
-              color: _prayerTimeColor,
-            );
+            Appointment? createPrayerAppointment(String name, int? minutes) {
+              if (minutes == null) return null;
+              final start = baseDay.add(Duration(minutes: minutes));
+              final end = start.add(const Duration(minutes: 15));
+              return Appointment(
+                id: 'prayer_${name}_${baseDay.toIso8601String()}',
+                subject: name,
+                notes: 'prayerTime',
+                startTime: start,
+                endTime: end,
+                isAllDay: false,
+                color: _prayerTimeColor,
+              );
+            }
+
+            final fajrApp =
+                createPrayerAppointment('Fajr', _toInt(row['fajr']));
+            if (fajrApp != null) allAppointments.add(fajrApp);
+
+            final dhuhrApp =
+                createPrayerAppointment('Dhuhr', _toInt(row['dhuhr']));
+            if (dhuhrApp != null) allAppointments.add(dhuhrApp);
+
+            final asrApp = createPrayerAppointment('Asr', _toInt(row['asr']));
+            if (asrApp != null) allAppointments.add(asrApp);
+
+            final maghribApp =
+                createPrayerAppointment('Maghrib', _toInt(row['maghrib']));
+            if (maghribApp != null) allAppointments.add(maghribApp);
+
+            final ishaApp =
+                createPrayerAppointment('Isha', _toInt(row['isha']));
+            if (ishaApp != null) allAppointments.add(ishaApp);
           }
-
-          final fajrApp = createPrayerAppointment('Fajr', _toInt(row['fajr']));
-          if (fajrApp != null) allAppointments.add(fajrApp);
-
-          final dhuhrApp =
-              createPrayerAppointment('Dhuhr', _toInt(row['dhuhr']));
-          if (dhuhrApp != null) allAppointments.add(dhuhrApp);
-
-          final asrApp = createPrayerAppointment('Asr', _toInt(row['asr']));
-          if (asrApp != null) allAppointments.add(asrApp);
-
-          final maghribApp =
-              createPrayerAppointment('Maghrib', _toInt(row['maghrib']));
-          if (maghribApp != null) allAppointments.add(maghribApp);
-
-          final ishaApp = createPrayerAppointment('Isha', _toInt(row['isha']));
-          if (ishaApp != null) allAppointments.add(ishaApp);
         }
       }
 
@@ -247,12 +280,11 @@ class HomePageState extends State<HomePage> {
       _dashboardKey.currentState?.reloadData();
     }
 
-    // Zeitformat ggf. neu laden
     await _loadUserPrefs();
+    await loadAllAppointments();
     setState(() {});
   }
 
-  // Qibla Kompass
   Future<void> _openQiblaCompass() async {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const QiblaCompassPage()),
@@ -271,14 +303,17 @@ class HomePageState extends State<HomePage> {
           IconButton(
             icon: const Icon(Icons.explore),
             onPressed: _openQiblaCompass,
+            tooltip: 'Qibla Compass',
           ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: _openSettings,
+            tooltip: loc.settings,
           ),
           IconButton(
             icon: const Icon(Icons.filter_list),
             onPressed: _showCategoryFilterDialog,
+            tooltip: loc.filterCategories,
           ),
         ],
       ),
@@ -316,7 +351,7 @@ class HomePageState extends State<HomePage> {
                   }
                   final Appointment appointment = details.appointments.first;
 
-                  // Gebetszeiten im Monats-View ggf. dezent anzeigen
+                  // Gebetszeiten im Monats-View dezenter
                   if (appointment.notes == 'prayerTime' &&
                       _selectedView == CalendarView.month) {
                     return Container(
@@ -422,6 +457,7 @@ class HomePageState extends State<HomePage> {
                     }
                   } else if (calendarTapDetails.targetElement ==
                       CalendarElement.calendarCell) {
+                    // Falls man z.B. auf denselben Tag klickt => Tag-View
                     if (calendarTapDetails.date == _selectedDate) {
                       setState(() {
                         _selectedNavIndex = 1; // Day
@@ -434,7 +470,7 @@ class HomePageState extends State<HomePage> {
             ),
       floatingActionButton: showFab
           ? FloatingActionButton(
-              tooltip: 'Neuen Termin hinzufügen',
+              tooltip: loc.addNewAppointment,
               onPressed: () async {
                 final result = await Navigator.of(context).push(
                   MaterialPageRoute(
@@ -459,7 +495,7 @@ class HomePageState extends State<HomePage> {
         destinations: [
           NavigationDestination(
             icon: const Icon(Icons.dashboard),
-            label: 'Dashboard',
+            label: loc.dashboard,
           ),
           NavigationDestination(
             icon: const Icon(Icons.view_day),
@@ -483,15 +519,15 @@ class HomePageState extends State<HomePage> {
     return DateFormat(pattern).format(dt);
   }
 
-  /// Dialog für Kategorien-Filter
   void _showCategoryFilterDialog() {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
     showDialog(
       context: context,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
-              title: const Text('Kategorien filtern'),
+              title: Text(loc.filterCategories),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -529,7 +565,7 @@ class HomePageState extends State<HomePage> {
                         Navigator.of(ctx).pop();
                         _showAddCategoryDialog();
                       },
-                      child: const Text('+ Neue Kategorie'),
+                      child: Text(loc.addNewCategory),
                     )
                   ],
                 ),
@@ -537,14 +573,14 @@ class HomePageState extends State<HomePage> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('Abbrechen'),
+                  child: Text(loc.cancel),
                 ),
                 FilledButton(
                   onPressed: () {
                     Navigator.of(ctx).pop();
                     loadAllAppointments();
                   },
-                  child: const Text('Übernehmen'),
+                  child: Text(loc.apply),
                 ),
               ],
             );
@@ -554,21 +590,23 @@ class HomePageState extends State<HomePage> {
     );
   }
 
-  /// Dialog zum Erstellen einer neuen Kategorie
   void _showAddCategoryDialog() {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
     final TextEditingController nameController = TextEditingController();
     Color selectedColor = Colors.blue;
     showDialog(
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('Neue Kategorie erstellen'),
+          title: Text("Kategorie (Muss übersetzt werden)"),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
+                decoration: InputDecoration(
+                  labelText: loc.titleLabel,
+                ),
               ),
               const SizedBox(height: 12),
               BlockPicker(
@@ -582,7 +620,7 @@ class HomePageState extends State<HomePage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Abbrechen'),
+              child: Text(loc.cancel),
             ),
             FilledButton(
               onPressed: () async {
@@ -598,7 +636,7 @@ class HomePageState extends State<HomePage> {
                   loadAllAppointments();
                 }
               },
-              child: const Text('Speichern'),
+              child: Text(loc.save),
             ),
           ],
         );

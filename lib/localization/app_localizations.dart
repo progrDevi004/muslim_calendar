@@ -1434,4 +1434,79 @@ class AppLocalizations extends ChangeNotifier {
         return 'Failed to save the appointment.';
     }
   }
+
+  // >>> Getter für "filterCategories"
+  String get filterCategories {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Kategorien filtern';
+      case AppLanguage.turkish:
+        return 'Kategorileri Filtrele';
+      case AppLanguage.arabic:
+        return 'تصفية الفئات';
+      case AppLanguage.english:
+      default:
+        return 'Filter Categories';
+    }
+  }
+
+  // >>> Getter für "addNewCategory"
+  String get addNewCategory {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return '+ Neue Kategorie';
+      case AppLanguage.turkish:
+        return '+ Yeni Kategori';
+      case AppLanguage.arabic:
+        return '+ فئة جديدة';
+      case AppLanguage.english:
+      default:
+        return '+ New Category';
+    }
+  }
+
+  // >>> Getter für "apply"
+  String get apply {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Übernehmen';
+      case AppLanguage.turkish:
+        return 'Uygula';
+      case AppLanguage.arabic:
+        return 'تطبيق';
+      case AppLanguage.english:
+      default:
+        return 'Apply';
+    }
+  }
+
+  // >>> Getter für "dashboard"
+  String get dashboard {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Übersicht';
+      case AppLanguage.turkish:
+        return 'Gösterge Paneli';
+      case AppLanguage.arabic:
+        return 'لوحة التحكم';
+      case AppLanguage.english:
+      default:
+        return 'Dashboard';
+    }
+  }
+
+  // >>> Getter für "addNewAppointment"
+  String get addNewAppointment {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Neuen Termin hinzufügen';
+      case AppLanguage.turkish:
+        return 'Yeni Randevu Ekle';
+      case AppLanguage.arabic:
+        return 'أضف موعدًا جديدًا';
+      case AppLanguage.english:
+      default:
+        return 'Add New Appointment';
+    }
+  }
 }
