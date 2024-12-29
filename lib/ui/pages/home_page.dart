@@ -204,13 +204,22 @@ class HomePageState extends State<HomePage> {
                 showDatePickerButton: true,
                 monthViewSettings: const MonthViewSettings(
                   appointmentDisplayMode: MonthAppointmentDisplayMode.indicator,
+                  showTrailingAndLeadingDates: true,
                   showAgenda: true,
                   agendaItemHeight: 50,
                   monthCellStyle: MonthCellStyle(
                     trailingDatesBackgroundColor:
                         Color.fromARGB(0, 165, 165, 165),
+                    leadingDatesTextStyle: TextStyle(
+                      color: Color.fromARGB(255, 85, 85, 85),
+                    ),
+                    trailingDatesTextStyle: TextStyle(
+                      color: Color.fromARGB(255, 85, 85, 85),
+                    ),
                   ),
+                  numberOfWeeksInView: 6,
                 ),
+                firstDayOfWeek: 1,
                 timeSlotViewSettings: const TimeSlotViewSettings(
                   timeIntervalHeight: 80,
                 ),
