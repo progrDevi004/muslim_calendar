@@ -1,5 +1,3 @@
-// lib/ui/pages/home_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
@@ -72,10 +70,11 @@ class HomePageState extends State<HomePage> {
   // Dezenter Farbton für Gebetszeiten
   static const Color _prayerTimeColor = Color(0xFF90A4AE); // BlueGrey 300
 
-  // >>> Flags aus den Settings (EIN/AUS-Schalter in SettingsPage)
+  // Flags aus den Settings (für Daily/Weekly und ggf. Dashboard-Gebetszeiten)
   bool _showPrayerSlotsInDashboard = true;
   bool _showPrayerTimesInDayView = true;
   bool _showPrayerTimesInWeekView = true;
+  bool _showPrayerTimesInMonthView = true;
 
   @override
   void initState() {
@@ -84,7 +83,7 @@ class HomePageState extends State<HomePage> {
     _selectedNavIndex = 0; // Standard: Dashboard
     _updateCalendarViewFromNavIndex();
 
-    _loadUserPrefs(); // Lädt bools + Zeiteinstellungen
+    _loadUserPrefs();
     _loadAllCategories();
     _fetchYearlyPrayerTimesIfNeeded().then((_) {
       loadAllAppointments();
@@ -101,12 +100,16 @@ class HomePageState extends State<HomePage> {
       // Dashboard
       _showPrayerSlotsInDashboard =
           prefs.getBool('showPrayerSlotsInDashboard') ?? true;
+
       // Day
       _showPrayerTimesInDayView =
           prefs.getBool('showPrayerTimesInDayView') ?? true;
+
       // Week
       _showPrayerTimesInWeekView =
           prefs.getBool('showPrayerTimesInWeekView') ?? true;
+      // Month deactivated
+      _showPrayerTimesInMonthView = false;
     });
   }
 
@@ -141,7 +144,8 @@ class HomePageState extends State<HomePage> {
     _calendarController.view = _selectedView;
     setState(() {});
 
-    // >>> Neu: Jedes Mal, wenn sich die Ansicht ändert, holen wir neu die Daten
+    // Bei jedem Wechsel der Ansicht -> neu laden,
+    // damit Day/Week-Flags korrekt berücksichtigt werden
     if (_selectedNavIndex != 0) {
       loadAllAppointments();
     }
@@ -186,10 +190,9 @@ class HomePageState extends State<HomePage> {
       }
 
       // 2) Gebetszeiten
-      //    - Falls wir in der Day-Ansicht sind, nur hinzufügen, wenn _showPrayerTimesInDayView = true
-      //    - Falls wir in der Week-Ansicht sind, nur hinzufügen, wenn _showPrayerTimesInWeekView = true
-      //    - In Month -> ggf. immer anzeigen (nach Belieben) oder du fügst einen Schalter in SettingsPage ein
-      //    - In Dashboard (index = 0) -> wir laden NICHT den SfCalendar, also egal
+      //   NEU: Im Month View NIE anzeigen
+      //   => Day View nur, wenn _showPrayerTimesInDayView = true
+      //   => Week View nur, wenn _showPrayerTimesInWeekView = true
 
       bool addPrayers = true;
       if (_selectedView == CalendarView.day && !_showPrayerTimesInDayView) {
@@ -198,9 +201,10 @@ class HomePageState extends State<HomePage> {
           !_showPrayerTimesInWeekView) {
         addPrayers = false;
       }
-      // Falls du im Monat gar nicht zeigen willst, könntest du hier einfügen:
-      // else if (_selectedView == CalendarView.month) addPrayers = false;
-      // (aber nur wenn du willst.)
+      // >>> NEU: Keine Gebetszeiten in der Monatsansicht
+      else if (_selectedView == CalendarView.month) {
+        addPrayers = false;
+      }
 
       if (addPrayers && _selectedNavIndex != 0) {
         final prayerTimeEntries = await _prayerTimeRepo.getPrayerTimesInRange(
@@ -351,18 +355,10 @@ class HomePageState extends State<HomePage> {
                   }
                   final Appointment appointment = details.appointments.first;
 
-                  // Gebetszeiten im Monats-View dezenter
-                  if (appointment.notes == 'prayerTime' &&
-                      _selectedView == CalendarView.month) {
-                    return Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: appointment.color.withOpacity(0.7),
-                        shape: BoxShape.circle,
-                      ),
-                    );
-                  }
+                  // Falls du hier noch eine Absicherung machen willst:
+                  // if (_selectedView == CalendarView.month && appointment.notes == 'prayerTime') {
+                  //   return const SizedBox.shrink();
+                  // }
 
                   // Month => Minimales Layout
                   if (_selectedView == CalendarView.month) {
@@ -598,7 +594,7 @@ class HomePageState extends State<HomePage> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: Text("Kategorie (Muss übersetzt werden)"),
+          title: Text(loc.addNewCategory),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
