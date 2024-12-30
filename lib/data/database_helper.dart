@@ -10,6 +10,7 @@ class DatabaseHelper {
 
   static Database? _database;
 
+  // >>> Version von 3 auf 4 erhöht
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDatabase();
@@ -18,12 +19,13 @@ class DatabaseHelper {
 
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'appointments.db');
-    // >>> Version auf 3 erhöht
     return await openDatabase(
       path,
-      version: 3,
+      version: 4, // <-- NEU: DB-Version raufgesetzt
       onCreate: (db, version) async {
-        // Version 3 bedeutet, wir führen gleich alles an.
+        // Version 4 bedeutet, wir führen gleich alles an.
+
+        // appointments
         await db.execute('''
           CREATE TABLE appointments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,12 +44,17 @@ class DatabaseHelper {
             startTime TEXT,
             endTime TEXT,
             categoryId INTEGER,
+            reminderMinutesBefore INTEGER,
 
-            -- >>> NEU: Spalte für Reminder (in Minuten)
-            reminderMinutesBefore INTEGER
+            -- NEU ab Version 4:
+            externalIdGoogle TEXT,
+            externalIdOutlook TEXT,
+            externalIdApple TEXT,
+            lastSyncedAt TEXT
           )
         ''');
 
+        // prayer_times
         await db.execute('''
           CREATE TABLE prayer_times (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -62,6 +69,7 @@ class DatabaseHelper {
           )
         ''');
 
+        // categories
         await db.execute('''
           CREATE TABLE categories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,7 +78,7 @@ class DatabaseHelper {
           )
         ''');
 
-        // >>> Standard-Kategorien einfügen <<<
+        // Standard-Kategorien einfügen
         await db.insert('categories', {
           'name': 'Privat',
           'colorValue': 0xFF2196F3,
@@ -85,6 +93,8 @@ class DatabaseHelper {
         });
       },
       onUpgrade: (db, oldVersion, newVersion) async {
+        // Hier handle Upgrades von älteren Versionen:
+
         if (oldVersion < 2) {
           await db.execute('''
             ALTER TABLE appointments ADD COLUMN categoryId INTEGER
@@ -110,10 +120,30 @@ class DatabaseHelper {
           });
         }
 
-        // >>> Neu: Falls alter DB-Stand < 3 => Spalte reminderMinutesBefore hinzufügen
         if (oldVersion < 3) {
+          // Version 3 => Spalte reminderMinutesBefore
           await db.execute('''
             ALTER TABLE appointments ADD COLUMN reminderMinutesBefore INTEGER
+          ''');
+        }
+
+        // >>> NEU: Wenn von <3 hoch auf 4, müssen wir
+        // ebenfalls die reminderMinutesBefore-Spalte noch ergänzen (siehe oben).
+        // Dann erst die neuen Spalten:
+
+        if (oldVersion < 4) {
+          // Die neuen Spalten für externe Sync:
+          await db.execute('''
+            ALTER TABLE appointments ADD COLUMN externalIdGoogle TEXT
+          ''');
+          await db.execute('''
+            ALTER TABLE appointments ADD COLUMN externalIdOutlook TEXT
+          ''');
+          await db.execute('''
+            ALTER TABLE appointments ADD COLUMN externalIdApple TEXT
+          ''');
+          await db.execute('''
+            ALTER TABLE appointments ADD COLUMN lastSyncedAt TEXT
           ''');
         }
       },

@@ -1,3 +1,4 @@
+//lib/pages/dashboard.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -197,50 +198,40 @@ class DashboardPageState extends State<DashboardPage> {
     final startOfDay = DateTime(now.year, now.month, now.day, 0, 0);
     final endOfDay = DateTime(now.year, now.month, now.day, 23, 59);
 
-    // >>> NEU: Filter aus SharedPreferences holen
-    final prefs = await SharedPreferences.getInstance();
-    final catList = prefs.getStringList('selectedCategoryIds') ?? [];
-    final selectedCatIds = catList
-        .map((e) => int.tryParse(e))
-        .whereType<int>()
-        .toSet(); // kann leer sein
-
     final all = await _appointmentRepo.getAllAppointments();
-
     final tasks = <_DashboardTask>[];
 
-    // 1) Normale Termine
+    // 1) Normale Termine (ggf. relativer Gebetszeitenbezug)
     for (var ap in all) {
-      // KATEGORIE-FILTER anwenden:
-      if (ap.categoryId != null && !selectedCatIds.contains(ap.categoryId)) {
-        // => Überspringen, da dieser Appointment ausgeblendet sein soll
-        continue;
-      }
+      // >>> NEU: Gebetszeiten-berechneten Start/End ermitteln,
+      // oder fallback auf ap.startTime / ap.endTime
+      final calculatedStart =
+          await _prayerTimeService.getCalculatedStartTime(ap, now);
+      final start = calculatedStart ?? (ap.startTime ?? now);
 
-      final start = ap.startTime;
-      final end = ap.endTime;
+      final calculatedEnd =
+          await _prayerTimeService.getCalculatedEndTime(ap, now);
+      // Falls endTime null ist, nimm "start + 30min" als Fallback
+      final end = calculatedEnd ??
+          (ap.endTime ?? start.add(const Duration(minutes: 30)));
 
       // Termin ist heute relevant, wenn (end >= startOfDay) && (start <= endOfDay)
-      if (start != null && end != null) {
-        final bool isToday =
-            end.isAfter(startOfDay) && start.isBefore(endOfDay);
-        if (isToday) {
-          final diff = end.difference(start).inMinutes;
-          final desc = ap.notes ?? '';
+      if (end.isAfter(startOfDay) && start.isBefore(endOfDay)) {
+        final diff = end.difference(start).inMinutes;
+        final desc = ap.notes ?? '';
 
-          tasks.add(
-            _DashboardTask(
-              appointmentId: ap.id,
-              isPrayerSlot: false,
-              title: ap.subject,
-              start: start,
-              end: end,
-              durationInMinutes: diff,
-              description: desc,
-              color: ap.color,
-            ),
-          );
-        }
+        tasks.add(
+          _DashboardTask(
+            appointmentId: ap.id,
+            isPrayerSlot: false,
+            title: ap.subject,
+            start: start,
+            end: end,
+            durationInMinutes: diff,
+            description: desc,
+            color: ap.color,
+          ),
+        );
       }
     }
 

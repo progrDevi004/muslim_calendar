@@ -25,6 +25,12 @@ class AppointmentModel {
   // >>> NEU: Erinnerung X Minuten vor Start
   final int? reminderMinutesBefore;
 
+  // >>> NEU: Für Synchronisierung
+  final String? externalIdGoogle; // z.B. Event-ID in Google Calendar
+  final String? externalIdOutlook; // z.B. Event-ID in Outlook
+  final String? externalIdApple; // z.B. Event-Identifier in Apple-Kalender
+  final DateTime? lastSyncedAt; // Zuletzt erfolgreich synchronisiert
+
   AppointmentModel({
     this.id,
     required this.subject,
@@ -42,9 +48,13 @@ class AppointmentModel {
     this.startTime,
     this.endTime,
     this.categoryId,
-
-    // >>> NEU
     this.reminderMinutesBefore,
+
+    // NEU
+    this.externalIdGoogle,
+    this.externalIdOutlook,
+    this.externalIdApple,
+    this.lastSyncedAt,
   });
 
   Map<String, dynamic> toMap() {
@@ -61,15 +71,23 @@ class AppointmentModel {
       'location': location,
       'recurrenceRule': recurrenceRule,
       'recurrenceExceptionDates': recurrenceExceptionDates != null
-          ? json.encode(recurrenceExceptionDates!
-              .map((e) => e.toIso8601String())
-              .toList())
+          ? json.encode(
+              recurrenceExceptionDates!
+                  .map((e) => e.toIso8601String())
+                  .toList(),
+            )
           : null,
       'color': color.value,
       'startTime': startTime?.toIso8601String(),
       'endTime': endTime?.toIso8601String(),
       'categoryId': categoryId,
-      'reminderMinutesBefore': reminderMinutesBefore, // NEU
+      'reminderMinutesBefore': reminderMinutesBefore,
+
+      // NEU
+      'externalIdGoogle': externalIdGoogle,
+      'externalIdOutlook': externalIdOutlook,
+      'externalIdApple': externalIdApple,
+      'lastSyncedAt': lastSyncedAt?.toIso8601String(),
     };
   }
 
@@ -110,8 +128,15 @@ class AppointmentModel {
       endTime: map['endTime'] != null ? DateTime.parse(map['endTime']) : null,
       categoryId: map['categoryId'],
 
-      // >>> NEU
+      // NEU
       reminderMinutesBefore: map['reminderMinutesBefore'],
+
+      externalIdGoogle: map['externalIdGoogle'],
+      externalIdOutlook: map['externalIdOutlook'],
+      externalIdApple: map['externalIdApple'],
+      lastSyncedAt: map['lastSyncedAt'] != null
+          ? DateTime.parse(map['lastSyncedAt'])
+          : null,
     );
   }
 }
