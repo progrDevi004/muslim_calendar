@@ -79,8 +79,19 @@ class HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+
     _calendarController = CalendarController();
     _selectedNavIndex = 0; // Standard: Dashboard
+
+    // --------------------------
+    // NEU: Standardmäßig heute auswählen,
+    // damit bei der Monats-Agenda direkt der heutige Tag angezeigt wird.
+    // --------------------------
+    _selectedDate = DateTime.now();
+    _calendarController.selectedDate = _selectedDate;
+    _calendarController.displayDate = _selectedDate;
+    // --------------------------
+
     _updateCalendarViewFromNavIndex();
 
     _loadUserPrefs();
@@ -108,7 +119,9 @@ class HomePageState extends State<HomePage> {
       // Week
       _showPrayerTimesInWeekView =
           prefs.getBool('showPrayerTimesInWeekView') ?? true;
-      // Month deactivated
+
+      // Month
+      // Hier hast du laut Vorgabe "nie Gebetszeiten" – also auf false
       _showPrayerTimesInMonthView = false;
     });
   }
@@ -142,7 +155,15 @@ class HomePageState extends State<HomePage> {
         break;
     }
     _calendarController.view = _selectedView;
-    setState(() {});
+    setState(() {
+      // Falls du bei jedem Wechsel in die Monatsansicht
+      // *erneut* den heutigen Tag erzwingen willst, könntest du hier:
+      // if (_selectedView == CalendarView.month) {
+      //   _selectedDate = DateTime.now();
+      //   _calendarController.selectedDate = _selectedDate;
+      //   _calendarController.displayDate = _selectedDate;
+      // }
+    });
 
     // Bei jedem Wechsel der Ansicht -> neu laden,
     // damit Day/Week-Flags korrekt berücksichtigt werden
@@ -181,6 +202,7 @@ class HomePageState extends State<HomePage> {
 
       // 1) Normale Appointments
       for (var m in models) {
+        // Kategorie-Filter
         if (m.categoryId == null ||
             _selectedCategoryIds.contains(m.categoryId)) {
           final apps =
@@ -190,20 +212,14 @@ class HomePageState extends State<HomePage> {
       }
 
       // 2) Gebetszeiten
-      //   NEU: Im Month View NIE anzeigen
-      //   => Day View nur, wenn _showPrayerTimesInDayView = true
-      //   => Week View nur, wenn _showPrayerTimesInWeekView = true
-
       bool addPrayers = true;
       if (_selectedView == CalendarView.day && !_showPrayerTimesInDayView) {
         addPrayers = false;
       } else if (_selectedView == CalendarView.week &&
           !_showPrayerTimesInWeekView) {
         addPrayers = false;
-      }
-      // >>> NEU: Keine Gebetszeiten in der Monatsansicht
-      else if (_selectedView == CalendarView.month) {
-        addPrayers = false;
+      } else if (_selectedView == CalendarView.month) {
+        addPrayers = false; // niemals Gebetszeiten in Month
       }
 
       if (addPrayers && _selectedNavIndex != 0) {
@@ -329,14 +345,17 @@ class HomePageState extends State<HomePage> {
                 headerStyle: const CalendarHeaderStyle(
                   backgroundColor: Colors.transparent,
                   textAlign: TextAlign.center,
-                  textStyle:
-                      TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                  textStyle: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
                 ),
                 view: _selectedView,
                 controller: _calendarController,
                 dataSource: _dataSource,
                 showDatePickerButton: true,
                 monthViewSettings: const MonthViewSettings(
+                  // Agenda einblenden
                   appointmentDisplayMode: MonthAppointmentDisplayMode.indicator,
                   showAgenda: true,
                   agendaItemHeight: 50,
@@ -355,10 +374,12 @@ class HomePageState extends State<HomePage> {
                   }
                   final Appointment appointment = details.appointments.first;
 
-                  // Falls du hier noch eine Absicherung machen willst:
-                  // if (_selectedView == CalendarView.month && appointment.notes == 'prayerTime') {
-                  //   return const SizedBox.shrink();
-                  // }
+                  // Gebetszeiten nicht antippbar
+                  if (appointment.notes == 'prayerTime' &&
+                      _selectedView != CalendarView.day &&
+                      _selectedView != CalendarView.week) {
+                    return const SizedBox.shrink();
+                  }
 
                   // Month => Minimales Layout
                   if (_selectedView == CalendarView.month) {
@@ -366,8 +387,9 @@ class HomePageState extends State<HomePage> {
                       decoration: BoxDecoration(
                         color: appointment.color,
                         shape: BoxShape.rectangle,
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(4)),
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(4),
+                        ),
                       ),
                       alignment: Alignment.centerLeft,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -453,7 +475,7 @@ class HomePageState extends State<HomePage> {
                     }
                   } else if (calendarTapDetails.targetElement ==
                       CalendarElement.calendarCell) {
-                    // Falls man z.B. auf denselben Tag klickt => Tag-View
+                    // KLICK auf denselben Tag => wechsle in Day-Ansicht
                     if (calendarTapDetails.date == _selectedDate) {
                       setState(() {
                         _selectedNavIndex = 1; // Day
@@ -515,6 +537,13 @@ class HomePageState extends State<HomePage> {
     return DateFormat(pattern).format(dt);
   }
 
+  /// SPEICHERN DER GEWÄHLTEN KATEGORIEN IN SHARED PREFERENCES
+  Future<void> _saveSelectedCategoryIdsToPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final catList = _selectedCategoryIds.map((id) => id.toString()).toList();
+    await prefs.setStringList('selectedCategoryIds', catList);
+  }
+
   void _showCategoryFilterDialog() {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
     showDialog(
@@ -572,9 +601,17 @@ class HomePageState extends State<HomePage> {
                   child: Text(loc.cancel),
                 ),
                 FilledButton(
-                  onPressed: () {
+                  onPressed: () async {
                     Navigator.of(ctx).pop();
+
+                    // **NEU**: Ausgewählte Kategorien in SharedPrefs speichern
+                    await _saveSelectedCategoryIdsToPrefs();
+
+                    // Dann neu laden
                     loadAllAppointments();
+
+                    // Wenn Dashboard aktiv => dort auch reload
+                    _dashboardKey.currentState?.reloadData();
                   },
                   child: Text(loc.apply),
                 ),

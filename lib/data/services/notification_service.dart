@@ -51,15 +51,14 @@ class NotificationService {
     }
 
     final id = appointmentId;
-
-    final androidDetails = AndroidNotificationDetails(
+    const androidDetails = AndroidNotificationDetails(
       'appointments_channel',
       'Appointments',
       channelDescription: 'Termin-Erinnerungen',
       importance: Importance.max,
       priority: Priority.high,
     );
-    final platformDetails = NotificationDetails(android: androidDetails);
+    const platformDetails = NotificationDetails(android: androidDetails);
 
     await _flutterLocalNotificationsPlugin.zonedSchedule(
       id,
