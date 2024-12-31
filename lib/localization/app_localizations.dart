@@ -1509,4 +1509,144 @@ class AppLocalizations extends ChangeNotifier {
         return 'Add New Appointment';
     }
   }
+
+  String get prayerTimeSlots {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Gebetszeiten-Slots';
+      case AppLanguage.turkish:
+        return 'Namaz vakti aralıkları';
+      case AppLanguage.arabic:
+        return 'فترات أوقات الصلاة';
+      case AppLanguage.english:
+      default:
+        return 'Prayer time slots';
+    }
+  }
+
+  String get prayerTimeSlotsInDashboard {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Gebetszeiten-Slots im Dashboard';
+      case AppLanguage.turkish:
+        return 'Dashboard\'da namaz vakti aralıkları';
+      case AppLanguage.arabic:
+        return 'فترات أوقات الصلاة في لوحة التحكم';
+      case AppLanguage.english:
+      default:
+        return 'Prayer time slots in the dashboard';
+    }
+  }
+
+  String get useSystemTheme {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'System-Theme verwenden';
+      case AppLanguage.turkish:
+        return 'Sistem temasını kullan';
+      case AppLanguage.arabic:
+        return 'استخدام سمة النظام';
+      case AppLanguage.english:
+      default:
+        return 'Use system theme';
+    }
+  }
+
+  String get autoSwitchDarkLightMode {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Automatisch auf Dunkel/Hell schalten, wenn das Gerät in den Nachtmodus wechselt';
+      case AppLanguage.turkish:
+        return 'Cihaz gece moduna geçtiğinde otomatik olarak karanlık/açık moda geç';
+      case AppLanguage.arabic:
+        return 'التبديل تلقائيًا إلى الوضع الداكن/الفاتح عند انتقال الجهاز إلى الوضع الليلي';
+      case AppLanguage.english:
+      default:
+        return 'Automatically switch to dark/light mode when the device switches to night mode';
+    }
+  }
+
+  String get showTodayPrayerTimesAsSlots {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Zeigt die heutigen Gebetszeiten zusätzlich als Slots im Dashboard an';
+      case AppLanguage.turkish:
+        return 'Bugünün namaz vakitlerini ek olarak Dashboard\'da aralıklar olarak gösterir';
+      case AppLanguage.arabic:
+        return 'يعرض أوقات الصلاة اليوم كفتحات إضافية في لوحة التحكم';
+      case AppLanguage.english:
+      default:
+        return 'Displays today\'s prayer times additionally as slots in the dashboard';
+    }
+  }
+
+  String get showPrayerTimesInDailyView {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Gebetszeiten in Daily-View anzeigen';
+      case AppLanguage.turkish:
+        return 'Namaz vakitlerini günlük görünümde göster';
+      case AppLanguage.arabic:
+        return 'عرض أوقات الصلاة في العرض اليومي';
+      case AppLanguage.english:
+      default:
+        return 'Show prayer times in daily view';
+    }
+  }
+
+  String get showPrayerTimesInWeeklyView {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Gebetszeiten in der Wochenansicht anzeigen';
+      case AppLanguage.turkish:
+        return 'Namaz vakitlerini haftalık görünümde göster';
+      case AppLanguage.arabic:
+        return 'عرض أوقات الصلاة في العرض الأسبوعي';
+      case AppLanguage.english:
+      default:
+        return 'Show prayer times in weekly view';
+    }
+  }
+
+  String get prayerTimesCalculation {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Gebetszeiten-Berechnung';
+      case AppLanguage.turkish:
+        return 'Namaz vakti hesaplama';
+      case AppLanguage.arabic:
+        return 'حساب أوقات الصلاة';
+      case AppLanguage.english:
+      default:
+        return 'Prayer times calculation';
+    }
+  }
+
+  String get calculationMethod {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Kalkulationsmethode';
+      case AppLanguage.turkish:
+        return 'Hesaplama yöntemi';
+      case AppLanguage.arabic:
+        return 'طريقة الحساب';
+      case AppLanguage.english:
+      default:
+        return 'Calculation method';
+    }
+  }
+
+  String get errorLoadingCountryList {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Fehler beim Laden der Länderliste:';
+      case AppLanguage.turkish:
+        return 'Ülke listesi yüklenirken hata oluştu:';
+      case AppLanguage.arabic:
+        return 'حدث خطأ أثناء تحميل قائمة الدول:';
+      case AppLanguage.english:
+      default:
+        return 'Error loading country list:';
+    }
+  }
 }

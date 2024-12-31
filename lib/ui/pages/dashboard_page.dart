@@ -194,6 +194,7 @@ class DashboardPageState extends State<DashboardPage> {
   /// **Nur** die Termine des heutigen Tages laden
   Future<void> _loadTodaysAppointments() async {
     final now = DateTime.now();
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
     // Start und Ende des heutigen Tages (bis 23:59)
     final startOfDay = DateTime(now.year, now.month, now.day, 0, 0);
     final endOfDay = DateTime(now.year, now.month, now.day, 23, 59);
@@ -255,7 +256,7 @@ class DashboardPageState extends State<DashboardPage> {
           _DashboardTask(
             appointmentId: null,
             isPrayerSlot: true,
-            title: _prayerTimeLabel(prayerTime),
+            title: loc.getPrayerTimeLabel(prayerTime),
             start: dtStart,
             end: dtEnd,
             durationInMinutes: 1,
@@ -273,21 +274,6 @@ class DashboardPageState extends State<DashboardPage> {
       _todayTasks = tasks;
       _isAppointmentsLoading = false;
     });
-  }
-
-  String _prayerTimeLabel(PrayerTime pt) {
-    switch (pt) {
-      case PrayerTime.fajr:
-        return 'Fajr';
-      case PrayerTime.dhuhr:
-        return 'Dhuhr';
-      case PrayerTime.asr:
-        return 'Asr';
-      case PrayerTime.maghrib:
-        return 'Maghrib';
-      case PrayerTime.isha:
-        return 'Isha';
-    }
   }
 
   String _formatTimeFromMinutes(int? totalMinutes) {

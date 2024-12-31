@@ -141,7 +141,7 @@ class _SettingsPageState extends State<SettingsPage> {
       });
     } catch (e) {
       setState(() {
-        _loadError = 'Fehler beim Laden der Länderliste: $e';
+        _loadError = 'Error loading country list: $e';
         _isLoadingCountries = false;
       });
     }
@@ -215,9 +215,8 @@ class _SettingsPageState extends State<SettingsPage> {
           SwitchListTile(
             activeColor: Colors.green,
             activeTrackColor: Colors.greenAccent,
-            title: const Text('System Theme verwenden'),
-            subtitle: const Text(
-                'Automatisch auf Dunkel/Hell schalten, wenn das Gerät in den Nachtmodus wechselt'),
+            title: Text(loc.useSystemTheme),
+            subtitle: Text(loc.autoSwitchDarkLightMode),
             value: _useSystemTheme,
             onChanged: (bool value) async {
               setState(() {
@@ -309,7 +308,7 @@ class _SettingsPageState extends State<SettingsPage> {
             activeTrackColor: Colors.greenAccent,
             title: Text(loc.automaticLocation),
             subtitle: Text(loc.automaticLocationSubtitle),
-            value: _locationMode == LocationMode.automatic,
+            value: _locationMode == LocationMode.manual,
             onChanged: (bool value) {
               setState(() {
                 _locationMode =
@@ -318,13 +317,13 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
           if (_locationMode == LocationMode.manual)
-            ..._buildManualLocationFields(),
+            ..._buildManualLocationFields(loc.country, loc.city),
 
           const Divider(height: 40),
 
           // Gebetszeiten-Slots (Dashboard)
           Text(
-            'Gebetszeiten-Slots',
+            loc.prayerTimeSlots,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -333,9 +332,8 @@ class _SettingsPageState extends State<SettingsPage> {
           SwitchListTile(
             activeColor: Colors.green,
             activeTrackColor: Colors.greenAccent,
-            title: const Text('Gebetszeiten-Slots im Dashboard'),
-            subtitle: const Text(
-                'Zeigt die heutigen Gebetszeiten zusätzlich als Slots im Dashboard an'),
+            title: Text(loc.prayerTimeSlotsInDashboard),
+            subtitle: Text(loc.showTodayPrayerTimesAsSlots),
             value: _showPrayerSlotsInDashboard,
             onChanged: (bool val) async {
               setState(() {
@@ -349,8 +347,8 @@ class _SettingsPageState extends State<SettingsPage> {
           SwitchListTile(
             activeColor: Colors.green,
             activeTrackColor: Colors.greenAccent,
-            title: const Text('Gebetszeiten in Daily-View anzeigen'),
-            subtitle: const Text('Zeigt Gebetszeiten in der Tagesansicht'),
+            title: Text(loc.showPrayerTimesInDailyView),
+            subtitle: Text(loc.showPrayerTimesInDailyView),
             value: _showPrayerTimesInDayView,
             onChanged: (bool val) async {
               setState(() {
@@ -362,8 +360,8 @@ class _SettingsPageState extends State<SettingsPage> {
           SwitchListTile(
             activeColor: Colors.green,
             activeTrackColor: Colors.greenAccent,
-            title: const Text('Gebetszeiten in Weekly-View anzeigen'),
-            subtitle: const Text('Zeigt Gebetszeiten in der Wochenansicht'),
+            title: Text(loc.showPrayerTimesInWeeklyView),
+            subtitle: Text(loc.showPrayerTimesInWeeklyView),
             value: _showPrayerTimesInWeekView,
             onChanged: (bool val) async {
               setState(() {
@@ -377,15 +375,15 @@ class _SettingsPageState extends State<SettingsPage> {
 
           // Berechnungsmethode
           Text(
-            'Gebetszeiten-Berechnung',
+            loc.prayerTimesCalculation,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<int>(
-            decoration: const InputDecoration(
-              labelText: 'Kalkulationsmethode',
+            decoration: InputDecoration(
+              labelText: loc.calculationMethod,
               border: OutlineInputBorder(),
             ),
             value: _selectedCalcMethod,
@@ -421,7 +419,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   /// Baut das UI für die manuelle Standort-Auswahl
-  List<Widget> _buildManualLocationFields() {
+  List<Widget> _buildManualLocationFields(String? country, String? city) {
     if (_isLoadingCountries) {
       return [
         const SizedBox(height: 16),
@@ -443,7 +441,7 @@ class _SettingsPageState extends State<SettingsPage> {
       const SizedBox(height: 8),
       DropdownButtonFormField<String>(
         value: _defaultCountry,
-        decoration: const InputDecoration(labelText: 'Land'),
+        decoration: InputDecoration(labelText: country),
         onChanged: (value) {
           setState(() {
             _defaultCountry = value;
@@ -462,7 +460,7 @@ class _SettingsPageState extends State<SettingsPage> {
           _countryCityData.containsKey(_defaultCountry))
         DropdownButtonFormField<String>(
           value: _defaultCity,
-          decoration: const InputDecoration(labelText: 'Stadt'),
+          decoration: InputDecoration(labelText: city),
           onChanged: (value) {
             setState(() {
               _defaultCity = value;
