@@ -9,15 +9,33 @@ class PrayerTimeService {
   PrayerTimeService(this.prayerTimeRepo);
 
   Future<DateTime?> getCalculatedStartTime(
-      AppointmentModel appointment, DateTime date) async {
+    AppointmentModel appointment,
+    DateTime fallbackDate, {
+    bool useAppointmentDate = false,
+  }) async {
     if (!appointment.isRelatedToPrayerTimes || appointment.prayerTime == null) {
       return appointment.startTime;
     }
+
     final minutes = await prayerTimeRepo.getPrayerTimeMinutes(
-        date, appointment.location!, appointment.prayerTime!);
+      useAppointmentDate ? appointment.startTime! : fallbackDate,
+      appointment.location!,
+      appointment.prayerTime!,
+    );
+
     if (minutes == null) return null;
-    DateTime baseTime = DateTime(date.year, date.month, date.day)
-        .add(Duration(minutes: minutes));
+
+    // Basis-Datum: je nach Flag (Dashboard vs. Nicht-Dashboard)
+    final baseSource =
+        useAppointmentDate ? appointment.startTime! : fallbackDate;
+
+    DateTime baseTime = DateTime(
+      baseSource.year,
+      baseSource.month,
+      baseSource.day,
+    ).add(Duration(minutes: minutes));
+
+    // Vor/Nach (before/after)
     if (appointment.timeRelation == TimeRelation.before &&
         appointment.minutesBeforeAfter != null) {
       baseTime =

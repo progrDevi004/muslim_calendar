@@ -205,17 +205,15 @@ class DashboardPageState extends State<DashboardPage> {
     // 1) Normale Termine
     for (var ap in all) {
       // Berechnete Start-/Endzeit (für Gebetszeitabhängige Termine)
-      final calculatedStart =
-          await _prayerTimeService.getCalculatedStartTime(ap, now);
+      final calculatedStart = await _prayerTimeService
+          .getCalculatedStartTime(ap, DateTime.now(), useAppointmentDate: true);
+
       final start = calculatedStart ?? (ap.startTime ?? now);
 
       final calculatedEnd =
           await _prayerTimeService.getCalculatedEndTime(ap, now);
       final end = calculatedEnd ??
           (ap.endTime ?? start.add(const Duration(minutes: 30)));
-
-      // final start = ap.startTime!;
-      // final end = ap.endTime!;
 
       // BUGFIX: Zeige nur Termine an, die tatsächlich am heutigen Tag beginnen
       if (start.year == now.year &&
