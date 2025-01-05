@@ -1,4 +1,4 @@
-//lib/pages/dashboard.dart
+// lib/pages/dashboard.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -202,22 +202,25 @@ class DashboardPageState extends State<DashboardPage> {
     final all = await _appointmentRepo.getAllAppointments();
     final tasks = <_DashboardTask>[];
 
-    // 1) Normale Termine (ggf. relativer Gebetszeitenbezug)
+    // 1) Normale Termine
     for (var ap in all) {
-      // >>> NEU: Gebetszeiten-berechneten Start/End ermitteln,
-      // oder fallback auf ap.startTime / ap.endTime
+      // Berechnete Start-/Endzeit (für Gebetszeitabhängige Termine)
       final calculatedStart =
           await _prayerTimeService.getCalculatedStartTime(ap, now);
       final start = calculatedStart ?? (ap.startTime ?? now);
 
       final calculatedEnd =
           await _prayerTimeService.getCalculatedEndTime(ap, now);
-      // Falls endTime null ist, nimm "start + 30min" als Fallback
       final end = calculatedEnd ??
           (ap.endTime ?? start.add(const Duration(minutes: 30)));
 
-      // Termin ist heute relevant, wenn (end >= startOfDay) && (start <= endOfDay)
-      if (end.isAfter(startOfDay) && start.isBefore(endOfDay)) {
+      // final start = ap.startTime!;
+      // final end = ap.endTime!;
+
+      // BUGFIX: Zeige nur Termine an, die tatsächlich am heutigen Tag beginnen
+      if (start.year == now.year &&
+          start.month == now.month &&
+          start.day == now.day) {
         final diff = end.difference(start).inMinutes;
         final desc = ap.notes ?? '';
 

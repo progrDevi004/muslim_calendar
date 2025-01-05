@@ -1,5 +1,7 @@
 // lib/ui/pages/appointment_details_page.dart
 
+import 'dart:io' show Platform;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
@@ -39,6 +41,8 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
       PrayerTimeService(PrayerTimeRepository());
   DateTime? _computedStartTime;
   DateTime? _computedEndTime;
+
+  bool get _isIos => Platform.isIOS;
 
   @override
   void initState() {
@@ -117,26 +121,13 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   Future<void> _deleteAppointment() async {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
 
-    bool confirmDelete = await showDialog(
-          context: context,
-          builder: (BuildContext ctx) {
-            return AlertDialog(
-              title: Text(loc.deleteAppointmentTitle),
-              content: Text(loc.deleteAppointmentConfirmation),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(false),
-                  child: Text(loc.cancel),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.of(ctx).pop(true),
-                  child: Text(loc.delete),
-                ),
-              ],
-            );
-          },
-        ) ??
-        false;
+    bool confirmDelete = await _showAdaptiveDialog(
+      context: context,
+      title: loc.deleteAppointmentTitle,
+      content: loc.deleteAppointmentConfirmation,
+      confirmText: loc.delete,
+      cancelText: loc.cancel,
+    );
 
     if (confirmDelete && _appointment?.id != null) {
       try {
@@ -160,11 +151,17 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
     if (_appointment?.id == null) return;
 
     await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => AppointmentCreationPage(
-          appointmentId: _appointment!.id,
-        ),
-      ),
+      _isIos
+          ? CupertinoPageRoute(
+              builder: (context) => AppointmentCreationPage(
+                appointmentId: _appointment!.id,
+              ),
+            )
+          : MaterialPageRoute(
+              builder: (context) => AppointmentCreationPage(
+                appointmentId: _appointment!.id,
+              ),
+            ),
     );
 
     _loadAppointment();
@@ -174,23 +171,41 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(loc.editAppointment), // oder "Termindetails"
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _appointment == null
-              ? Center(
-                  child: Text(
-                    'Appointment not found.',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16.0),
-                  child: _buildDetailsContent(loc),
-                ),
+    if (_isIos) {
+      return CupertinoPageScaffold(
+        navigationBar: CupertinoNavigationBar(
+          middle: Text(loc.editAppointment),
+        ),
+        child: SafeArea(
+          child: _buildBody(loc),
+        ),
+      );
+    } else {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(loc.editAppointment),
+        ),
+        body: _buildBody(loc),
+      );
+    }
+  }
+
+  Widget _buildBody(AppLocalizations loc) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_appointment == null) {
+      return Center(
+        child: Text(
+          'Appointment not found.',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: _buildDetailsContent(loc),
     );
   }
 
@@ -329,19 +344,119 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            OutlinedButton.icon(
+            _buildAdaptiveOutlinedButton(
+              icon: Icons.delete,
+              label: loc.delete,
               onPressed: _deleteAppointment,
-              icon: const Icon(Icons.delete),
-              label: Text(loc.delete),
             ),
-            FilledButton.icon(
+            _buildAdaptiveFilledButton(
+              icon: Icons.edit,
+              label: loc.editAppointment,
               onPressed: _editAppointment,
-              icon: const Icon(Icons.edit),
-              label: Text(loc.editAppointment),
             ),
           ],
         ),
       ],
     );
+  }
+
+  /// Adaptive Bestätigungs-Dialog
+  Future<bool> _showAdaptiveDialog({
+    required BuildContext context,
+    required String title,
+    required String content,
+    required String confirmText,
+    required String cancelText,
+  }) async {
+    if (Platform.isIOS) {
+      final result = await showCupertinoDialog<bool>(
+        context: context,
+        builder: (ctx) => CupertinoAlertDialog(
+          title: Text(title),
+          content: Text(content),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(cancelText),
+            ),
+            CupertinoDialogAction(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(confirmText),
+            ),
+          ],
+        ),
+      );
+      return result ?? false;
+    } else {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(title),
+          content: Text(content),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(cancelText),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(confirmText),
+            ),
+          ],
+        ),
+      );
+      return result ?? false;
+    }
+  }
+
+  Widget _buildAdaptiveOutlinedButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    if (_isIos) {
+      return CupertinoButton(
+        onPressed: onPressed,
+        child: Row(
+          children: [
+            Icon(icon, color: CupertinoColors.activeBlue),
+            const SizedBox(width: 4),
+            Text(label,
+                style: const TextStyle(color: CupertinoColors.activeBlue)),
+          ],
+        ),
+      );
+    } else {
+      return OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon),
+        label: Text(label),
+      );
+    }
+  }
+
+  Widget _buildAdaptiveFilledButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    if (_isIos) {
+      return CupertinoButton.filled(
+        onPressed: onPressed,
+        child: Row(
+          children: [
+            Icon(icon, color: CupertinoColors.white),
+            const SizedBox(width: 4),
+            Text(label, style: const TextStyle(color: CupertinoColors.white)),
+          ],
+        ),
+      );
+    } else {
+      return FilledButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon),
+        label: Text(label),
+      );
+    }
   }
 }

@@ -1,5 +1,8 @@
-//lib/ui/pages/appointment_creation_page.dart
+// lib/ui/pages/appointment_creation_page.dart
+
 import 'dart:convert';
+import 'dart:io' show Platform; // Für isIOS
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
@@ -106,6 +109,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
   // >>> NEU: Um Mehrfachklicks zu verhindern
   bool _isSaving = false;
+
+  bool get _isIos => Platform.isIOS;
 
   @override
   void initState() {
@@ -319,26 +324,13 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       return;
     }
 
-    bool confirmDelete = await showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text(loc.deleteAppointmentTitle),
-              content: Text(loc.deleteAppointmentConfirmation),
-              actions: <Widget>[
-                TextButton(
-                  child: Text(loc.cancel),
-                  onPressed: () => Navigator.of(context).pop(false),
-                ),
-                FilledButton(
-                  child: Text(loc.delete),
-                  onPressed: () => Navigator.of(context).pop(true),
-                ),
-              ],
-            );
-          },
-        ) ??
-        false;
+    bool confirmDelete = await _showAdaptiveDialog(
+      context: context,
+      title: loc.deleteAppointmentTitle,
+      content: loc.deleteAppointmentConfirmation,
+      confirmText: loc.delete,
+      cancelText: loc.cancel,
+    );
 
     if (confirmDelete) {
       try {
@@ -410,13 +402,16 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             recurrence.weekDays.clear();
             if (_selectedWeekDays[0]) recurrence.weekDays.add(WeekDays.monday);
             if (_selectedWeekDays[1]) recurrence.weekDays.add(WeekDays.tuesday);
-            if (_selectedWeekDays[2])
+            if (_selectedWeekDays[2]) {
               recurrence.weekDays.add(WeekDays.wednesday);
-            if (_selectedWeekDays[3])
+            }
+            if (_selectedWeekDays[3]) {
               recurrence.weekDays.add(WeekDays.thursday);
+            }
             if (_selectedWeekDays[4]) recurrence.weekDays.add(WeekDays.friday);
-            if (_selectedWeekDays[5])
+            if (_selectedWeekDays[5]) {
               recurrence.weekDays.add(WeekDays.saturday);
+            }
             if (_selectedWeekDays[6]) recurrence.weekDays.add(WeekDays.sunday);
           } else if (_recurrenceType == RecurrenceType.monthly) {
             recurrence.dayOfMonth = safeStart.day;
@@ -511,7 +506,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         SnackBar(content: Text('${loc.errorSavingAppointment}: $e')),
       );
     } finally {
-      // Danach wieder Freigabe für Speichern
+      // Danach wieder Freigabe fürs Speichern
       if (mounted) {
         setState(() {
           _isSaving = false;
@@ -523,16 +518,16 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   /// Fügt ein Ausnahme-Datum hinzu
   void _addExceptionDate() async {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
-    DateTime? selectedDate = await showDatePicker(
+    final picked = await _showAdaptiveDatePicker(
       context: context,
       initialDate: _startTime ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
       helpText: loc.addExceptionDate,
     );
-    if (selectedDate != null) {
+    if (picked != null) {
       setState(() {
-        _exceptionDates.add(selectedDate);
+        _exceptionDates.add(picked);
       });
     }
   }
@@ -542,7 +537,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     required DateTime initial,
     required bool isAllDay,
   }) async {
-    final date = await showDatePicker(
+    final date = await _showAdaptiveDatePicker(
       context: context,
       initialDate: initial,
       firstDate: DateTime(2000),
@@ -554,20 +549,18 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       return date;
     }
 
+    // Zeit abfragen
     final newDateTime = await _pickTime(date);
     return newDateTime ?? date;
   }
 
-  /// >>> NEU: TimePicker zuerst in Tastatur-Modus (TimePickerEntryMode.input)
-  /// und automatisches Überschreiben bei Klick (via _OverwriteOnFocus).
+  /// >>> TimePicker
   Future<DateTime?> _pickTime(DateTime dateBase) async {
     final timeOfDay = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: dateBase.hour, minute: dateBase.minute),
-      // Tastatur zuerst:
       initialEntryMode: TimePickerEntryMode.input,
       builder: (BuildContext context, Widget? child) {
-        // Wir wickeln den Standard-TimePicker in unseren Hack:
         return MediaQuery(
           data: MediaQuery.of(context)
               .copyWith(alwaysUse24HourFormat: _use24hFormat),
@@ -603,234 +596,257 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         .titleMedium
         ?.copyWith(fontWeight: FontWeight.bold);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.appointmentId == null
-            ? loc.createAppointment
-            : loc.editAppointment),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(loc.general, style: headlineStyle),
-              const SizedBox(height: 12),
-
-              // Titel
-              TextFormField(
-                controller: _titleController,
-                decoration: InputDecoration(labelText: '${loc.titleLabel} *'),
-                validator: (value) =>
-                    (value == null || value.isEmpty) ? loc.titleLabel : null,
+    return _isIos
+        ? CupertinoPageScaffold(
+            navigationBar: CupertinoNavigationBar(
+              middle: Text(widget.appointmentId == null
+                  ? loc.createAppointment
+                  : loc.editAppointment),
+              trailing: GestureDetector(
+                onTap: _saveAppointment,
+                child: Text(
+                  loc.save,
+                  style: const TextStyle(color: CupertinoColors.activeBlue),
+                ),
               ),
-              const SizedBox(height: 12),
+            ),
+            child: SafeArea(
+              child: _buildMainBody(headlineStyle, loc),
+            ),
+          )
+        : Scaffold(
+            appBar: AppBar(
+              title: Text(widget.appointmentId == null
+                  ? loc.createAppointment
+                  : loc.editAppointment),
+            ),
+            body: _buildMainBody(headlineStyle, loc),
+          );
+  }
 
-              // Start-/Endzeit
-              Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () async {
-                        final picked = await _pickDateTime(
-                          initial: _startTime ?? DateTime.now(),
-                          isAllDay: _isAllDay,
-                        );
-                        if (picked != null) {
-                          setState(() {
-                            _startTime = picked;
-                            if (_isAllDay) {
-                              _endTime =
-                                  _startTime!.add(const Duration(hours: 1));
-                            } else {
-                              _endTime =
-                                  _startTime!.add(const Duration(minutes: 30));
-                            }
-                          });
-                        }
-                      },
-                      child: _buildDateTimeDisplay(
-                        label: loc.startTime,
-                        dateTime: _startTime,
+  Widget _buildMainBody(TextStyle? headlineStyle, AppLocalizations loc) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(loc.general, style: headlineStyle),
+            const SizedBox(height: 12),
+
+            // Titel
+            TextFormField(
+              controller: _titleController,
+              decoration: InputDecoration(labelText: '${loc.titleLabel} *'),
+              validator: (value) =>
+                  (value == null || value.isEmpty) ? loc.titleLabel : null,
+            ),
+            const SizedBox(height: 12),
+
+            // Start-/Endzeit
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () async {
+                      final picked = await _pickDateTime(
+                        initial: _startTime ?? DateTime.now(),
                         isAllDay: _isAllDay,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: !_isAllDay
-                        ? InkWell(
-                            onTap: () async {
-                              if (_startTime == null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(loc.selectStartTime),
-                                  ),
-                                );
-                                return;
-                              }
-                              final picked = await _pickDateTime(
-                                initial: _endTime ?? _startTime!,
-                                isAllDay: false,
-                              );
-                              if (picked != null) {
-                                setState(() {
-                                  _endTime = picked;
-                                });
-                              }
-                            },
-                            child: _buildDateTimeDisplay(
-                              label: loc.endTime,
-                              dateTime: _endTime,
-                              isAllDay: false,
-                            ),
-                          )
-                        : Container(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Kategorie & Farbe
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<CategoryModel>(
-                      value: _selectedCategory,
-                      decoration:
-                          InputDecoration(labelText: loc.selectCategoryLabel),
-                      items: _allCategories.map((cat) {
-                        return DropdownMenuItem<CategoryModel>(
-                          value: cat,
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 12,
-                                height: 12,
-                                margin: const EdgeInsets.only(right: 8),
-                                decoration: BoxDecoration(
-                                  color: cat.color,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              Text(cat.name),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
+                      );
+                      if (picked != null) {
                         setState(() {
-                          _selectedCategory = value;
-                          _isCategoryDropdownClicked = true;
-                          if (_selectedCategory != null) {
-                            _color = _selectedCategory!.color;
-                          }
-                        });
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: () => _pickColor(context),
-                    child: Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        color: _color,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.color_lens,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Ganztägig
-              SwitchListTile(
-                activeColor: Colors.green,
-                activeTrackColor: Colors.greenAccent,
-                title: Text(loc.allDay),
-                subtitle: Text(loc.allDaySubtitle),
-                value: _isAllDay,
-                onChanged: !_isRelatedToPrayerTimes
-                    ? (bool value) {
-                        setState(() {
-                          _isAllDay = value;
-                          if (value && _startTime != null) {
+                          _startTime = picked;
+                          if (_isAllDay) {
                             _endTime =
                                 _startTime!.add(const Duration(hours: 1));
+                          } else {
+                            _endTime =
+                                _startTime!.add(const Duration(minutes: 30));
                           }
                         });
                       }
-                    : null,
-              ),
-              const SizedBox(height: 16),
-
-              // Erinnerung
-              DropdownButtonFormField<int?>(
-                value: _selectedReminderMinutes,
-                decoration: InputDecoration(labelText: loc.reminderInMinutes),
-                onChanged: (val) {
-                  setState(() {
-                    _selectedReminderMinutes = val;
-                  });
-                },
-                items: _reminderOptions.map((option) {
-                  if (option == null) {
-                    return DropdownMenuItem<int?>(
-                      value: null,
-                      child: Text(loc.noReminder),
-                    );
-                  } else if (option < 60) {
-                    return DropdownMenuItem<int?>(
-                      value: option,
-                      child: Text(loc.minutesBefore(option)),
-                    );
-                  } else if (option < 1440) {
-                    final h = option ~/ 60;
-                    return DropdownMenuItem<int?>(
-                      value: option,
-                      child: Text(loc.hoursBefore(h)),
-                    );
-                  } else {
-                    final d = option ~/ 1440;
-                    return DropdownMenuItem<int?>(
-                      value: option,
-                      child: Text(loc.daysBefore(d)),
-                    );
-                  }
-                }).toList(),
-              ),
-
-              const SizedBox(height: 20),
-
-              FilledButton(
-                onPressed: () {
-                  setState(() {
-                    _showAdvancedOptions = !_showAdvancedOptions;
-                  });
-                },
-                child: Text(
-                  _showAdvancedOptions ? loc.fewerOptions : loc.advancedOptions,
+                    },
+                    child: _buildDateTimeDisplay(
+                      label: loc.startTime,
+                      dateTime: _startTime,
+                      isAllDay: _isAllDay,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: !_isAllDay
+                      ? InkWell(
+                          onTap: () async {
+                            if (_startTime == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(loc.selectStartTime),
+                                ),
+                              );
+                              return;
+                            }
+                            final picked = await _pickDateTime(
+                              initial: _endTime ?? _startTime!,
+                              isAllDay: false,
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                _endTime = picked;
+                              });
+                            }
+                          },
+                          child: _buildDateTimeDisplay(
+                            label: loc.endTime,
+                            dateTime: _endTime,
+                            isAllDay: false,
+                          ),
+                        )
+                      : Container(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
 
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: _showAdvancedOptions
-                    ? _buildAdvancedOptions(loc, headlineStyle)
-                    : const SizedBox(),
-              ),
+            // Kategorie & Farbe
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<CategoryModel>(
+                    value: _selectedCategory,
+                    decoration:
+                        InputDecoration(labelText: loc.selectCategoryLabel),
+                    items: _allCategories.map((cat) {
+                      return DropdownMenuItem<CategoryModel>(
+                        value: cat,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 12,
+                              height: 12,
+                              margin: const EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                color: cat.color,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            Text(cat.name),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedCategory = value;
+                        _isCategoryDropdownClicked = true;
+                        if (_selectedCategory != null) {
+                          _color = _selectedCategory!.color;
+                        }
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () => _pickColor(context),
+                  child: Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: _color,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.color_lens,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
 
-              const SizedBox(height: 24),
+            // Ganztägig
+            SwitchListTile.adaptive(
+              title: Text(loc.allDay),
+              subtitle: Text(loc.allDaySubtitle),
+              value: _isAllDay,
+              onChanged: !_isRelatedToPrayerTimes
+                  ? (bool value) {
+                      setState(() {
+                        _isAllDay = value;
+                        if (value && _startTime != null) {
+                          _endTime = _startTime!.add(const Duration(hours: 1));
+                        }
+                      });
+                    }
+                  : null,
+            ),
+            const SizedBox(height: 16),
+
+            // Erinnerung
+            DropdownButtonFormField<int?>(
+              value: _selectedReminderMinutes,
+              decoration: InputDecoration(labelText: loc.reminderInMinutes),
+              onChanged: (val) {
+                setState(() {
+                  _selectedReminderMinutes = val;
+                });
+              },
+              items: _reminderOptions.map((option) {
+                if (option == null) {
+                  return DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text(loc.noReminder),
+                  );
+                } else if (option < 60) {
+                  return DropdownMenuItem<int?>(
+                    value: option,
+                    child: Text(loc.minutesBefore(option)),
+                  );
+                } else if (option < 1440) {
+                  final h = option ~/ 60;
+                  return DropdownMenuItem<int?>(
+                    value: option,
+                    child: Text(loc.hoursBefore(h)),
+                  );
+                } else {
+                  final d = option ~/ 1440;
+                  return DropdownMenuItem<int?>(
+                    value: option,
+                    child: Text(loc.daysBefore(d)),
+                  );
+                }
+              }).toList(),
+            ),
+
+            const SizedBox(height: 20),
+
+            FilledButton(
+              onPressed: () {
+                setState(() {
+                  _showAdvancedOptions = !_showAdvancedOptions;
+                });
+              },
+              child: Text(
+                _showAdvancedOptions ? loc.fewerOptions : loc.advancedOptions,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: _showAdvancedOptions
+                  ? _buildAdvancedOptions(loc, headlineStyle)
+                  : const SizedBox(),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Speichern / Löschen Buttons (nur bei Android in der Footer-Leiste, bei iOS ins Nav)
+            if (!_isIos)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -847,8 +863,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   ],
                 ],
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );
@@ -869,9 +884,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         ),
         const SizedBox(height: 12),
         Text(loc.prayerTimeSettings, style: headlineStyle),
-        SwitchListTile(
-          activeColor: Colors.green,
-          activeTrackColor: Colors.greenAccent,
+        SwitchListTile.adaptive(
           title: Text(loc.relatedToPrayerTimes),
           subtitle: Text(loc.relatedToPrayerTimesSubtitle),
           value: _isRelatedToPrayerTimes,
@@ -893,7 +906,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 ? '${_startTime!.day}/${_startTime!.month}/${_startTime!.year}'
                 : loc.selectDate),
             onTap: () async {
-              final picked = await showDatePicker(
+              final picked = await _showAdaptiveDatePicker(
                 context: context,
                 initialDate: _startTime ?? DateTime.now(),
                 firstDate: DateTime(2000),
@@ -1006,9 +1019,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         ],
         const SizedBox(height: 24),
         Text(loc.recurrence, style: headlineStyle),
-        SwitchListTile(
-          activeColor: Colors.green,
-          activeTrackColor: Colors.greenAccent,
+        SwitchListTile.adaptive(
           title: Text(loc.recurringEvent),
           value: _isRecurring,
           onChanged: (value) {
@@ -1116,7 +1127,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 _recurrenceEndDate?.toString() ?? loc.selectEndDate,
               ),
               onTap: () async {
-                DateTime? selectedDate = await showDatePicker(
+                final selectedDate = await _showAdaptiveDatePicker(
                   context: context,
                   initialDate: _recurrenceEndDate ?? DateTime.now(),
                   firstDate: DateTime(2000),
@@ -1204,7 +1215,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
+        final dialog = AlertDialog(
           title: Text(loc.select),
           content: SingleChildScrollView(
             child: BlockPicker(
@@ -1230,8 +1241,157 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             ),
           ],
         );
+
+        return Platform.isIOS
+            ? CupertinoAlertDialog(
+                title: Text(loc.select),
+                content: SizedBox(
+                  height: 300,
+                  child: BlockPicker(
+                    pickerColor: _color,
+                    onColorChanged: (Color c) {
+                      tempColor = c;
+                    },
+                  ),
+                ),
+                actions: [
+                  CupertinoDialogAction(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text(loc.cancel),
+                  ),
+                  CupertinoDialogAction(
+                    onPressed: () {
+                      setState(() {
+                        _color = tempColor;
+                      });
+                      Navigator.of(context).pop();
+                    },
+                    child: Text(loc.select),
+                  ),
+                ],
+              )
+            : dialog;
       },
     );
+  }
+
+  /// Zeigt einen adaptiven Dialog (Bestätigung)
+  Future<bool> _showAdaptiveDialog({
+    required BuildContext context,
+    required String title,
+    required String content,
+    required String confirmText,
+    required String cancelText,
+  }) async {
+    if (Platform.isIOS) {
+      // Cupertino
+      final result = await showCupertinoDialog<bool>(
+        context: context,
+        builder: (ctx) => CupertinoAlertDialog(
+          title: Text(title),
+          content: Text(content),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(cancelText),
+            ),
+            CupertinoDialogAction(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(confirmText),
+            ),
+          ],
+        ),
+      );
+      return result ?? false;
+    } else {
+      // Material
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(title),
+          content: Text(content),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(cancelText),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(confirmText),
+            ),
+          ],
+        ),
+      );
+      return result ?? false;
+    }
+  }
+
+  /// Zeigt einen adaptiven DatePicker (vereinfacht)
+  Future<DateTime?> _showAdaptiveDatePicker({
+    required BuildContext context,
+    required DateTime initialDate,
+    required DateTime firstDate,
+    required DateTime lastDate,
+    String? helpText,
+  }) async {
+    if (Platform.isIOS) {
+      // iOS: Wir zeigen ein CupertinoDatePicker in einem Modal
+      DateTime tempDate = initialDate;
+      bool confirmed = false;
+
+      await showCupertinoModalPopup(
+        context: context,
+        builder: (ctx) => Container(
+          height: 300,
+          color: CupertinoColors.systemBackground.resolveFrom(ctx),
+          child: Column(
+            children: [
+              SizedBox(
+                height: 200,
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.date,
+                  minimumDate: firstDate,
+                  maximumDate: lastDate,
+                  initialDateTime: initialDate,
+                  onDateTimeChanged: (DateTime newDateTime) {
+                    tempDate = newDateTime;
+                  },
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  CupertinoButton(
+                    child: Text(helpText ?? 'Cancel'),
+                    onPressed: () {
+                      confirmed = false;
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                  CupertinoButton(
+                    child: const Text('OK'),
+                    onPressed: () {
+                      confirmed = true;
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      return confirmed ? tempDate : null;
+    } else {
+      // Android / Material
+      return showDatePicker(
+        context: context,
+        initialDate: initialDate,
+        firstDate: firstDate,
+        lastDate: lastDate,
+        helpText: helpText,
+      );
+    }
   }
 }
 
@@ -1243,8 +1403,6 @@ class _OverwriteOnFocus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Wir umwickeln das eigentliche Widget (TimePicker) mit einem Listener,
-    // der beim "build" versucht, die Textfelder zu finden und darauf "selectAll" zu legen.
     return Builder(builder: (ctx) {
       return _SelectAllOnFocusChild(child: child);
     });
@@ -1265,8 +1423,6 @@ class _SelectAllOnFocusChild extends StatefulWidget {
 class _SelectAllOnFocusChildState extends State<_SelectAllOnFocusChild> {
   @override
   Widget build(BuildContext context) {
-    // Per "LayoutBuilder" oder "Builder" könnten wir an die
-    // TextFields rankommen. Hier machen wir es einfach:
     return FocusTraversalGroup(
       policy: OrderedTraversalPolicy(),
       child: _SelectAllInterceptor(child: widget.child),
@@ -1294,7 +1450,3 @@ class _SelectAllTextOnFocusInherited extends InheritedWidget {
   @override
   bool updateShouldNotify(_SelectAllTextOnFocusInherited oldWidget) => false;
 }
-
-/// Falls du eine robustere Lösung willst, könntest du die TimePicker-TextFields
-/// per "child.key" identifizieren und in "didChangeDependencies" alles markieren.
-/// Das hier ist eine Demo-Lösung, die in vielen Fällen schon reicht.

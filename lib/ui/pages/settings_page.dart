@@ -1,4 +1,8 @@
+// lib/ui/pages/settings_page.dart
+
 import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:provider/provider.dart';
@@ -38,7 +42,7 @@ class _SettingsPageState extends State<SettingsPage> {
   // Gebetszeiten-Slots auf dem Dashboard
   bool _showPrayerSlotsInDashboard = true;
 
-  // >>> NEU: Gebetszeiten in Daily / Weekly View
+  // Gebetszeiten in Daily / Weekly View
   bool _showPrayerTimesInDayView = true;
   bool _showPrayerTimesInWeekView = true;
 
@@ -62,6 +66,8 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _isLoadingCountries = true;
   String? _loadError;
   Map<String, List<String>> _countryCityData = {};
+
+  bool get _isIos => Platform.isIOS;
 
   @override
   void initState() {
@@ -106,7 +112,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _showPrayerSlotsInDashboard =
         prefs.getBool('showPrayerSlotsInDashboard') ?? true;
 
-    // NEU: Gebetszeiten in Daily/Weekly
+    // Gebetszeiten in Daily/Weekly
     _showPrayerTimesInDayView =
         prefs.getBool('showPrayerTimesInDayView') ?? true;
     _showPrayerTimesInWeekView =
@@ -182,226 +188,237 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
-    final themeNotifier = Provider.of<ThemeNotifier>(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(loc.settings),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            loc.general,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+    return _isIos
+        ? CupertinoPageScaffold(
+            navigationBar: CupertinoNavigationBar(
+              middle: Text(loc.settings),
+              trailing: GestureDetector(
+                onTap: () async {
+                  await _saveSettings();
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  loc.save,
+                  style: const TextStyle(color: CupertinoColors.activeBlue),
                 ),
-          ),
-          const SizedBox(height: 16),
-
-          // Sprache
-          ListTile(
-            title: Text(loc.language),
-            subtitle: Text(
-              Provider.of<AppLocalizations>(context, listen: false)
-                  .getLanguageName(_selectedLanguage),
+              ),
             ),
-            onTap: () => _showLanguageSelector(context),
-            trailing: const Icon(Icons.chevron_right),
-          ),
-          const SizedBox(height: 16),
+            child: SafeArea(child: _buildSettingsList(loc)),
+          )
+        : Scaffold(
+            appBar: AppBar(
+              title: Text(loc.settings),
+            ),
+            body: _buildSettingsList(loc),
+          );
+  }
 
-          // System-Theme
-          SwitchListTile(
-            activeColor: Colors.green,
-            activeTrackColor: Colors.greenAccent,
-            title: Text(loc.useSystemTheme),
-            subtitle: Text(loc.autoSwitchDarkLightMode),
-            value: _useSystemTheme,
-            onChanged: (bool value) async {
-              setState(() {
-                _useSystemTheme = value;
-                if (value) {
-                  _darkModeEnabled = false;
-                }
-              });
-              themeNotifier.toggleSystemTheme(value);
-              await _saveSettings();
-            },
-          ),
+  Widget _buildSettingsList(AppLocalizations loc) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          loc.general,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 16),
 
-          // Dark Mode
-          SwitchListTile(
-            activeColor: Colors.green,
-            activeTrackColor: Colors.greenAccent,
-            title: Text(loc.darkMode),
-            subtitle: Text(loc.darkModeSubtitle),
-            value: _darkModeEnabled,
-            onChanged: _useSystemTheme
-                ? null
-                : (bool value) async {
-                    setState(() {
-                      _darkModeEnabled = value;
-                    });
-                    themeNotifier.toggleTheme(value);
-                    await _saveSettings();
-                  },
+        // Sprache
+        ListTile(
+          title: Text(loc.language),
+          subtitle: Text(
+            Provider.of<AppLocalizations>(context, listen: false)
+                .getLanguageName(_selectedLanguage),
           ),
-          const SizedBox(height: 16),
+          onTap: () => _showLanguageSelector(context),
+          trailing: const Icon(Icons.chevron_right),
+        ),
+        const SizedBox(height: 16),
 
-          // Notifications
-          SwitchListTile(
-            activeColor: Colors.green,
-            activeTrackColor: Colors.greenAccent,
-            title: Text(loc.enableNotifications),
-            subtitle: Text(loc.enableNotificationsSubtitle),
-            value: _notificationsEnabled,
-            onChanged: (bool value) async {
-              setState(() {
-                _notificationsEnabled = value;
-              });
+        // System-Theme
+        SwitchListTile.adaptive(
+          title: Text(loc.useSystemTheme),
+          subtitle: Text(loc.autoSwitchDarkLightMode),
+          value: _useSystemTheme,
+          onChanged: (bool value) async {
+            setState(() {
+              _useSystemTheme = value;
               if (value) {
-                await NotificationService().enableNotifications();
-              } else {
-                await NotificationService().disableNotifications();
+                _darkModeEnabled = false;
               }
-              await _saveSettings();
-            },
-          ),
-          const Divider(height: 40),
+            });
+            Provider.of<ThemeNotifier>(context, listen: false)
+                .toggleSystemTheme(value);
+            await _saveSettings();
+          },
+        ),
 
-          // Zeitformat
-          Text(
-            loc.timeFormat,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 8),
-          SwitchListTile(
-            activeColor: Colors.green,
-            activeTrackColor: Colors.greenAccent,
-            title: Text(loc.timeFormat24),
-            subtitle: Text(_use24hFormat
-                ? loc.timeFormat24Active
-                : loc.timeFormatAmPmActive),
-            value: _use24hFormat,
-            onChanged: (bool val) async {
-              setState(() {
-                _use24hFormat = val;
-              });
-              await _saveSettings();
-            },
-          ),
-          const Divider(height: 40),
+        // Dark Mode
+        SwitchListTile.adaptive(
+          title: Text(loc.darkMode),
+          subtitle: Text(loc.darkModeSubtitle),
+          value: _darkModeEnabled,
+          onChanged: _useSystemTheme
+              ? null
+              : (bool value) async {
+                  setState(() {
+                    _darkModeEnabled = value;
+                  });
+                  Provider.of<ThemeNotifier>(context, listen: false)
+                      .toggleTheme(value);
+                  await _saveSettings();
+                },
+        ),
+        const SizedBox(height: 16),
 
-          // Standort
-          Text(
-            loc.locationSettings,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 8),
-          SwitchListTile(
-            activeColor: Colors.green,
-            activeTrackColor: Colors.greenAccent,
-            title: Text(loc.automaticLocation),
-            subtitle: Text(loc.automaticLocationSubtitle),
-            value: _locationMode == LocationMode.manual,
-            onChanged: (bool value) {
-              setState(() {
-                _locationMode =
-                    value ? LocationMode.automatic : LocationMode.manual;
-              });
-            },
-          ),
-          if (_locationMode == LocationMode.manual)
-            ..._buildManualLocationFields(loc.country, loc.city),
+        // Notifications
+        SwitchListTile.adaptive(
+          title: Text(loc.enableNotifications),
+          subtitle: Text(loc.enableNotificationsSubtitle),
+          value: _notificationsEnabled,
+          onChanged: (bool value) async {
+            setState(() {
+              _notificationsEnabled = value;
+            });
+            if (value) {
+              await NotificationService().enableNotifications();
+            } else {
+              await NotificationService().disableNotifications();
+            }
+            await _saveSettings();
+          },
+        ),
+        const Divider(height: 40),
 
-          const Divider(height: 40),
+        // Zeitformat
+        Text(
+          loc.timeFormat,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 8),
+        SwitchListTile.adaptive(
+          title: Text(loc.timeFormat24),
+          subtitle: Text(_use24hFormat
+              ? loc.timeFormat24Active
+              : loc.timeFormatAmPmActive),
+          value: _use24hFormat,
+          onChanged: (bool val) async {
+            setState(() {
+              _use24hFormat = val;
+            });
+            await _saveSettings();
+          },
+        ),
+        const Divider(height: 40),
 
-          // Gebetszeiten-Slots (Dashboard)
-          Text(
-            loc.prayerTimeSlots,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 8),
-          SwitchListTile(
-            activeColor: Colors.green,
-            activeTrackColor: Colors.greenAccent,
-            title: Text(loc.prayerTimeSlotsInDashboard),
-            subtitle: Text(loc.showTodayPrayerTimesAsSlots),
-            value: _showPrayerSlotsInDashboard,
-            onChanged: (bool val) async {
-              setState(() {
-                _showPrayerSlotsInDashboard = val;
-              });
-              await _saveSettings();
-            },
-          ),
+        // Standort
+        Text(
+          loc.locationSettings,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 8),
+        SwitchListTile.adaptive(
+          title: Text(loc.automaticLocation),
+          subtitle: Text(loc.automaticLocationSubtitle),
+          // Invertierte Logik war im Original-Code?
+          value: _locationMode == LocationMode.manual,
+          onChanged: (bool value) async {
+            setState(() {
+              // Achtung: Hier anpassen, dass "true" => automatic
+              _locationMode =
+                  value ? LocationMode.manual : LocationMode.automatic;
+            });
+            await _saveSettings();
+          },
+        ),
+        if (_locationMode == LocationMode.manual)
+          ..._buildManualLocationFields(loc.country, loc.city),
 
-          // >>> NEU: Gebetszeiten in Daily und Weekly View
-          SwitchListTile(
-            activeColor: Colors.green,
-            activeTrackColor: Colors.greenAccent,
-            title: Text(loc.showPrayerTimesInDailyView),
-            subtitle: Text(loc.showPrayerTimesInDailyView),
-            value: _showPrayerTimesInDayView,
-            onChanged: (bool val) async {
-              setState(() {
-                _showPrayerTimesInDayView = val;
-              });
-              await _saveSettings();
-            },
-          ),
-          SwitchListTile(
-            activeColor: Colors.green,
-            activeTrackColor: Colors.greenAccent,
-            title: Text(loc.showPrayerTimesInWeeklyView),
-            subtitle: Text(loc.showPrayerTimesInWeeklyView),
-            value: _showPrayerTimesInWeekView,
-            onChanged: (bool val) async {
-              setState(() {
-                _showPrayerTimesInWeekView = val;
-              });
-              await _saveSettings();
-            },
-          ),
+        const Divider(height: 40),
 
-          const Divider(height: 40),
+        // Gebetszeiten-Slots (Dashboard)
+        Text(
+          loc.prayerTimeSlots,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 8),
+        SwitchListTile.adaptive(
+          title: Text(loc.prayerTimeSlotsInDashboard),
+          subtitle: Text(loc.showTodayPrayerTimesAsSlots),
+          value: _showPrayerSlotsInDashboard,
+          onChanged: (bool val) async {
+            setState(() {
+              _showPrayerSlotsInDashboard = val;
+            });
+            await _saveSettings();
+          },
+        ),
 
-          // Berechnungsmethode
-          Text(
-            loc.prayerTimesCalculation,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<int>(
-            decoration: InputDecoration(
-              labelText: loc.calculationMethod,
-              border: OutlineInputBorder(),
-            ),
-            value: _selectedCalcMethod,
-            onChanged: (value) async {
-              if (value == null) return;
-              setState(() {
-                _selectedCalcMethod = value;
-              });
-              await _saveSettings();
-            },
-            items: _calcMethodMap.entries.map((entry) {
-              return DropdownMenuItem<int>(
-                value: entry.key,
-                child: Text(entry.value),
-              );
-            }).toList(),
-          ),
+        // Gebetszeiten in Daily / Weekly
+        SwitchListTile.adaptive(
+          title: Text(loc.showPrayerTimesInDailyView),
+          subtitle: Text(loc.showPrayerTimesInDailyView),
+          value: _showPrayerTimesInDayView,
+          onChanged: (bool val) async {
+            setState(() {
+              _showPrayerTimesInDayView = val;
+            });
+            await _saveSettings();
+          },
+        ),
+        SwitchListTile.adaptive(
+          title: Text(loc.showPrayerTimesInWeeklyView),
+          subtitle: Text(loc.showPrayerTimesInWeeklyView),
+          value: _showPrayerTimesInWeekView,
+          onChanged: (bool val) async {
+            setState(() {
+              _showPrayerTimesInWeekView = val;
+            });
+            await _saveSettings();
+          },
+        ),
 
+        const Divider(height: 40),
+
+        // Berechnungsmethode
+        Text(
+          loc.prayerTimesCalculation,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<int>(
+          decoration: InputDecoration(
+            labelText: loc.calculationMethod,
+            border: const OutlineInputBorder(),
+          ),
+          value: _selectedCalcMethod,
+          onChanged: (value) async {
+            if (value == null) return;
+            setState(() {
+              _selectedCalcMethod = value;
+            });
+            await _saveSettings();
+          },
+          items: _calcMethodMap.entries.map((entry) {
+            return DropdownMenuItem<int>(
+              value: entry.key,
+              child: Text(entry.value),
+            );
+          }).toList(),
+        ),
+
+        if (!_isIos) ...[
           const SizedBox(height: 40),
           Center(
             child: FilledButton(
@@ -414,7 +431,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 
@@ -448,10 +465,10 @@ class _SettingsPageState extends State<SettingsPage> {
             _defaultCity = null;
           });
         },
-        items: countries.map((country) {
+        items: countries.map((c) {
           return DropdownMenuItem<String>(
-            value: country,
-            child: Text(country),
+            value: c,
+            child: Text(c),
           );
         }).toList(),
       ),
@@ -477,29 +494,71 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showLanguageSelector(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) {
-        final loc = Provider.of<AppLocalizations>(ctx, listen: false);
-        return SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            children: AppLanguage.values.map((lang) {
-              return ListTile(
-                title: Text(loc.getLanguageName(lang)),
-                onTap: () async {
-                  Navigator.of(ctx).pop();
-                  setState(() {
-                    _selectedLanguage = lang;
-                  });
-                  loc.setLanguage(lang);
-                  await _saveSettings();
-                },
-              );
-            }).toList(),
-          ),
-        );
-      },
-    );
+    if (_isIos) {
+      // iOS-BottomSheet
+      showCupertinoModalPopup(
+        context: context,
+        builder: (ctx) {
+          final loc = Provider.of<AppLocalizations>(ctx, listen: false);
+          return Container(
+            color: CupertinoColors.systemBackground.resolveFrom(ctx),
+            height: 300,
+            child: SafeArea(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: ListView(
+                      children: AppLanguage.values.map((lang) {
+                        return CupertinoButton(
+                          onPressed: () async {
+                            Navigator.of(ctx).pop();
+                            setState(() {
+                              _selectedLanguage = lang;
+                            });
+                            loc.setLanguage(lang);
+                            await _saveSettings();
+                          },
+                          child: Text(loc.getLanguageName(lang)),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  CupertinoButton(
+                    child: Text('Close'),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } else {
+      // Material-BottomSheet
+      showModalBottomSheet(
+        context: context,
+        builder: (ctx) {
+          final loc = Provider.of<AppLocalizations>(ctx, listen: false);
+          return SafeArea(
+            child: ListView(
+              shrinkWrap: true,
+              children: AppLanguage.values.map((lang) {
+                return ListTile(
+                  title: Text(loc.getLanguageName(lang)),
+                  onTap: () async {
+                    Navigator.of(ctx).pop();
+                    setState(() {
+                      _selectedLanguage = lang;
+                    });
+                    loc.setLanguage(lang);
+                    await _saveSettings();
+                  },
+                );
+              }).toList(),
+            ),
+          );
+        },
+      );
+    }
   }
 }

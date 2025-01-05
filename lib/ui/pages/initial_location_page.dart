@@ -1,4 +1,8 @@
+// lib/ui/pages/initial_location_page.dart
+
 import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,6 +24,8 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
 
   bool _isLoading = true;
   String? _error;
+
+  bool get _isIos => Platform.isIOS;
 
   @override
   void initState() {
@@ -59,12 +65,19 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Willkommen!'),
-      ),
-      body: _buildBody(),
-    );
+    return _isIos
+        ? CupertinoPageScaffold(
+            navigationBar: const CupertinoNavigationBar(
+              middle: Text('Willkommen!'),
+            ),
+            child: SafeArea(child: _buildBody()),
+          )
+        : Scaffold(
+            appBar: AppBar(
+              title: const Text('Willkommen!'),
+            ),
+            body: _buildBody(),
+          );
   }
 
   Widget _buildBody() {
@@ -137,10 +150,10 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
             ),
           ],
           const Spacer(),
-          ElevatedButton(
+          _buildAdaptiveButton(
+            label: 'Fertig',
             onPressed: _selectedCity == null ? null : _saveAndContinue,
-            child: const Text('Fertig'),
-          )
+          ),
         ],
       ),
     );
@@ -163,9 +176,26 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     // Wechsle zur HomePage
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => const HomePage(),
-      ),
+      _isIos
+          ? CupertinoPageRoute(builder: (_) => const HomePage())
+          : MaterialPageRoute(builder: (_) => const HomePage()),
     );
+  }
+
+  Widget _buildAdaptiveButton({
+    required String label,
+    required VoidCallback? onPressed,
+  }) {
+    if (_isIos) {
+      return CupertinoButton.filled(
+        onPressed: onPressed,
+        child: Text(label),
+      );
+    } else {
+      return ElevatedButton(
+        onPressed: onPressed,
+        child: Text(label),
+      );
+    }
   }
 }
