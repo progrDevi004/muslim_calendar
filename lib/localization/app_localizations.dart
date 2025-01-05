@@ -1649,4 +1649,60 @@ class AppLocalizations extends ChangeNotifier {
         return 'Error loading country list:';
     }
   }
+
+  String get startDate {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Startdatum';
+      case AppLanguage.turkish:
+        return 'Başlangıç tarihi';
+      case AppLanguage.arabic:
+        return 'تاريخ البدء';
+      case AppLanguage.english:
+      default:
+        return 'Start date';
+    }
+  }
+
+  String get date {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Datum';
+      case AppLanguage.turkish:
+        return 'Tarih';
+      case AppLanguage.arabic:
+        return 'التاريخ';
+      case AppLanguage.english:
+      default:
+        return 'Date';
+    }
+  }
+
+  String get time {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Zeit';
+      case AppLanguage.turkish:
+        return 'Saat';
+      case AppLanguage.arabic:
+        return 'الوقت';
+      case AppLanguage.english:
+      default:
+        return 'Time';
+    }
+  }
+
+  String get endDate {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Enddatum';
+      case AppLanguage.turkish:
+        return 'Bitiş tarihi';
+      case AppLanguage.arabic:
+        return 'تاريخ الانتهاء';
+      case AppLanguage.english:
+      default:
+        return 'End date';
+    }
+  }
 }

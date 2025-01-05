@@ -1,5 +1,3 @@
-// lib/ui/pages/appointment_creation_page.dart
-
 import 'dart:convert';
 import 'dart:io' show Platform; // Für isIOS
 import 'package:flutter/cupertino.dart';
@@ -104,7 +102,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   // Interne Variable, die die (ggf. frisch erzeugte) Appointment-ID hält
   int? _currentAppointmentId;
 
-  //AZIZ: isCategoryDropdownClicked
+  // AZIZ: isCategoryDropdownClicked
   bool _isCategoryDropdownClicked = false;
 
   // >>> NEU: Um Mehrfachklicks zu verhindern
@@ -532,7 +530,126 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     }
   }
 
-  /// Hilfsfunktion: Datum+Zeit-Picker
+  // --------------------------------------------------------------------------
+  // NEU: Vier separate Methoden zum Auswählen von Start-/End-Datum und -Zeit
+  // --------------------------------------------------------------------------
+
+  Future<void> _pickStartDate() async {
+    final pickedDate = await _showAdaptiveDatePicker(
+      context: context,
+      initialDate: _startTime ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      helpText: 'Pick Start Date',
+    );
+    if (pickedDate != null) {
+      setState(() {
+        if (_startTime != null) {
+          // Uhrzeit übernehmen
+          _startTime = DateTime(
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            _startTime!.hour,
+            _startTime!.minute,
+          );
+        } else {
+          _startTime = pickedDate;
+        }
+        // Wenn AllDay => Endzeit = +1h vom Start
+        if (_isAllDay) {
+          _endTime = _startTime!.add(const Duration(hours: 1));
+        }
+      });
+    }
+  }
+
+  Future<void> _pickStartTime() async {
+    if (_startTime == null) {
+      // Falls noch kein Start-Datum gewählt, nimm "Heute"
+      _startTime = DateTime.now();
+    }
+    final pickedTime = await _pickTime(_startTime!);
+    if (pickedTime != null) {
+      setState(() {
+        _startTime = DateTime(
+          _startTime!.year,
+          _startTime!.month,
+          _startTime!.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
+        // Endzeit ggf. anpassen
+        if (_isAllDay) {
+          _endTime = _startTime!.add(const Duration(hours: 1));
+        } else if (_endTime != null && _endTime!.isBefore(_startTime!)) {
+          // Wenn Endzeit vor Start liegt, Standard = +30min
+          _endTime = _startTime!.add(const Duration(minutes: 30));
+        }
+      });
+    }
+  }
+
+  Future<void> _pickEndDate() async {
+    final pickedDate = await _showAdaptiveDatePicker(
+      context: context,
+      initialDate: _endTime ?? _startTime ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      helpText: 'Pick End Date',
+    );
+    if (pickedDate != null) {
+      setState(() {
+        if (_endTime != null) {
+          _endTime = DateTime(
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            _endTime!.hour,
+            _endTime!.minute,
+          );
+        } else {
+          _endTime = pickedDate;
+        }
+        if (_isAllDay &&
+            _startTime != null &&
+            _endTime!.isBefore(_startTime!)) {
+          // End-Datum ist vor Start-Datum => nimm Start + 1h
+          _endTime = _startTime!.add(const Duration(hours: 1));
+        }
+      });
+    }
+  }
+
+  Future<void> _pickEndTime() async {
+    if (_endTime == null) {
+      // Falls noch kein End-Datum gewählt, nimm StartTime oder Heute
+      _endTime = _startTime ?? DateTime.now();
+    }
+    final pickedTime = await _pickTime(_endTime!);
+    if (pickedTime != null) {
+      setState(() {
+        _endTime = DateTime(
+          _endTime!.year,
+          _endTime!.month,
+          _endTime!.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
+        if (_startTime != null && _endTime!.isBefore(_startTime!)) {
+          // Endzeit vor Start => +30min
+          _endTime = _startTime!.add(const Duration(minutes: 30));
+        }
+      });
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Ende NEU
+  // --------------------------------------------------------------------------
+
+  /// Hilfsfunktion: Datum+Zeit-Picker (nicht mehr für Start-/Endzeit genutzt,
+  /// aber behalten für andere Einsatzzwecke)
   Future<DateTime?> _pickDateTime({
     required DateTime initial,
     required bool isAllDay,
@@ -644,70 +761,69 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             ),
             const SizedBox(height: 12),
 
-            // Start-/Endzeit
-            Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () async {
-                      final picked = await _pickDateTime(
-                        initial: _startTime ?? DateTime.now(),
-                        isAllDay: _isAllDay,
-                      );
-                      if (picked != null) {
-                        setState(() {
-                          _startTime = picked;
-                          if (_isAllDay) {
-                            _endTime =
-                                _startTime!.add(const Duration(hours: 1));
-                          } else {
-                            _endTime =
-                                _startTime!.add(const Duration(minutes: 30));
-                          }
-                        });
-                      }
-                    },
-                    child: _buildDateTimeDisplay(
-                      label: loc.startTime,
-                      dateTime: _startTime,
-                      isAllDay: _isAllDay,
+            // NUR sichtbar, wenn NICHT auf PrayerTimes bezogen
+            if (!_isRelatedToPrayerTimes) ...[
+              // NEU: Start-Datum/-Zeit + End-Datum/-Zeit separat
+              Text(loc.startDate,
+                  style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  // Start-Datum
+                  Expanded(
+                    child: InkWell(
+                      onTap: _pickStartDate,
+                      child: _buildDateDisplay(
+                        label: loc.date,
+                        dateTime: _startTime,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: !_isAllDay
-                      ? InkWell(
-                          onTap: () async {
-                            if (_startTime == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(loc.selectStartTime),
-                                ),
-                              );
-                              return;
-                            }
-                            final picked = await _pickDateTime(
-                              initial: _endTime ?? _startTime!,
-                              isAllDay: false,
-                            );
-                            if (picked != null) {
-                              setState(() {
-                                _endTime = picked;
-                              });
-                            }
-                          },
-                          child: _buildDateTimeDisplay(
-                            label: loc.endTime,
-                            dateTime: _endTime,
-                            isAllDay: false,
-                          ),
-                        )
-                      : Container(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
+                  const SizedBox(width: 8),
+                  // Start-Zeit
+                  if (!_isAllDay)
+                    Expanded(
+                      child: InkWell(
+                        onTap: _pickStartTime,
+                        child: _buildTimeDisplay(
+                          label: loc.time,
+                          dateTime: _startTime,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(loc.endDate, style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  // End-Datum
+                  Expanded(
+                    child: InkWell(
+                      onTap: _pickEndDate,
+                      child: _buildDateDisplay(
+                        label: loc.date,
+                        dateTime: _endTime,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // End-Zeit
+                  if (!_isAllDay)
+                    Expanded(
+                      child: InkWell(
+                        onTap: _pickEndTime,
+                        child: _buildTimeDisplay(
+                          label: loc.time,
+                          dateTime: _endTime,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
 
             // Kategorie & Farbe
             Row(
@@ -1167,22 +1283,51 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     );
   }
 
-  /// UI-Baustein für Datum/Zeit
-  Widget _buildDateTimeDisplay({
+  // >>> NEU: Separate UI-Bausteine für Datum und Zeit
+
+  Widget _buildDateDisplay({
     required String label,
     required DateTime? dateTime,
-    required bool isAllDay,
   }) {
-    final text = dateTime != null
-        ? (isAllDay
-            ? '${dateTime.day}/${dateTime.month}/${dateTime.year}'
-            : '${dateTime.day}/${dateTime.month}/${dateTime.year} ${_formatTime(dateTime)}')
+    final text = (dateTime != null)
+        ? '${dateTime.day}.${dateTime.month}.${dateTime.year}'
         : '---';
-
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final containerColor =
         isDark ? Colors.grey[800]! : const Color.fromARGB(255, 245, 245, 245);
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: containerColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            text,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildTimeDisplay({
+    required String label,
+    required DateTime? dateTime,
+  }) {
+    final text = (dateTime != null) ? _formatTime(dateTime) : '---';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final containerColor =
+        isDark ? Colors.grey[800]! : const Color.fromARGB(255, 245, 245, 245);
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
