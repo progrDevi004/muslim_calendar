@@ -65,12 +65,18 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Damit der Dropdown auch auf iOS funktioniert, müssen wir eine Material-Hülle verwenden.
+    // Wir packen das _buildBody() einfach in ein Material-Widget.
     return _isIos
         ? CupertinoPageScaffold(
             navigationBar: const CupertinoNavigationBar(
               middle: Text('Willkommen!'),
             ),
-            child: SafeArea(child: _buildBody()),
+            child: SafeArea(
+              child: Material(
+                child: _buildBody(),
+              ),
+            ),
           )
         : Scaffold(
             appBar: AppBar(
