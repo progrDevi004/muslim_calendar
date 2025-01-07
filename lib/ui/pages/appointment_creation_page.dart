@@ -569,16 +569,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       // Falls noch kein Start-Datum gewählt, nimm "Heute"
       _startTime = DateTime.now();
     }
-    final pickedTime = await _pickTime(_startTime!);
+    final pickedTime = await _pickAdaptiveTime(_startTime!);
     if (pickedTime != null) {
       setState(() {
-        _startTime = DateTime(
-          _startTime!.year,
-          _startTime!.month,
-          _startTime!.day,
-          pickedTime.hour,
-          pickedTime.minute,
-        );
+        _startTime = pickedTime;
         // Endzeit ggf. anpassen
         if (_isAllDay) {
           _endTime = _startTime!.add(const Duration(hours: 1));
@@ -626,16 +620,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       // Falls noch kein End-Datum gewählt, nimm StartTime oder Heute
       _endTime = _startTime ?? DateTime.now();
     }
-    final pickedTime = await _pickTime(_endTime!);
+    final pickedTime = await _pickAdaptiveTime(_endTime!);
     if (pickedTime != null) {
       setState(() {
-        _endTime = DateTime(
-          _endTime!.year,
-          _endTime!.month,
-          _endTime!.day,
-          pickedTime.hour,
-          pickedTime.minute,
-        );
+        _endTime = pickedTime;
         if (_startTime != null && _endTime!.isBefore(_startTime!)) {
           // Endzeit vor Start => +30min
           _endTime = _startTime!.add(const Duration(minutes: 30));
@@ -645,64 +633,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   }
 
   // --------------------------------------------------------------------------
-  // Ende NEU
+  // ENDE NEU
   // --------------------------------------------------------------------------
-
-  /// Hilfsfunktion: Datum+Zeit-Picker (nicht mehr für Start-/Endzeit genutzt,
-  /// aber behalten für andere Einsatzzwecke)
-  Future<DateTime?> _pickDateTime({
-    required DateTime initial,
-    required bool isAllDay,
-  }) async {
-    final date = await _showAdaptiveDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
-    if (date == null) return null;
-
-    if (isAllDay) {
-      return date;
-    }
-
-    // Zeit abfragen
-    final newDateTime = await _pickTime(date);
-    return newDateTime ?? date;
-  }
-
-  /// >>> TimePicker (hier fügen wir eine Material-Hülle hinzu, damit es keine Fehler auf iOS gibt)
-  Future<DateTime?> _pickTime(DateTime dateBase) async {
-    final timeOfDay = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(hour: dateBase.hour, minute: dateBase.minute),
-      initialEntryMode: TimePickerEntryMode.input,
-      builder: (BuildContext context, Widget? child) {
-        // Hier wichtig: Wir geben dem TimePicker eine Material-Umgebung mit,
-        // damit TextField und andere Widgets einen Material-Ancestor haben.
-        return Material(
-          child: MediaQuery(
-            data: MediaQuery.of(context).copyWith(
-              alwaysUse24HourFormat: _use24hFormat,
-            ),
-            child: _OverwriteOnFocus(child: child ?? const SizedBox()),
-          ),
-        );
-      },
-    );
-    if (timeOfDay == null) return null;
-
-    return DateTime(
-      dateBase.year,
-      dateBase.month,
-      dateBase.day,
-      timeOfDay.hour,
-      timeOfDay.minute,
-      dateBase.second,
-      dateBase.millisecond,
-      dateBase.microsecond,
-    );
-  }
 
   /// Anzeigeformat
   String _formatTime(DateTime dt) {
@@ -718,37 +650,39 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         .titleMedium
         ?.copyWith(fontWeight: FontWeight.bold);
 
-    // WICHTIG FÜR iOS: Wir packen den Body in ein `Material`-Widget,
-    // damit alle Material-Widgets (TextField, Buttons, etc.) einen
-    // Material-Ancestor haben.
-    return _isIos
-        ? CupertinoPageScaffold(
-            navigationBar: CupertinoNavigationBar(
-              middle: Text(widget.appointmentId == null
-                  ? loc.createAppointment
-                  : loc.editAppointment),
-              trailing: GestureDetector(
-                onTap: _saveAppointment,
-                child: Text(
-                  loc.save,
-                  style: const TextStyle(color: CupertinoColors.activeBlue),
-                ),
-              ),
+    // WICHTIG: Wir packen das Ganze bei iOS in eine Material-Hülle, damit
+    // TextFormFields, Dropdowns usw. kein Problem verursachen.
+    if (_isIos) {
+      return CupertinoPageScaffold(
+        navigationBar: CupertinoNavigationBar(
+          middle: Text(widget.appointmentId == null
+              ? loc.createAppointment
+              : loc.editAppointment),
+          trailing: GestureDetector(
+            onTap: _saveAppointment,
+            child: Text(
+              loc.save,
+              style: const TextStyle(color: CupertinoColors.activeBlue),
             ),
-            child: SafeArea(
-              child: Material(
-                child: _buildMainBody(headlineStyle, loc),
-              ),
-            ),
-          )
-        : Scaffold(
-            appBar: AppBar(
-              title: Text(widget.appointmentId == null
-                  ? loc.createAppointment
-                  : loc.editAppointment),
-            ),
-            body: _buildMainBody(headlineStyle, loc),
-          );
+          ),
+        ),
+        child: SafeArea(
+          child: Material(
+            child: _buildMainBody(headlineStyle, loc),
+          ),
+        ),
+      );
+    } else {
+      // Android
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(widget.appointmentId == null
+              ? loc.createAppointment
+              : loc.editAppointment),
+        ),
+        body: _buildMainBody(headlineStyle, loc),
+      );
+    }
   }
 
   Widget _buildMainBody(TextStyle? headlineStyle, AppLocalizations loc) {
@@ -1545,6 +1479,90 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         firstDate: firstDate,
         lastDate: lastDate,
         helpText: helpText,
+      );
+    }
+  }
+
+  /// Zeigt einen adaptiven TimePicker
+  Future<DateTime?> _pickAdaptiveTime(DateTime dateBase) async {
+    if (Platform.isIOS) {
+      // iOS: CupertinoTimePicker in einem Modal
+      DateTime tempDateTime = dateBase;
+      bool confirmed = false;
+
+      await showCupertinoModalPopup(
+        context: context,
+        builder: (ctx) => Container(
+          height: 300,
+          color: CupertinoColors.systemBackground.resolveFrom(ctx),
+          child: Column(
+            children: [
+              SizedBox(
+                height: 200,
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.time,
+                  initialDateTime: dateBase,
+                  use24hFormat: _use24hFormat,
+                  onDateTimeChanged: (DateTime newDateTime) {
+                    tempDateTime = DateTime(
+                      dateBase.year,
+                      dateBase.month,
+                      dateBase.day,
+                      newDateTime.hour,
+                      newDateTime.minute,
+                    );
+                  },
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  CupertinoButton(
+                    child: const Text('Cancel'),
+                    onPressed: () {
+                      confirmed = false;
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                  CupertinoButton(
+                    child: const Text('OK'),
+                    onPressed: () {
+                      confirmed = true;
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      return confirmed ? tempDateTime : null;
+    } else {
+      // Android / Material
+      final timeOfDay = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay(hour: dateBase.hour, minute: dateBase.minute),
+        initialEntryMode: TimePickerEntryMode.input,
+        builder: (BuildContext context, Widget? child) {
+          return MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(alwaysUse24HourFormat: _use24hFormat),
+            child: _OverwriteOnFocus(child: child ?? const SizedBox()),
+          );
+        },
+      );
+      if (timeOfDay == null) return null;
+
+      return DateTime(
+        dateBase.year,
+        dateBase.month,
+        dateBase.day,
+        timeOfDay.hour,
+        timeOfDay.minute,
+        dateBase.second,
+        dateBase.millisecond,
+        dateBase.microsecond,
       );
     }
   }
