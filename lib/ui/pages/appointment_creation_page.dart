@@ -671,17 +671,22 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     return newDateTime ?? date;
   }
 
-  /// >>> TimePicker
+  /// >>> TimePicker (hier fügen wir eine Material-Hülle hinzu, damit es keine Fehler auf iOS gibt)
   Future<DateTime?> _pickTime(DateTime dateBase) async {
     final timeOfDay = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: dateBase.hour, minute: dateBase.minute),
       initialEntryMode: TimePickerEntryMode.input,
       builder: (BuildContext context, Widget? child) {
-        return MediaQuery(
-          data: MediaQuery.of(context)
-              .copyWith(alwaysUse24HourFormat: _use24hFormat),
-          child: _OverwriteOnFocus(child: child ?? const SizedBox()),
+        // Hier wichtig: Wir geben dem TimePicker eine Material-Umgebung mit,
+        // damit TextField und andere Widgets einen Material-Ancestor haben.
+        return Material(
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              alwaysUse24HourFormat: _use24hFormat,
+            ),
+            child: _OverwriteOnFocus(child: child ?? const SizedBox()),
+          ),
         );
       },
     );
@@ -713,6 +718,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         .titleMedium
         ?.copyWith(fontWeight: FontWeight.bold);
 
+    // WICHTIG FÜR iOS: Wir packen den Body in ein `Material`-Widget,
+    // damit alle Material-Widgets (TextField, Buttons, etc.) einen
+    // Material-Ancestor haben.
     return _isIos
         ? CupertinoPageScaffold(
             navigationBar: CupertinoNavigationBar(
@@ -728,7 +736,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               ),
             ),
             child: SafeArea(
-              child: _buildMainBody(headlineStyle, loc),
+              child: Material(
+                child: _buildMainBody(headlineStyle, loc),
+              ),
             ),
           )
         : Scaffold(
