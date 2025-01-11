@@ -1,4 +1,5 @@
-//lib/main.dart
+// lib/main.dart
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -13,7 +14,16 @@ import 'package:muslim_calendar/providers/theme_notifier.dart';
 import 'package:muslim_calendar/ui/pages/initial_location_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
+// NEU: NotificationService-Import
+import 'package:muslim_calendar/data/services/notification_service.dart';
+
+void main() async {
+  // Damit wir vor dem runApp asynchrone Aufrufe durchführen können:
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // NotificationService initialisieren + (falls iOS) um Erlaubnis fragen
+  await NotificationService().init();
+
   runApp(
     MultiProvider(
       providers: [

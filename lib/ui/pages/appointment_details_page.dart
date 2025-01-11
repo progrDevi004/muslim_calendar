@@ -117,7 +117,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
     }
   }
 
-  /// Termin löschen
+  /// Termin löschen (angepasst!)
   Future<void> _deleteAppointment() async {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
 
@@ -131,8 +131,18 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
     if (confirmDelete && _appointment?.id != null) {
       try {
-        await NotificationService().cancelNotification(_appointment!.id!);
+        // 1) Zuerst: Datenbank-Löschen
         await _appointmentRepo.deleteAppointment(_appointment!.id!);
+
+        // 2) Dann Notification stornieren (falls das fehlschlägt,
+        //    NICHT den DB-Löschvorgang "zurückrollen"):
+        try {
+          await NotificationService().cancelNotification(_appointment!.id!);
+        } catch (notifErr) {
+          // Nur loggen oder ignorieren
+          debugPrint(
+              'iOS-Knackpunkt: Notification-Cancel schlug fehl: $notifErr');
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(loc.appointmentDeletedSuccessfully)),

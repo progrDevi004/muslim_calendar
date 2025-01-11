@@ -1,5 +1,6 @@
 // lib/data/services/notification_service.dart
 
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -21,6 +22,7 @@ class NotificationService {
   // >>> NEU: gesondertes Flag für Zeitzonen-Init
   bool _timeZoneInitialized = false;
 
+  /// Aufruf zum globalen Aktivieren. Hier kann man ggf. nochmal `_initIfNeeded()` triggern.
   Future<void> enableNotifications() async {
     if (kDebugMode) {
       print("[NotificationService] Notifications globally enabled.");
@@ -28,6 +30,7 @@ class NotificationService {
     await _initIfNeeded();
   }
 
+  /// Globales Deaktivieren (alle geplanten Notifications abbrechen).
   Future<void> disableNotifications() async {
     if (kDebugMode) {
       print("[NotificationService] Notifications globally disabled.");
@@ -35,6 +38,35 @@ class NotificationService {
     await cancelAllNotifications();
   }
 
+  /// Initiales Setup mit optionaler iOS-Permission-Abfrage
+  /// (Kannst du bei Bedarf auch manuell aufrufen.)
+  Future<void> init() async {
+    // Wir initialisieren und fragen auf iOS um Erlaubnis
+    await _initIfNeeded();
+    if (Platform.isIOS) {
+      await requestIOSPermissions();
+    }
+  }
+
+  /// iOS-spezifisch: Benachrichtigungs-Rechte anfragen (alert, badge, sound).
+  Future<void> requestIOSPermissions() async {
+    if (!Platform.isIOS) return; // Nur iOS braucht das
+    final iosPlugin =
+        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>();
+    if (iosPlugin != null) {
+      final granted = await iosPlugin.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      if (kDebugMode) {
+        print("[NotificationService] iOS Permission granted? $granted");
+      }
+    }
+  }
+
+  /// Plant eine Notification, sofern das Datum in der Zukunft liegt.
   Future<void> scheduleNotification({
     required int appointmentId,
     required String title,
@@ -78,6 +110,7 @@ class NotificationService {
     }
   }
 
+  /// Bricht eine Notification mit der entsprechenden ID ab.
   Future<void> cancelNotification(int appointmentId) async {
     await _initIfNeeded();
     await _flutterLocalNotificationsPlugin.cancel(appointmentId);
@@ -87,6 +120,7 @@ class NotificationService {
     }
   }
 
+  /// Bricht alle Notifications ab.
   Future<void> cancelAllNotifications() async {
     await _initIfNeeded();
     await _flutterLocalNotificationsPlugin.cancelAll();
@@ -114,9 +148,17 @@ class NotificationService {
     if (!_initialized) {
       const androidInitSettings =
           AndroidInitializationSettings('@mipmap/ic_launcher');
+
+      // iOS-Init, falls benötigt
+      const iosInitSettings = DarwinInitializationSettings();
+
+      // Kombinierte Settings
       const initSettings = InitializationSettings(
         android: androidInitSettings,
+        iOS: iosInitSettings,
       );
+
+      // Plugin initialisieren
       await _flutterLocalNotificationsPlugin.initialize(initSettings);
       _initialized = true;
 
@@ -126,8 +168,7 @@ class NotificationService {
     }
   }
 
-  /// >>> Wichtig: Wir wandeln das DateTime in ein 'tz.TZDateTime' um,
-  /// nachdem wir 'tz.local' korrekt gesetzt haben.
+  /// Wandelt das DateTime in ein 'tz.TZDateTime' um (Zeitzone).
   tz.TZDateTime _convertTimeToTZDateTime(DateTime dateTime) {
     return tz.TZDateTime.from(dateTime, tz.local);
   }

@@ -176,7 +176,7 @@ class _SettingsPageState extends State<SettingsPage> {
     await prefs.setBool(
         'showPrayerSlotsInDashboard', _showPrayerSlotsInDashboard);
 
-    // NEU: Daily/Week
+    // Daily/Week
     await prefs.setBool('showPrayerTimesInDayView', _showPrayerTimesInDayView);
     await prefs.setBool(
         'showPrayerTimesInWeekView', _showPrayerTimesInWeekView);
@@ -188,6 +188,10 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
+
+    // WICHTIG: Bei iOS packen wir den Inhalt in eine Material-Hülle,
+    // damit Widgets wie DropdownButtonFormField, ListTile usw.
+    // nicht den "TextField widgets require a Material ancestor"-Fehler werfen.
     return _isIos
         ? CupertinoPageScaffold(
             navigationBar: CupertinoNavigationBar(
@@ -204,7 +208,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
             ),
-            child: SafeArea(child: _buildSettingsList(loc)),
+            child: SafeArea(
+              child: Material(
+                child: _buildSettingsList(loc),
+              ),
+            ),
           )
         : Scaffold(
             appBar: AppBar(
@@ -327,11 +335,11 @@ class _SettingsPageState extends State<SettingsPage> {
         SwitchListTile.adaptive(
           title: Text(loc.automaticLocation),
           subtitle: Text(loc.automaticLocationSubtitle),
-          // Invertierte Logik war im Original-Code?
+          // Beachte: wir haben hier invertierte Logik => s. Original:
+          // "value: _locationMode == LocationMode.manual" => an = manual
           value: _locationMode == LocationMode.manual,
           onChanged: (bool value) async {
             setState(() {
-              // Achtung: Hier anpassen, dass "true" => automatic
               _locationMode =
                   value ? LocationMode.manual : LocationMode.automatic;
             });
@@ -418,6 +426,7 @@ class _SettingsPageState extends State<SettingsPage> {
           }).toList(),
         ),
 
+        // Falls Android => Save-Button extra
         if (!_isIos) ...[
           const SizedBox(height: 40),
           Center(
@@ -524,7 +533,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                   CupertinoButton(
-                    child: Text('Close'),
+                    child: const Text('Close'),
                     onPressed: () => Navigator.of(ctx).pop(),
                   ),
                 ],
