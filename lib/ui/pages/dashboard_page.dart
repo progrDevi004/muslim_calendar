@@ -455,7 +455,7 @@ class DashboardPageState extends State<DashboardPage> {
                         if (t.isPrayerSlot) {
                           return _buildPrayerSlotItem(t);
                         } else if (t.isAllDay) {
-                          return _buildAllDayAppointmentItem(t);
+                          return _buildAllDayAppointmentItem(t, loc);
                         } else {
                           return _buildAppointmentItem(t);
                         }
@@ -684,7 +684,7 @@ class DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildAllDayAppointmentItem(_DashboardTask t) {
+  Widget _buildAllDayAppointmentItem(_DashboardTask t, AppLocalizations loc) {
     final backgroundColor = t.color;
     final textColor = _getContrastingTextColor(backgroundColor);
 
@@ -737,7 +737,7 @@ class DashboardPageState extends State<DashboardPage> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  '${t.title} (All Day)',
+                  '${t.title} (${loc.allDay})',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,

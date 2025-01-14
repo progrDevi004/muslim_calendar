@@ -134,12 +134,10 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         // 1) Zuerst: Datenbank-Löschen
         await _appointmentRepo.deleteAppointment(_appointment!.id!);
 
-        // 2) Dann Notification stornieren (falls das fehlschlägt,
-        //    NICHT den DB-Löschvorgang "zurückrollen"):
+        // 2) Dann Notification stornieren
         try {
           await NotificationService().cancelNotification(_appointment!.id!);
         } catch (notifErr) {
-          // Nur loggen oder ignorieren
           debugPrint(
               'iOS-Knackpunkt: Notification-Cancel schlug fehl: $notifErr');
         }
@@ -319,34 +317,36 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
           ),
 
         // Gebetszeiten-Info + Ganztägig
-        Card(
-          color: Theme.of(context).cardColor,
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Row(
-              children: [
-                if (_appointment!.isAllDay) ...[
-                  const Icon(Icons.calendar_today, color: Colors.blue),
-                  const SizedBox(width: 8),
-                  Text(
-                    loc.allDay,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const Spacer(),
+        // FIX: Nur anzeigen, wenn mindestens eine Bedingung true ist.
+        if (_appointment!.isAllDay || _appointment!.isRelatedToPrayerTimes)
+          Card(
+            color: Theme.of(context).cardColor,
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                children: [
+                  if (_appointment!.isAllDay) ...[
+                    const Icon(Icons.calendar_today, color: Colors.blue),
+                    const SizedBox(width: 8),
+                    Text(
+                      loc.allDay,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const Spacer(),
+                  ],
+                  if (_appointment!.isRelatedToPrayerTimes) ...[
+                    const Icon(Icons.star, color: Colors.green),
+                    const SizedBox(width: 8),
+                    Text(
+                      loc.relatedToPrayerTimes,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
                 ],
-                if (_appointment!.isRelatedToPrayerTimes) ...[
-                  const Icon(Icons.star, color: Colors.green),
-                  const SizedBox(width: 8),
-                  Text(
-                    loc.relatedToPrayerTimes,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
-              ],
+              ),
             ),
           ),
-        ),
 
         const SizedBox(height: 16),
 
