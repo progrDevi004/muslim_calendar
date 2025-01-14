@@ -1,4 +1,5 @@
 // lib/pages/dashboard.dart
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -195,6 +196,7 @@ class DashboardPageState extends State<DashboardPage> {
   Future<void> _loadTodaysAppointments() async {
     final now = DateTime.now();
     final loc = Provider.of<AppLocalizations>(context, listen: false);
+
     // Start und Ende des heutigen Tages (bis 23:59)
     final startOfDay = DateTime(now.year, now.month, now.day, 0, 0);
     final endOfDay = DateTime(now.year, now.month, now.day, 23, 59);
@@ -232,6 +234,7 @@ class DashboardPageState extends State<DashboardPage> {
             durationInMinutes: diff,
             description: desc,
             color: ap.color,
+            isAllDay: ap.isAllDay, // WICHTIG
           ),
         );
       }
@@ -263,13 +266,22 @@ class DashboardPageState extends State<DashboardPage> {
             durationInMinutes: 1,
             description: '',
             color: Colors.teal,
+            isAllDay: false,
           ),
         );
       }
     }
 
-    // Sortieren
-    tasks.sort((a, b) => a.start.compareTo(b.start));
+    // **Neuer Sortiermechanismus**:
+    //  1) All-Day nach oben
+    //  2) Sonst nach Startzeit
+    tasks.sort((a, b) {
+      // All-Day => ganz oben
+      if (a.isAllDay && !b.isAllDay) return -1;
+      if (!a.isAllDay && b.isAllDay) return 1;
+      // Falls beide allDay oder beide normal => sortiere nach Zeit
+      return a.start.compareTo(b.start);
+    });
 
     setState(() {
       _todayTasks = tasks;
@@ -442,6 +454,8 @@ class DashboardPageState extends State<DashboardPage> {
                       children: _todayTasks.map((t) {
                         if (t.isPrayerSlot) {
                           return _buildPrayerSlotItem(t);
+                        } else if (t.isAllDay) {
+                          return _buildAllDayAppointmentItem(t);
                         } else {
                           return _buildAppointmentItem(t);
                         }
@@ -670,6 +684,74 @@ class DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  Widget _buildAllDayAppointmentItem(_DashboardTask t) {
+    final backgroundColor = t.color;
+    final textColor = _getContrastingTextColor(backgroundColor);
+
+    return MouseRegion(
+      onEnter: (_) => _onHoverEnter(t.appointmentId ?? 0),
+      onExit: (_) => _onHoverExit(t.appointmentId ?? 0),
+      child: InkWell(
+        splashColor: backgroundColor.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(16),
+        onTap: () async {
+          if (t.appointmentId != null) {
+            // Termin-Details öffnen
+            await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (ctx) => AppointmentDetailsPage(
+                  appointmentId: t.appointmentId!,
+                ),
+              ),
+            );
+            reloadData();
+            // HomePage-Kalender aktualisieren
+            final homePageState =
+                context.findAncestorStateOfType<HomePageState>();
+            homePageState?.loadAllAppointments();
+          }
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: backgroundColor.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: _hoveredTaskId == t.appointmentId
+                ? [
+                    BoxShadow(
+                      color: backgroundColor.withOpacity(0.4),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    )
+                  ]
+                : [],
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.calendar_month,
+                color: Colors.white,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '${t.title} (All Day)',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: textColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPrayerSlotItem(_DashboardTask t) {
     final timeStr = _formatDateTime(t.start);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -760,6 +842,7 @@ class _DashboardTask {
   final int durationInMinutes;
   final String description;
   final Color color;
+  final bool isAllDay;
 
   _DashboardTask({
     this.appointmentId,
@@ -770,5 +853,6 @@ class _DashboardTask {
     required this.durationInMinutes,
     required this.description,
     required this.color,
+    required this.isAllDay,
   });
 }
