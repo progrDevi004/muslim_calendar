@@ -11,6 +11,11 @@ import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/data/services/notification_service.dart';
 import 'package:muslim_calendar/providers/theme_notifier.dart';
 
+// Neu: Für reDownloadAndRecalcAll()
+import 'package:muslim_calendar/data/services/prayer_time_service.dart';
+
+// Beispiel-Enum, kann auch global in app_language.dart liegen:
+
 enum LocationMode {
   automatic,
   manual,
@@ -30,26 +35,14 @@ class _SettingsPageState extends State<SettingsPage> {
   String? _defaultCity;
   bool _notificationsEnabled = true;
 
-  // War bisher unser Dark Mode
   bool _darkModeEnabled = false;
-
-  // System-Theme
   bool _useSystemTheme = false;
-
-  // 24h/AM-PM
   bool _use24hFormat = false;
-
-  // Gebetszeiten-Slots auf dem Dashboard
   bool _showPrayerSlotsInDashboard = true;
-
-  // Gebetszeiten in Daily / Weekly View
   bool _showPrayerTimesInDayView = true;
   bool _showPrayerTimesInWeekView = true;
-
-  // Gebets-Berechnungsmethode (Default = 13, Diyanet)
   int _selectedCalcMethod = 13;
 
-  /// Mapping zwischen Methode und Anzeigenamen (Quelle: https://aladhan.com/calculation-methods)
   final Map<int, String> _calcMethodMap = {
     13: 'Diyanet (Turkey)', // Standard
     3: 'MWL (Muslim World League)',
@@ -76,13 +69,10 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadCountryCityData();
   }
 
-  /// Lädt das Zeitformat, DarkMode etc.
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-
     _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
 
-    // Aus unserem ThemeNotifier => hier gespiegelt
     final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
     _darkModeEnabled = themeNotifier.isDarkMode;
     _useSystemTheme = themeNotifier.useSystemTheme;
@@ -95,7 +85,6 @@ class _SettingsPageState extends State<SettingsPage> {
     } else {
       _locationMode = LocationMode.automatic;
     }
-
     _defaultCountry = prefs.getString('defaultCountry');
     _defaultCity = prefs.getString('defaultCity');
 
@@ -108,23 +97,18 @@ class _SettingsPageState extends State<SettingsPage> {
           .setLanguage(_selectedLanguage);
     }
 
-    // Dashboard-Slots
     _showPrayerSlotsInDashboard =
         prefs.getBool('showPrayerSlotsInDashboard') ?? true;
-
-    // Gebetszeiten in Daily/Weekly
     _showPrayerTimesInDayView =
         prefs.getBool('showPrayerTimesInDayView') ?? true;
     _showPrayerTimesInWeekView =
         prefs.getBool('showPrayerTimesInWeekView') ?? true;
 
-    // Gebets-Berechnungsmethode
-    _selectedCalcMethod = prefs.getInt('calculationMethod') ?? 13; // Diyanet
+    _selectedCalcMethod = prefs.getInt('calculationMethod') ?? 13;
 
     setState(() {});
   }
 
-  /// Lädt die Country-City-Daten aus dem JSON
   Future<void> _loadCountryCityData() async {
     setState(() {
       _isLoadingCountries = true;
@@ -153,54 +137,51 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  /// Speichert aktuelle Settings
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
-
     await prefs.setBool('notificationsEnabled', _notificationsEnabled);
     await prefs.setBool('use24hFormat', _use24hFormat);
-
     await prefs.setString(
       'locationMode',
       _locationMode == LocationMode.manual ? 'manual' : 'automatic',
     );
-
     if (_defaultCountry != null) {
       await prefs.setString('defaultCountry', _defaultCountry!);
     }
     if (_defaultCity != null) {
       await prefs.setString('defaultCity', _defaultCity!);
     }
-
     await prefs.setInt('selectedLanguageIndex', _selectedLanguage.index);
-
     await prefs.setBool(
         'showPrayerSlotsInDashboard', _showPrayerSlotsInDashboard);
-
-    // Daily/Week
     await prefs.setBool('showPrayerTimesInDayView', _showPrayerTimesInDayView);
     await prefs.setBool(
         'showPrayerTimesInWeekView', _showPrayerTimesInWeekView);
-
-    // Gebets-Berechnungsmethode
     await prefs.setInt('calculationMethod', _selectedCalcMethod);
+  }
+
+  /// Ruft die Logik zum Neuladen auf
+  Future<void> _updatePrayerTimes() async {
+    final prayerTimeService = context.read<PrayerTimeService>();
+    await prayerTimeService.reDownloadAndRecalcAll();
   }
 
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
 
-    // WICHTIG: Bei iOS packen wir den Inhalt in eine Material-Hülle,
-    // damit Widgets wie DropdownButtonFormField, ListTile usw.
-    // nicht den "TextField widgets require a Material ancestor"-Fehler werfen.
     return _isIos
         ? CupertinoPageScaffold(
             navigationBar: CupertinoNavigationBar(
               middle: Text(loc.settings),
               trailing: GestureDetector(
                 onTap: () async {
+                  // Speichern
                   await _saveSettings();
+                  // Danach pop mit "true" => Dashboard kann neu laden
                   if (!mounted) return;
-                  Navigator.pop(context);
+                  Navigator.of(context).pop(true);
                 },
                 child: Text(
                   loc.save,
@@ -335,8 +316,6 @@ class _SettingsPageState extends State<SettingsPage> {
         SwitchListTile.adaptive(
           title: Text(loc.automaticLocation),
           subtitle: Text(loc.automaticLocationSubtitle),
-          // Beachte: wir haben hier invertierte Logik => s. Original:
-          // "value: _locationMode == LocationMode.manual" => an = manual
           value: _locationMode == LocationMode.manual,
           onChanged: (bool value) async {
             setState(() {
@@ -344,6 +323,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   value ? LocationMode.manual : LocationMode.automatic;
             });
             await _saveSettings();
+            // Gebetszeiten anstoßen, falls wir auf manuell umstellen
+            if (_locationMode == LocationMode.manual) {
+              await _updatePrayerTimes();
+            }
           },
         ),
         if (_locationMode == LocationMode.manual)
@@ -417,6 +400,8 @@ class _SettingsPageState extends State<SettingsPage> {
               _selectedCalcMethod = value;
             });
             await _saveSettings();
+            // Neu laden
+            await _updatePrayerTimes();
           },
           items: _calcMethodMap.entries.map((entry) {
             return DropdownMenuItem<int>(
@@ -426,15 +411,16 @@ class _SettingsPageState extends State<SettingsPage> {
           }).toList(),
         ),
 
-        // Falls Android => Save-Button extra
+        // Falls Android => Speichern-Knopf
         if (!_isIos) ...[
           const SizedBox(height: 40),
           Center(
             child: FilledButton(
               onPressed: () async {
                 await _saveSettings();
+                // Wichtig: Pop mit true
                 if (!mounted) return;
-                Navigator.pop(context);
+                Navigator.pop(context, true);
               },
               child: Text(loc.save),
             ),
@@ -444,7 +430,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  /// Baut das UI für die manuelle Standort-Auswahl
   List<Widget> _buildManualLocationFields(String? country, String? city) {
     if (_isLoadingCountries) {
       return [
@@ -467,17 +452,34 @@ class _SettingsPageState extends State<SettingsPage> {
       const SizedBox(height: 8),
       DropdownButtonFormField<String>(
         value: _defaultCountry,
-        decoration: InputDecoration(labelText: country),
-        onChanged: (value) {
+        icon: Container(),
+        decoration: InputDecoration(
+          labelText: country,
+          suffixIcon: const Padding(
+            padding: EdgeInsets.only(right: 8.0),
+            child: Icon(
+              Icons.arrow_drop_down,
+              size: 24, // Icon-Größe anpassen, wenn nötig
+            ),
+          ),
+        ),
+        onChanged: (value) async {
           setState(() {
             _defaultCountry = value;
-            _defaultCity = null;
+            _defaultCity = null; // reset
           });
+          await _saveSettings();
+          if (_defaultCountry != null && _defaultCountry!.isNotEmpty) {
+            await _updatePrayerTimes();
+          }
         },
         items: countries.map((c) {
           return DropdownMenuItem<String>(
             value: c,
-            child: Text(c),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(c),
+            ),
           );
         }).toList(),
       ),
@@ -486,11 +488,25 @@ class _SettingsPageState extends State<SettingsPage> {
           _countryCityData.containsKey(_defaultCountry))
         DropdownButtonFormField<String>(
           value: _defaultCity,
-          decoration: InputDecoration(labelText: city),
-          onChanged: (value) {
+          icon: Container(),
+          decoration: InputDecoration(
+            labelText: city,
+            suffixIcon: const Padding(
+              padding: EdgeInsets.only(right: 8.0),
+              child: Icon(
+                Icons.arrow_drop_down,
+                size: 24, // Icon-Größe anpassen, wenn nötig
+              ),
+            ),
+          ),
+          onChanged: (value) async {
             setState(() {
               _defaultCity = value;
             });
+            await _saveSettings();
+            if (_defaultCity != null && _defaultCity!.isNotEmpty) {
+              await _updatePrayerTimes();
+            }
           },
           items: _countryCityData[_defaultCountry]!
               .map((city) => DropdownMenuItem<String>(
@@ -504,7 +520,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _showLanguageSelector(BuildContext context) {
     if (_isIos) {
-      // iOS-BottomSheet
       showCupertinoModalPopup(
         context: context,
         builder: (ctx) {
@@ -543,7 +558,6 @@ class _SettingsPageState extends State<SettingsPage> {
         },
       );
     } else {
-      // Material-BottomSheet
       showModalBottomSheet(
         context: context,
         builder: (ctx) {

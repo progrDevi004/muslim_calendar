@@ -10,6 +10,9 @@ import '../database_helper.dart';
 class PrayerTimeRepository {
   final DatabaseHelper dbHelper = DatabaseHelper();
 
+  // >>> NEU: Machen wir es einfach per Getter:
+  DatabaseHelper get databaseHelper => dbHelper;
+
   // Prüft, ob wir schon das ganze Jahr im DB-Cache haben.
   Future<bool> _hasFullYearInDB(int year, String location) async {
     final db = await dbHelper.database;

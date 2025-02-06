@@ -546,11 +546,14 @@ class DashboardPageState extends State<DashboardPage> {
           children: [
             Icon(Icons.access_alarm_outlined, color: accentTextColor),
             const SizedBox(width: 8),
-            Text(
-              loc.prayerTimeDashboard,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: accentTextColor,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                loc.prayerTimeDashboard,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: accentTextColor,
+                ),
               ),
             ),
           ],
