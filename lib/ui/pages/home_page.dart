@@ -319,6 +319,20 @@ class HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
+        leadingWidth: 200, // Wert ggf. anpassen
+        leading: Row(
+          children: [
+            // Dein Logo (mit Schrift) als Image.asset
+            Padding(
+              padding: const EdgeInsets.only(left: 10.0),
+              child: Image.asset(
+                'assets/images/logo.png', // Pfad zu deinem Logo anpassen
+                height: 30, // Höhe des Logos, ggf. anpassen
+                fit: BoxFit.contain,
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.explore),
