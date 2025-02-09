@@ -111,28 +111,24 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
             style: TextStyle(fontSize: 16),
           ),
           const SizedBox(height: 24),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: // Auswahl Land
-                DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: 'Land',
-                border: OutlineInputBorder(),
-              ),
-              value: _selectedCountry,
-              items: countries.map((country) {
-                return DropdownMenuItem<String>(
-                  value: country,
-                  child: Text(country),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedCountry = value;
-                  _selectedCity = null; // Reset der Stadt
-                });
-              },
+          DropdownButtonFormField<String>(
+            decoration: const InputDecoration(
+              labelText: 'Land',
+              border: OutlineInputBorder(),
             ),
+            value: _selectedCountry,
+            items: countries.map((country) {
+              return DropdownMenuItem<String>(
+                value: country,
+                child: Text(country),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedCountry = value;
+                _selectedCity = null; // Reset der Stadt
+              });
+            },
           ),
 
           const SizedBox(height: 24),
