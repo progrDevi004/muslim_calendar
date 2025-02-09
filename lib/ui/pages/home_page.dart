@@ -595,7 +595,6 @@ class HomePageState extends State<HomePage> {
       },
     );
   }
-
   void _showAddCategoryDialog() {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
     final TextEditingController nameController = TextEditingController();

@@ -26,7 +26,7 @@ class AppointmentModel {
   final int? reminderMinutesBefore;
 
   // >>> NEU: Für Synchronisierung
-  final String? externalIdGoogle; // z.B. Event-ID in Google Calendar
+  String? externalIdGoogle; // z.B. Event-ID in Google Calendar
   final String? externalIdOutlook; // z.B. Event-ID in Outlook
   final String? externalIdApple; // z.B. Event-Identifier in Apple-Kalender
   final DateTime? lastSyncedAt; // Zuletzt erfolgreich synchronisiert
@@ -138,5 +138,32 @@ class AppointmentModel {
           ? DateTime.parse(map['lastSyncedAt'])
           : null,
     );
+  }
+    @override
+  String toString() {
+    return '''
+    AppointmentModel(
+      id: $id,
+      subject: $subject,
+      notes: $notes,
+      isAllDay: $isAllDay,
+      isRelatedToPrayerTimes: $isRelatedToPrayerTimes,
+      prayerTime: $prayerTime,
+      timeRelation: $timeRelation,
+      minutesBeforeAfter: $minutesBeforeAfter,
+      duration: $duration,
+      location: $location,
+      recurrenceRule: $recurrenceRule,
+      recurrenceExceptionDates: $recurrenceExceptionDates,
+      color: ${color.value},
+      startTime: $startTime,
+      endTime: $endTime,
+      categoryId: $categoryId,
+      reminderMinutesBefore: $reminderMinutesBefore,
+      externalIdGoogle: $externalIdGoogle,
+      externalIdOutlook: $externalIdOutlook,
+      externalIdApple: $externalIdApple,
+      lastSyncedAt: $lastSyncedAt
+    )''';
   }
 }

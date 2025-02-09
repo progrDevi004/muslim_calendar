@@ -17,6 +17,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 // NEU: NotificationService-Import
 import 'package:muslim_calendar/data/services/notification_service.dart';
 
+import 'data/repositories/appointment_repository.dart';
+import 'data/repositories/prayer_time_repository.dart';
+import 'data/services/calendar_sync_service.dart';
+import 'data/services/google_calendar_service.dart';
+import 'data/services/prayer_time_service.dart';
+import 'data/services/recurrence_service.dart';
+
 void main() async {
   // Damit wir vor dem runApp asynchrone Aufrufe durchführen können:
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +41,27 @@ void main() async {
         // ThemeNotifier => für Dark/Light/System
         ChangeNotifierProvider(
           create: (_) => ThemeNotifier(),
+        ),
+        Provider<GoogleCalendarService>(
+          create: (_) => GoogleCalendarService(),
+        ),
+        Provider<AppointmentRepository>(
+          create: (_) => AppointmentRepository(),
+        ),
+        Provider<RecurrenceService>(
+          create: (_) => RecurrenceService(),
+        ),
+        Provider<PrayerTimeService>(
+          create: (_) => PrayerTimeService(PrayerTimeRepository()),
+        ),
+        // Ardından, CalendarSyncService nesnelerini oluşturuyoruz:
+        Provider<CalendarSyncService>(
+          create: (context) => CalendarSyncService(
+            calendarProvider: context.read<GoogleCalendarService>(),
+            appointmentRepository: context.read<AppointmentRepository>(),
+            recurrenceService: context.read<RecurrenceService>(),
+            prayerTimeService: context.read<PrayerTimeService>(),
+          ),
         ),
       ],
       child: const MyApp(),

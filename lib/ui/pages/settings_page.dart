@@ -5,20 +5,32 @@ import 'dart:io' show Platform;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:muslim_calendar/data/services/google_calendar_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/data/services/notification_service.dart';
 import 'package:muslim_calendar/providers/theme_notifier.dart';
 
+<<<<<<< HEAD
 // Neu: Für reDownloadAndRecalcAll()
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 
 // Beispiel-Enum, kann auch global in app_language.dart liegen:
+=======
+import '../../data/services/calendar_sync_service.dart';
+>>>>>>> origin/Sync
 
 enum LocationMode {
   automatic,
   manual,
+}
+
+enum SyncFrequency {
+  none,
+  daily,
+  weekly,
+  monthly,
 }
 
 class SettingsPage extends StatefulWidget {
@@ -61,6 +73,16 @@ class _SettingsPageState extends State<SettingsPage> {
   Map<String, List<String>> _countryCityData = {};
 
   bool get _isIos => Platform.isIOS;
+
+  bool _googleCalendarEnabled = false;
+  bool _appleCalendarEnabled = false;
+  bool _outlookCalendarEnabled = false;
+  SyncFrequency _googleCalendarSyncFrequency = SyncFrequency.daily;
+  SyncFrequency _appleCalendarSyncFrequency = SyncFrequency.daily;
+  SyncFrequency _outlookCalendarSyncFrequency = SyncFrequency.daily;
+  bool _googleCalendarConnected = false;
+  bool _appleCalendarConnected = false;
+  bool _outlookCalendarConnected = false;
 
   @override
   void initState() {
@@ -106,6 +128,13 @@ class _SettingsPageState extends State<SettingsPage> {
 
     _selectedCalcMethod = prefs.getInt('calculationMethod') ?? 13;
 
+    _googleCalendarEnabled = prefs.getBool('googleCalendarEnabled') ?? false;
+    _appleCalendarEnabled = prefs.getBool('appleCalendarEnabled') ?? false;
+    _outlookCalendarEnabled = prefs.getBool('outlookCalendarEnabled') ?? false;
+    _googleCalendarSyncFrequency = SyncFrequency.values[prefs.getInt('googleSyncFrequency') ?? 0];
+    _appleCalendarSyncFrequency = SyncFrequency.values[prefs.getInt('appleSyncFrequency') ?? 0];
+    _outlookCalendarSyncFrequency = SyncFrequency.values[prefs.getInt('outlookSyncFrequency') ?? 0];
+
     setState(() {});
   }
 
@@ -137,7 +166,84 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+<<<<<<< HEAD
   /// Speichert aktuelle Settings
+=======
+  Future<bool> _connectToGoogleCalendar(BuildContext context) async {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    
+    final success = await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(loc.connectGoogle),
+        content: Text(loc.connectGoogleDescription),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(loc.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(loc.connect),
+          ),
+        ],
+      ),
+    );
+    
+    if (success == true) {
+      await GoogleCalendarService().signIn();
+      setState(() => _googleCalendarConnected = true);
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> _manageGoogleCalendarConnection(BuildContext context) async {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    final action = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(loc.manageConnection),
+        content: Text(loc.manageConnectionPrompt),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'disconnect'),
+            child: Text(loc.disconnect),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'cancel'),
+            child: Text(loc.cancel),
+          ),
+        ],
+      ),
+    );
+
+    if (action == 'disconnect') {
+      await GoogleCalendarService().signOut();
+      setState(() => _googleCalendarConnected = false);
+      await _saveSettings();
+    }
+  }
+
+  Future<bool> _connectToAppleCalendar(BuildContext context) async {
+    // Implement Apple Calendar integration
+    return true;
+  }
+
+  Future<void> _manageAppleCalendarConnection(BuildContext context) async {
+
+  }
+
+  Future<bool> _connectToOutlookCalendar(BuildContext context) async {
+    // Implement Outlook integration
+    return true;
+  }
+
+  Future<void> _manageOutlookCalendarConnection(BuildContext context) async {
+
+  }
+
+>>>>>>> origin/Sync
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('notificationsEnabled', _notificationsEnabled);
@@ -159,6 +265,13 @@ class _SettingsPageState extends State<SettingsPage> {
     await prefs.setBool(
         'showPrayerTimesInWeekView', _showPrayerTimesInWeekView);
     await prefs.setInt('calculationMethod', _selectedCalcMethod);
+
+    await prefs.setBool('googleCalendarEnabled', _googleCalendarEnabled);
+    await prefs.setBool('appleCalendarEnabled', _appleCalendarEnabled);
+    await prefs.setBool('outlookCalendarEnabled', _outlookCalendarEnabled);
+    await prefs.setInt('googleSyncFrequency', _googleCalendarSyncFrequency.index);
+    await prefs.setInt('appleSyncFrequency', _appleCalendarSyncFrequency.index);
+    await prefs.setInt('outlookSyncFrequency', _outlookCalendarSyncFrequency.index);
   }
 
   /// Ruft die Logik zum Neuladen auf
@@ -411,7 +524,88 @@ class _SettingsPageState extends State<SettingsPage> {
           }).toList(),
         ),
 
+<<<<<<< HEAD
         // Falls Android => Speichern-Knopf
+=======
+        // New Sync Section
+        const Divider(height: 40),
+        Text(
+          loc.calendarSync,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 16),
+
+        // Google Calendar Integration
+        _buildCalendarIntegration(
+          loc.googleCalendar,
+          Icons.calendar_today,
+          _googleCalendarEnabled,
+          _googleCalendarConnected,
+          _googleCalendarSyncFrequency,
+          (value) async {
+            setState(() => _googleCalendarEnabled = value);
+            await _saveSettings();
+          },
+          () async {
+            if (!_googleCalendarConnected) {
+              return _connectToGoogleCalendar(context);
+            } else {
+              await _manageGoogleCalendarConnection(context);
+              return _googleCalendarConnected;
+            }
+          },
+          (value) => _googleCalendarSyncFrequency = value,
+        ),
+
+        // Apple Calendar Integration
+        _buildCalendarIntegration(
+          loc.appleCalendar,
+          _isIos ? Icons.apple : Icons.calendar_month,
+          _appleCalendarEnabled,
+          _appleCalendarConnected,
+          _appleCalendarSyncFrequency,
+          (value) async {
+            setState(() => _appleCalendarEnabled = value);
+            await _saveSettings();
+          },
+          () async {
+            if (!_appleCalendarConnected) {
+              return _connectToAppleCalendar(context);
+            } else {
+              await _manageAppleCalendarConnection(context);
+              return _appleCalendarConnected;
+            }
+          },
+          (value) => _appleCalendarSyncFrequency = value,
+        ),
+
+        // Outlook Calendar Integration
+        _buildCalendarIntegration(
+          loc.outlookCalendar,
+          Icons.email_outlined,
+          _outlookCalendarEnabled,
+          _outlookCalendarConnected,
+          _outlookCalendarSyncFrequency,
+          (value) async {
+            setState(() => _outlookCalendarEnabled = value);
+            await _saveSettings();
+          },
+          () async {
+            if (!_outlookCalendarConnected) {
+              return _connectToOutlookCalendar(context);
+            } else {
+              await _manageOutlookCalendarConnection(context);
+              return _outlookCalendarConnected;
+            }
+          },
+          (value) => _outlookCalendarSyncFrequency = value,
+        ),
+
+
+        // Falls Android => Save-Button extra
+>>>>>>> origin/Sync
         if (!_isIos) ...[
           const SizedBox(height: 40),
           Center(
@@ -584,4 +778,178 @@ class _SettingsPageState extends State<SettingsPage> {
       );
     }
   }
+  Widget _buildCalendarIntegration(
+    String title,
+    IconData icon,
+    bool enabled,
+    bool connected,
+    SyncFrequency frequency,
+    Function(bool) onEnabledChanged,
+    Future<bool> Function() onConnectPressed,
+    Function(SyncFrequency) onFrequencyChanged,
+  ) {
+    final loc = Provider.of<AppLocalizations>(context);
+    
+    return Column(
+      children: [
+        SwitchListTile.adaptive(
+          title: Text(title),
+          value: enabled,
+          onChanged: onEnabledChanged,
+          secondary: Icon(icon),
+        ),
+        if (enabled) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              children: [
+                ElevatedButton(
+                  onPressed: () async {
+                    final success = await onConnectPressed();
+                    if (success) {
+                      setState(() {});
+                      await _saveSettings();
+                    }
+                  },
+                  child: Text(connected ? loc.manageConnection : loc.connect),
+                ),
+                const SizedBox(width: 8),
+                if (connected)
+                  const Icon(Icons.check_circle, color: Colors.green, size: 20),
+              ],
+            ),
+          ),
+          if (connected) ...[
+            _buildFrequencySelector(loc, frequency, onFrequencyChanged),
+            const SizedBox(height: 8),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(
+                  onPressed: () => _handleManualSync(true, title),
+                  child: Text(loc.importFromCalendar),
+                ),
+                ElevatedButton(
+                  onPressed: () => _handleManualSync(false, title),
+                  child: Text(loc.exportToCalendar),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 16),
+        ],
+      ],
+    );
+  }
+  Future<void> _handleManualSync(bool isImport, String serviceName) async {
+  final loc = Provider.of<AppLocalizations>(context, listen: false);
+  final String google = loc.googleCalendar;
+  final String apple = loc.appleCalendar;
+  final String outlook = loc.outlookCalendar;
+
+  try {
+    // İf-else ile servis karşılaştırması yapıyoruz
+    if (serviceName == google) {
+      final googleSyncService = Provider.of<CalendarSyncService>(context, listen: false);
+      if (isImport) {
+        await googleSyncService.importAppointments();
+      } else {
+        await googleSyncService.exportAppointments();
+      }
+    } else if (serviceName == outlook) {
+      if (isImport) {
+        //await outlookCalendarSyncService.importAppointments();
+      } else {
+        //await outlookCalendarSyncService.exportAppointments();
+      }
+    } else if (serviceName == apple) {
+      if (isImport) {
+        //await appleCalendarSyncService.importAppointments();
+      } else {
+        //await appleCalendarSyncService.exportAppointments();
+      }
+    } else {
+      // Bilinmeyen servis durumunda exception fırlatılıyor
+      throw Exception("Bilinmeyen servis: $serviceName");
+    }
+
+    // Başarı mesajı gösterme
+    if (isImport) {
+      await _showSuccessDialog(loc.importSuccess(serviceName));
+    } else {
+      await _showSuccessDialog(loc.exportSuccess(serviceName));
+    }
+  } catch (e) {
+    // Hata mesajı gösterme
+    await _showErrorDialog(loc.syncError(e.toString()));
+  }
+}
+
+  Future<void> _showSuccessDialog(String message) async {
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(Provider.of<AppLocalizations>(ctx).success),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(Provider.of<AppLocalizations>(ctx).ok),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showErrorDialog(String message) async {
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(Provider.of<AppLocalizations>(ctx).error),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(Provider.of<AppLocalizations>(ctx).ok),
+          ),
+        ],
+      ),
+    );
+  }
+  Widget _buildFrequencySelector(
+    AppLocalizations loc,
+    SyncFrequency currentFrequency,
+    Function(SyncFrequency) onChanged,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16.0, top: 8.0),
+      child: DropdownButtonFormField<SyncFrequency>(
+        value: currentFrequency,
+        onChanged: (value) {
+          if (value != null) {
+            onChanged(value);
+            _saveSettings();
+          }
+        },
+        items: [
+          DropdownMenuItem(
+            value: SyncFrequency.none,
+            child: Text(loc.noSync),
+          ),
+          DropdownMenuItem(
+            value: SyncFrequency.daily,
+            child: Text(loc.dailySync),
+          ),
+          DropdownMenuItem(
+            value: SyncFrequency.weekly,
+            child: Text(loc.weeklySync),
+          ),
+          DropdownMenuItem(
+            value: SyncFrequency.monthly,
+            child: Text(loc.monthlySync),
+          ),
+        ],
+      ),
+    );
+  }
+
 }
