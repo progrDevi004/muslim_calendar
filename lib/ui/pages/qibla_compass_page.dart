@@ -1,5 +1,6 @@
 // lib/ui/pages/qibla_compass_page.dart
 
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_qiblah/flutter_qiblah.dart';
@@ -31,14 +32,28 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
 
   /// Prüft und fordert die Location-Berechtigung an.
   Future<void> _checkAndRequestPermission() async {
-    var status = await Permission.location.status;
-    if (!status.isGranted) {
-      final result = await Permission.location.request();
-      if (!result.isGranted) {
-        setState(() {
-          _permissionDenied = true;
-        });
-        return;
+    // Auf iOS verwenden wir "locationWhenInUse", auf Android "location".
+    if (Platform.isIOS) {
+      var status = await Permission.locationWhenInUse.status;
+      if (!status.isGranted) {
+        final result = await Permission.locationWhenInUse.request();
+        if (!result.isGranted) {
+          setState(() {
+            _permissionDenied = true;
+          });
+          return;
+        }
+      }
+    } else {
+      var status = await Permission.location.status;
+      if (!status.isGranted) {
+        final result = await Permission.location.request();
+        if (!result.isGranted) {
+          setState(() {
+            _permissionDenied = true;
+          });
+          return;
+        }
       }
     }
 
@@ -160,115 +175,121 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
 
   /// Baut eine ansprechende Kompass-UI inklusive:
   /// - drehendem Pfeil, der die Qibla-Richtung anzeigt,
-  /// - einem visuellen Marker auf dem Kreis, der Qibla markiert,
+  /// - starren Himmelsrichtungen,
+  /// - einem festen Qibla-Marker, der die Qibla markiert,
   /// - und der textuellen Anzeige des Qibla-Winkels.
   Widget buildCompass(double angle, double qiblahDegrees) {
-    // Berechne die Position des Qibla-Markers (auf dem Kreis)
-    // Der Kreis hat eine Breite/Höhe von 300 -> Radius ca. 150.
-    // Wir platzieren den Marker etwas innerhalb des Rands (z. B. 140)
+    // Kreis-Dimensionen
+    const double containerSize = 300.0;
+    const double centerPoint = containerSize / 2; // 150
+    // Marker soll etwas innerhalb des Rands positioniert werden (z. B. Radius 140)
     const double markerRadius = 140.0;
+
+    // Berechne die Position des Qibla-Markers auf dem Kreis (auf Basis des Winkels)
     final double markerX = markerRadius * math.sin(angle);
     final double markerY = -markerRadius * math.cos(angle);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 300,
-          height: 300,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
-            border: Border.all(color: Colors.blueAccent, width: 4),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 8,
-                offset: Offset(0, 4),
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            // Der kreisförmige Hintergrund
+            Container(
+              width: containerSize,
+              height: containerSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                border: Border.all(color: Colors.blueAccent, width: 4),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 8,
+                    offset: Offset(0, 4),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Anzeige der Himmelsrichtungen
-              const Positioned(
-                top: 10,
-                child: Text(
-                  "N",
-                  style: TextStyle(
+            ),
+            // Statische Himmelsrichtungen
+            const Positioned(
+              top: 10,
+              child: Text(
+                "N",
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: Colors.black),
+              ),
+            ),
+            const Positioned(
+              bottom: 10,
+              child: Text(
+                "S",
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: Colors.black),
+              ),
+            ),
+            const Positioned(
+              left: 10,
+              child: Text(
+                "W",
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: Colors.black),
+              ),
+            ),
+            const Positioned(
+              right: 10,
+              child: Text(
+                "E",
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: Colors.black),
+              ),
+            ),
+            // Der drehende Kompasspfeil, der die Qibla-Richtung anzeigt.
+            Transform.rotate(
+              angle: angle,
+              child: const Icon(
+                Icons.navigation,
+                size: 80,
+                color: Colors.redAccent,
+              ),
+            ),
+            // Fester Qibla-Marker, fix positioniert.
+            Positioned(
+              left: centerPoint + markerX - 12,
+              top: centerPoint + markerY - 12,
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(
+                    Icons.place,
+                    size: 24,
+                    color: Colors.green,
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    "Qibla",
+                    style: TextStyle(
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      color: Colors.black),
-                ),
-              ),
-              const Positioned(
-                bottom: 10,
-                child: Text(
-                  "S",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      color: Colors.black),
-                ),
-              ),
-              const Positioned(
-                left: 10,
-                child: Text(
-                  "W",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      color: Colors.black),
-                ),
-              ),
-              const Positioned(
-                right: 10,
-                child: Text(
-                  "E",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      color: Colors.black),
-                ),
-              ),
-              // Der drehende Kompasspfeil, der auf Qibla zeigt.
-              Transform.rotate(
-                angle: angle,
-                child: const Icon(
-                  Icons.navigation,
-                  size: 80,
-                  color: Colors.redAccent,
-                ),
-              ),
-              // Der Qibla-Marker auf dem äußeren Rand des Kreises.
-              Transform.translate(
-                offset: Offset(markerX, markerY),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(
-                      Icons.place,
-                      size: 24,
                       color: Colors.green,
                     ),
-                    SizedBox(height: 2),
-                    Text(
-                      "Qibla",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
-        // Anzeige der Qibla-Richtung in Grad als Text.
+        // Textuelle Anzeige der Qibla-Richtung in Grad
         Text(
           "Qibla Richtung: ${qiblahDegrees.toStringAsFixed(0)}°",
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
