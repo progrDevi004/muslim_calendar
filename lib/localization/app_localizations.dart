@@ -1237,6 +1237,362 @@ class AppLocalizations extends ChangeNotifier {
   }
 
   // ------------------------------
+  // >>> Neue Strings für SettingsPage SYNC KALENDAR
+  // ------------------------------
+  String get calendarSync {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Kalendersynchronisation';
+      case AppLanguage.turkish:
+        return 'Takvim Senkronizasyonu';
+      case AppLanguage.arabic:
+        return 'مزامنة التقويم';
+      case AppLanguage.english:
+      default:
+        return 'Calendar Sync';
+    }
+  }
+
+  String get googleCalendar {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Google Kalender';
+      case AppLanguage.turkish:
+        return 'Google Takvimi';
+      case AppLanguage.arabic:
+        return 'تقويم جوجل';
+      case AppLanguage.english:
+      default:
+        return 'Google Calendar';
+    }
+  }
+
+  String get appleCalendar {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Apple Kalender';
+      case AppLanguage.turkish:
+        return 'Apple Takvimi';
+      case AppLanguage.arabic:
+        return 'تقويم آبل';
+      case AppLanguage.english:
+      default:
+        return 'Apple Calendar';
+    }
+  }
+
+  String get outlookCalendar {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Outlook Kalender';
+      case AppLanguage.turkish:
+        return 'Outlook Takvimi';
+      case AppLanguage.arabic:
+        return 'تقويم أوتلوك';
+      case AppLanguage.english:
+      default:
+        return 'Outlook Calendar';
+    }
+  }
+
+  String get connectToService {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Mit Dienst verbinden';
+      case AppLanguage.turkish:
+        return 'Hizmete Bağlan';
+      case AppLanguage.arabic:
+        return 'الاتصال بالخدمة';
+      case AppLanguage.english:
+      default:
+        return 'Connect to service';
+    }
+  }
+
+  String get connected {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Verbunden';
+      case AppLanguage.turkish:
+        return 'Bağlandı';
+      case AppLanguage.arabic:
+        return 'متصل';
+      case AppLanguage.english:
+      default:
+        return 'Connected';
+    }
+  }
+
+  String get dailySync {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Tägliche Synchronisation';
+      case AppLanguage.turkish:
+        return 'Günlük Senkronizasyon';
+      case AppLanguage.arabic:
+        return 'مزامنة يومية';
+      case AppLanguage.english:
+      default:
+        return 'Daily Sync';
+    }
+  }
+
+  String get weeklySync {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Wöchentliche Synchronisation';
+      case AppLanguage.turkish:
+        return 'Haftalık Senkronizasyon';
+      case AppLanguage.arabic:
+        return 'مزامنة أسبوعية';
+      case AppLanguage.english:
+      default:
+        return 'Weekly Sync';
+    }
+  }
+
+  String get monthlySync {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Monatliche Synchronisation';
+      case AppLanguage.turkish:
+        return 'Aylık Senkronizasyon';
+      case AppLanguage.arabic:
+        return 'مزامنة شهرية';
+      case AppLanguage.english:
+      default:
+        return 'Monthly Sync';
+    }
+  }
+
+  String get noSync {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Kein Synchronisation';
+      case AppLanguage.turkish:
+        return 'Senkronizasyon yok';
+      case AppLanguage.arabic:
+        return 'لا يوجد مزامنة';
+      case AppLanguage.english:
+      default:
+        return 'No Sync';
+    }
+  }
+
+  String get connectGoogle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Google Kalender verbinden';
+      case AppLanguage.turkish:
+        return 'Google Takvimine Bağlan';
+      case AppLanguage.arabic:
+        return 'الاتصال بتقويم جوجل';
+      case AppLanguage.english:
+      default:
+        return 'Connect Google Calendar';
+    }
+  }
+
+  String get connectGoogleDescription {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Dies öffnet die Google Anmeldung, um deinen Kalender zu verbinden';
+      case AppLanguage.turkish:
+        return 'Bu, takviminizi bağlamak için Google Girişini açacaktır';
+      case AppLanguage.arabic:
+        return 'سيفتح هذا تسجيل الدخول إلى جوجل لربط تقويمك';
+      case AppLanguage.english:
+      default:
+        return 'This will open Google Sign-In to connect your calendar';
+    }
+  }
+
+  String get connect {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Verbinden';
+      case AppLanguage.turkish:
+        return 'Bağlan';
+      case AppLanguage.arabic:
+        return 'اتصال';
+      case AppLanguage.english:
+      default:
+        return 'Connect';
+    }
+  }
+  // Bağlantı yönetimi ile ilgili terimler
+String get manageConnection {
+  switch (_currentLanguage) {
+    case AppLanguage.german:
+      return 'Verbindung verwalten';
+    case AppLanguage.turkish:
+      return 'Bağlantıyı Yönet';
+    case AppLanguage.arabic:
+      return 'إدارة الاتصال';
+    case AppLanguage.english:
+    default:
+      return 'Manage Connection';
+  }
+}
+
+String get importFromCalendar {
+  switch (_currentLanguage) {
+    case AppLanguage.german:
+      return 'Vom Kalender importieren';
+    case AppLanguage.turkish:
+      return 'Takvimden İçe Aktar';
+    case AppLanguage.arabic:
+      return 'استيراد من التقويم';
+    case AppLanguage.english:
+    default:
+      return 'Import from Calendar';
+  }
+}
+
+String get exportToCalendar {
+  switch (_currentLanguage) {
+    case AppLanguage.german:
+      return 'In Kalender exportieren';
+    case AppLanguage.turkish:
+      return 'Takvime Dışa Aktar';
+    case AppLanguage.arabic:
+      return 'تصدير إلى التقويم';
+    case AppLanguage.english:
+    default:
+      return 'Export to Calendar';
+  }
+}
+
+// Hata ve bildirim mesajları
+String syncError(String error) {
+  switch (_currentLanguage) {
+    case AppLanguage.german:
+      return 'Synchronisierungsfehler: $error';
+    case AppLanguage.turkish:
+      return 'Senkronizasyon hatası: $error';
+    case AppLanguage.arabic:
+      return 'خطأ في المزامنة: $error';
+    case AppLanguage.english:
+    default:
+      return 'Sync Error: $error';
+  }
+}
+
+String get success {
+  switch (_currentLanguage) {
+    case AppLanguage.german:
+      return 'Erfolg';
+    case AppLanguage.turkish:
+      return 'Başarılı';
+    case AppLanguage.arabic:
+      return 'نجاح';
+    case AppLanguage.english:
+    default:
+      return 'Success';
+  }
+}
+
+String get error {
+  switch (_currentLanguage) {
+    case AppLanguage.german:
+      return 'Fehler';
+    case AppLanguage.turkish:
+      return 'Hata';
+    case AppLanguage.arabic:
+      return 'خطأ';
+    case AppLanguage.english:
+    default:
+      return 'Error';
+  }
+}
+
+String get ok {
+  switch (_currentLanguage) {
+    case AppLanguage.german:
+      return 'OK';
+    case AppLanguage.turkish:
+      return 'Tamam';
+    case AppLanguage.arabic:
+      return 'موافق';
+    case AppLanguage.english:
+    default:
+      return 'OK';
+  }
+}
+
+// Bağlantı yönetimi diyalog metinleri
+String connectionError(String error) {
+  switch (_currentLanguage) {
+    case AppLanguage.german:
+      return 'Verbindungsfehler: $error';
+    case AppLanguage.turkish:
+      return 'Bağlantı hatası: $error';
+    case AppLanguage.arabic:
+      return 'خطأ في الاتصال: $error';
+    case AppLanguage.english:
+    default:
+      return 'Connection Error: $error';
+  }
+}
+
+String get disconnect {
+  switch (_currentLanguage) {
+    case AppLanguage.german:
+      return 'Trennen';
+    case AppLanguage.turkish:
+      return 'Bağlantıyı Kes';
+    case AppLanguage.arabic:
+      return 'قطع الاتصال';
+    case AppLanguage.english:
+    default:
+      return 'Disconnect';
+  }
+}
+
+String get manageConnectionPrompt {
+  switch (_currentLanguage) {
+    case AppLanguage.german:
+      return 'Was möchten Sie mit dieser Verbindung tun?';
+    case AppLanguage.turkish:
+      return 'Bu bağlantıyla ne yapmak istiyorsunuz?';
+    case AppLanguage.arabic:
+      return 'ماذا تريد أن تفعل بهذا الاتصال؟';
+    case AppLanguage.english:
+    default:
+      return 'What would you like to do with this connection?';
+  }
+}
+
+// Senkronizasyon başarı mesajları
+String importSuccess(String serviceName) {
+  switch (_currentLanguage) {
+    case AppLanguage.german:
+      return 'Erfolgreich importiert aus $serviceName';
+    case AppLanguage.turkish:
+      return '$serviceName bağlantısından başarıyla içe aktarıldı';
+    case AppLanguage.arabic:
+      return 'تم الاستيراد بنجاح من $serviceName';
+    case AppLanguage.english:
+    default:
+      return 'Successfully imported from $serviceName';
+  }
+}
+
+String exportSuccess(String serviceName) {
+  switch (_currentLanguage) {
+    case AppLanguage.german:
+      return 'Erfolgreich exportiert nach $serviceName';
+    case AppLanguage.turkish:
+      return '$serviceName bağlantısına başarıyla dışa aktarıldı';
+    case AppLanguage.arabic:
+      return 'تم التصدير بنجاح إلى $serviceName';
+    case AppLanguage.english:
+    default:
+      return 'Successfully exported to $serviceName';
+  }
+}
+
+  // ------------------------------
   // >>> NEUE STRINGS FÜR APPOINTMENT_CREATION_PAGE
   // ------------------------------
   String get pleaseSelectStartTimeError {

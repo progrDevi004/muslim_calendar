@@ -7,7 +7,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 // >>> NEU: Für Zeitzonen-Init
 import 'package:timezone/data/latest.dart' as tzData;
-import 'package:flutter_native_timezone/flutter_native_timezone.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -135,7 +135,7 @@ class NotificationService {
     if (!_timeZoneInitialized) {
       // Zeitzonen-Daten laden
       tzData.initializeTimeZones();
-      final localTimeZoneName = await FlutterNativeTimezone.getLocalTimezone();
+      final localTimeZoneName = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(localTimeZoneName));
       _timeZoneInitialized = true;
 
