@@ -1692,6 +1692,20 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
+  String get qiblaDirection {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Qibla Richtung';
+      case AppLanguage.turkish:
+        return 'Kıble yönü';
+      case AppLanguage.arabic:
+        return 'اتجاه القبلة';
+      case AppLanguage.english:
+      default:
+        return 'Qibla direction';
+    }
+  }
+
   String get endDate {
     switch (_currentLanguage) {
       case AppLanguage.german:
@@ -1703,6 +1717,76 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.english:
       default:
         return 'End date';
+    }
+  }
+
+  String get qiblaCompass {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Qibla Kompass';
+      case AppLanguage.turkish:
+        return 'Kıble Pusulası';
+      case AppLanguage.arabic:
+        return 'بوصلة القبلة';
+      case AppLanguage.english:
+      default:
+        return 'Qibla Compass';
+    }
+  }
+
+  String get locationPermissionDeniedMessage {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Die Standortberechtigung wurde verweigert.\nBitte erteile die Berechtigung, um den Kompass nutzen zu können.';
+      case AppLanguage.turkish:
+        return 'Konum izni reddedildi.\nLütfen pusulayı kullanabilmek için izni verin.';
+      case AppLanguage.arabic:
+        return 'تم رفض إذن الموقع.\nيرجى منح الإذن لاستخدام البوصلة.';
+      case AppLanguage.english:
+      default:
+        return 'Location permission was denied.\nPlease grant permission to use the compass.';
+    }
+  }
+
+  String get qiblaFetchError {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Fehler beim Abrufen der Qibla-Richtung';
+      case AppLanguage.turkish:
+        return 'Kıble yönü alınırken hata oluştu';
+      case AppLanguage.arabic:
+        return 'حدث خطأ أثناء استرجاع اتجاه القبلة';
+      case AppLanguage.english:
+      default:
+        return 'Error retrieving the Qibla direction';
+    }
+  }
+
+  String get deviceNotSupported {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Ihr Gerät unterstützt den Kompass nicht.';
+      case AppLanguage.turkish:
+        return 'Cihazınız pusulayı desteklemiyor.';
+      case AppLanguage.arabic:
+        return 'جهازك لا يدعم البوصلة.';
+      case AppLanguage.english:
+      default:
+        return 'Your device does not support the compass.';
+    }
+  }
+
+  String get qiblaLabel {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Qibla';
+      case AppLanguage.turkish:
+        return 'Kıble';
+      case AppLanguage.arabic:
+        return 'القبلة';
+      case AppLanguage.english:
+      default:
+        return 'Qibla';
     }
   }
 }

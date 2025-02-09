@@ -6,6 +6,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_qiblah/flutter_qiblah.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart'; // Für Ladeanimation
 import 'dart:math' as math;
+import 'package:provider/provider.dart';
+import 'package:muslim_calendar/localization/app_localizations.dart';
 
 class QiblaCompassPage extends StatefulWidget {
   const QiblaCompassPage({Key? key}) : super(key: key);
@@ -74,17 +76,19 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = Provider.of<AppLocalizations>(context);
+
     // Wenn die Berechtigung abgelehnt wurde, zeige eine Fehlermeldung.
     if (_permissionDenied) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Qibla Kompass'),
+          title: Text(localizations.qiblaCompass),
         ),
-        body: const Center(
+        body: Center(
           child: Text(
-            'Die Standortberechtigung wurde verweigert.\nBitte erteile die Berechtigung, um den Kompass nutzen zu können.',
+            localizations.locationPermissionDeniedMessage,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.red),
+            style: const TextStyle(fontSize: 16, color: Colors.red),
           ),
         ),
       );
@@ -94,7 +98,7 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
     if (_deviceSupportFuture == null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Qibla Kompass'),
+          title: Text(localizations.qiblaCompass),
         ),
         body: const Center(
           child: SpinKitFadingCircle(
@@ -107,7 +111,7 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Qibla Kompass'),
+        title: Text(localizations.qiblaCompass),
       ),
       body: FutureBuilder<bool>(
         future: _deviceSupportFuture,
@@ -121,19 +125,19 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
             );
           }
           if (snapshot.hasError || !snapshot.hasData) {
-            return const Center(
+            return Center(
               child: Text(
-                'Fehler beim Abrufen der Qibla-Richtung',
+                localizations.qiblaFetchError,
                 textAlign: TextAlign.center,
               ),
             );
           }
           final deviceSupported = snapshot.data!;
           if (!deviceSupported) {
-            return const Center(
+            return Center(
               child: Text(
-                'Ihr Gerät unterstützt den Kompass nicht.',
-                style: TextStyle(fontSize: 16, color: Colors.red),
+                localizations.deviceNotSupported,
+                style: const TextStyle(fontSize: 16, color: Colors.red),
                 textAlign: TextAlign.center,
               ),
             );
@@ -151,8 +155,8 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
                 );
               }
               if (qiblahSnapshot.hasError || !qiblahSnapshot.hasData) {
-                return const Center(
-                  child: Text('Fehler beim Abrufen der Qibla-Richtung'),
+                return Center(
+                  child: Text(localizations.qiblaFetchError),
                 );
               }
               final qiblahDirection = qiblahSnapshot.data!;
@@ -164,7 +168,8 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
 
               // Zentriere den gesamten Kompass (horizontal & vertikal)
               return Center(
-                child: buildCompass(correctedAngle, qiblahDegrees),
+                child:
+                    buildCompass(correctedAngle, qiblahDegrees, localizations),
               );
             },
           );
@@ -173,12 +178,13 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
     );
   }
 
-  /// Baut eine ansprechende Kompass-UI inklusive:
-  /// - drehendem Pfeil, der die Qibla-Richtung anzeigt,
-  /// - starren Himmelsrichtungen,
-  /// - einem festen Qibla-Marker, der die Qibla markiert,
-  /// - und der textuellen Anzeige des Qibla-Winkels.
-  Widget buildCompass(double angle, double qiblahDegrees) {
+  /// Baut die Kompass-UI:
+  /// - Der drehende Pfeil zeigt die Qibla-Richtung.
+  /// - Die Himmelsrichtungen bleiben statisch.
+  /// - Der Qibla-Marker (mit Übersetzung) bleibt fix positioniert.
+  /// - Unten wird die textuelle Anzeige der Qibla-Richtung (mit Übersetzung) dargestellt.
+  Widget buildCompass(
+      double angle, double qiblahDegrees, AppLocalizations loc) {
     // Kreis-Dimensionen
     const double containerSize = 300.0;
     const double centerPoint = containerSize / 2; // 150
@@ -195,7 +201,7 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
         Stack(
           alignment: Alignment.center,
           children: [
-            // Der kreisförmige Hintergrund
+            // Kreisförmiger Hintergrund
             Container(
               width: containerSize,
               height: containerSize,
@@ -253,7 +259,7 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
                     color: Colors.black),
               ),
             ),
-            // Der drehende Kompasspfeil, der die Qibla-Richtung anzeigt.
+            // Drehender Kompasspfeil, der die Qibla-Richtung anzeigt.
             Transform.rotate(
               angle: angle,
               child: const Icon(
@@ -262,22 +268,22 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
                 color: Colors.redAccent,
               ),
             ),
-            // Fester Qibla-Marker, fix positioniert.
+            // Fester Qibla-Marker (mit Übersetzung)
             Positioned(
               left: centerPoint + markerX - 12,
               top: centerPoint + markerY - 12,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(
+                children: [
+                  const Icon(
                     Icons.place,
                     size: 24,
                     color: Colors.green,
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(
-                    "Qibla",
-                    style: TextStyle(
+                    loc.qiblaLabel,
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: Colors.green,
@@ -289,9 +295,9 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
           ],
         ),
         const SizedBox(height: 16),
-        // Textuelle Anzeige der Qibla-Richtung in Grad
+        // Textuelle Anzeige der Qibla-Richtung (mit Übersetzung)
         Text(
-          "Qibla Richtung: ${qiblahDegrees.toStringAsFixed(0)}°",
+          "${loc.qiblaDirection}: ${qiblahDegrees.toStringAsFixed(0)}°",
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
       ],
