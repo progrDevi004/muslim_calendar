@@ -340,6 +340,7 @@ class HomePageState extends State<HomePage> {
                   view: _selectedView,
                   controller: _calendarController,
                   dataSource: _dataSource,
+                  allowAppointmentResize: true,
                   showDatePickerButton: true,
                   monthViewSettings: const MonthViewSettings(
                     appointmentDisplayMode:
