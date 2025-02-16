@@ -2,26 +2,28 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-// Deine Localization
-import 'package:muslim_calendar/localization/app_localizations.dart';
-// Deine HomePage
-import 'package:muslim_calendar/ui/pages/home_page.dart';
-// Dein ThemeNotifier
-import 'package:muslim_calendar/providers/theme_notifier.dart';
-
-// NEU: Für Standort-Erstabfrage
-import 'package:muslim_calendar/ui/pages/initial_location_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// NEU: NotificationService-Import
+// Localization
+import 'package:muslim_calendar/localization/app_localizations.dart';
+// ThemeNotifier
+import 'package:muslim_calendar/providers/theme_notifier.dart';
+// HomePage
+import 'package:muslim_calendar/ui/pages/home_page.dart';
+// InitialLocationPage
+import 'package:muslim_calendar/ui/pages/initial_location_page.dart';
+
+// NotificationService
 import 'package:muslim_calendar/data/services/notification_service.dart';
+// PrayerTimeService und zugehöriges Repository
+import 'package:muslim_calendar/data/services/prayer_time_service.dart';
+import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
 
 void main() async {
-  // Damit wir vor dem runApp asynchrone Aufrufe durchführen können:
+  // Widgets binding sicherstellen, da asynchrone Aufrufe vor runApp durchgeführt werden sollen.
   WidgetsFlutterBinding.ensureInitialized();
 
-  // NotificationService initialisieren + (falls iOS) um Erlaubnis fragen
+  // NotificationService initialisieren (und ggf. um Berechtigung fragen, wenn iOS)
   await NotificationService().init();
 
   runApp(
@@ -31,9 +33,13 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => AppLocalizations(),
         ),
-        // ThemeNotifier => für Dark/Light/System
+        // ThemeNotifier-Provider
         ChangeNotifierProvider(
           create: (_) => ThemeNotifier(),
+        ),
+        // PrayerTimeService-Provider (mit dem zugehörigen Repository)
+        ChangeNotifierProvider(
+          create: (_) => PrayerTimeService(PrayerTimeRepository()),
         ),
       ],
       child: const MyApp(),
@@ -43,13 +49,12 @@ void main() async {
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
-
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  // Wir prüfen hier, ob der Nutzer bereits einen Standort festgelegt hat.
+  // Prüft, ob der Nutzer bereits einen Standort festgelegt hat.
   late Future<bool> _locationCheckFuture;
 
   @override
@@ -59,7 +64,6 @@ class _MyAppState extends State<MyApp> {
   }
 
   /// Prüft in SharedPreferences, ob 'wasLocationAsked' bereits true ist.
-  /// Falls nicht, führen wir den Nutzer zuerst durch die Standort-Abfrage.
   Future<bool> _checkInitialLocation() async {
     final prefs = await SharedPreferences.getInstance();
     final wasAsked = prefs.getBool('wasLocationAsked') ?? false;
@@ -68,7 +72,6 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Unser ThemeNotifier, damit wir themeMode auslesen können
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final themeMode = themeNotifier.currentThemeMode;
 
@@ -199,30 +202,21 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       title: 'Muslim Calendar',
       debugShowCheckedModeBanner: false,
-
-      // Wichtig: Wir nutzen nun themeMode
       themeMode: themeMode,
-
       theme: lightTheme,
       darkTheme: darkTheme,
-
-      // FutureBuilder, um herauszufinden, ob wir InitialLocationPage oder HomePage anzeigen
       home: FutureBuilder<bool>(
         future: _locationCheckFuture,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            // Noch laden wir
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
           }
-
           final wasAsked = snapshot.data ?? false;
           if (!wasAsked) {
-            // Standort noch nicht festgelegt => zum Auswahldialog
             return const InitialLocationPage();
           } else {
-            // Standort schon da => direkt zur HomePage
             return const HomePage();
           }
         },

@@ -110,6 +110,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
   bool get _isIos => Platform.isIOS;
 
+  /// Wandelt den internen AppLanguage-Wert in einen Locale-Code (String) um.
+  AppLanguage? _lastLanguage;
+
   @override
   void initState() {
     super.initState();
@@ -122,7 +125,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     _initDefaultValues();
     _loadAppointmentData();
 
-    // Neu: Listeners zur automatischen Kategorisierung
+    // Listener zur automatischen Kategorisierung
     _titleController.addListener(_autoCategorizeIfNeeded);
     _descriptionController.addListener(_autoCategorizeIfNeeded);
 
@@ -130,10 +133,21 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final currentLang =
+        Provider.of<AppLocalizations>(context, listen: false).currentLanguage;
+    if (_lastLanguage != currentLang) {
+      _lastLanguage = currentLang;
+      // Bei Sprachwechsel neu laden:
+      _loadCountryCityData();
+    }
+  }
+
+  @override
   void dispose() {
     _titleController.removeListener(_autoCategorizeIfNeeded);
     _descriptionController.removeListener(_autoCategorizeIfNeeded);
-
     _titleController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -149,8 +163,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
   /// Land/Stadt-JSON laden
   Future<void> _loadCountryCityData() async {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    final languageCode = loc.mapAppLanguageToCode(loc.currentLanguage);
     final String response =
-        await rootBundle.loadString('assets/country_city_data.json');
+        await rootBundle.loadString('assets/country_city_$languageCode.json');
     final Map<String, dynamic> data = json.decode(response);
     setState(() {
       _countryCityData = data.map((key, value) =>
@@ -539,9 +555,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   }
 
   // --------------------------------------------------------------------------
-  // NEU: Vier separate Methoden zum Auswählen von Start-/End-Datum und -Zeit
-  // --------------------------------------------------------------------------
-
+  // NEU: Separate Methoden für Datum und Zeit (unverändert)
   Future<void> _pickStartDate() async {
     final pickedDate = await _showAdaptiveDatePicker(
       context: context,
@@ -639,27 +653,435 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       });
     }
   }
-
   // --------------------------------------------------------------------------
   // ENDE NEU
-  // --------------------------------------------------------------------------
 
-  /// Anzeigeformat
+  /// Hilfsmethode zum Formatieren der Zeit (unverändert)
   String _formatTime(DateTime dt) {
     final pattern = _use24hFormat ? 'HH:mm' : 'h:mm a';
     return DateFormat(pattern).format(dt);
   }
 
+  /// NEU: Hilfsmethode zum Formatieren des Datums
+  String _formatDate(DateTime dt) {
+    return DateFormat('dd.MM.yyyy').format(dt);
+  }
+
+  // --------------------------------------------------------------------------
+  // NEU: Aufbau des UI – Google Kalender–Stil
+  Widget _buildGoogleCalendarForm(AppLocalizations loc) {
+    return Form(
+      key: _formKey,
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: 20),
+        children: [
+          // Titel (groß, ohne Rahmen)
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextFormField(
+              controller: _titleController,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                hintText: loc.titleLabel,
+                border: InputBorder.none,
+              ),
+              validator: (value) =>
+                  (value == null || value.isEmpty) ? loc.titleLabel : null,
+            ),
+          ),
+          const Divider(height: 1),
+          // Startzeit
+          ListTile(
+            leading: const Icon(Icons.access_time),
+            title: const Text('Start'),
+            subtitle: Text(_startTime != null
+                ? '${_formatDate(_startTime!)}, ${_formatTime(_startTime!)}'
+                : '---'),
+            onTap: () async {
+              await _pickStartDate();
+              await _pickStartTime();
+            },
+          ),
+          // Endzeit
+          ListTile(
+            leading: const Icon(Icons.access_time),
+            title: const Text('End'),
+            subtitle: Text(_endTime != null
+                ? '${_formatDate(_endTime!)}, ${_formatTime(_endTime!)}'
+                : '---'),
+            onTap: () async {
+              await _pickEndDate();
+              await _pickEndTime();
+            },
+          ),
+          // All-Day Schalter
+          SwitchListTile.adaptive(
+            title: Text(loc.allDay),
+            value: _isAllDay,
+            onChanged: (bool value) {
+              setState(() {
+                _isAllDay = value;
+                if (value && _startTime != null) {
+                  _endTime = _startTime!.add(const Duration(hours: 1));
+                }
+              });
+            },
+          ),
+          const Divider(height: 1),
+          // Kategorie & Farbe
+          ListTile(
+            leading: CircleAvatar(
+              backgroundColor: _color,
+            ),
+            title: Text(_selectedCategory != null
+                ? _selectedCategory!.name
+                : loc.selectCategoryLabel),
+            trailing: const Icon(Icons.arrow_forward_ios),
+            onTap: () {
+              // Hier könnte ein separater Dialog zur Kategoriewahl geöffnet werden.
+            },
+          ),
+          // Erinnerung
+          ListTile(
+            leading: const Icon(Icons.alarm),
+            title: Text(loc.reminderInMinutes),
+            subtitle: Text(_selectedReminderMinutes != null
+                ? (_selectedReminderMinutes! < 60
+                    ? loc.minutesBefore(_selectedReminderMinutes!)
+                    : _selectedReminderMinutes! < 1440
+                        ? loc.hoursBefore(_selectedReminderMinutes! ~/ 60)
+                        : loc.daysBefore(_selectedReminderMinutes! ~/ 1440))
+                : loc.noReminder),
+            trailing: const Icon(Icons.arrow_forward_ios),
+            onTap: () {
+              _showReminderSelectionDialog(loc);
+            },
+          ),
+          const Divider(height: 1),
+          // Mehr Optionen ein-/ausklappen
+          ListTile(
+            leading: const Icon(Icons.more_horiz),
+            title: Text(
+                _showAdvancedOptions ? loc.fewerOptions : loc.advancedOptions),
+            trailing: const Icon(Icons.arrow_drop_down),
+            onTap: () {
+              setState(() {
+                _showAdvancedOptions = !_showAdvancedOptions;
+              });
+            },
+          ),
+          if (_showAdvancedOptions) ...[
+            // Beschreibung
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: TextFormField(
+                controller: _descriptionController,
+                decoration: InputDecoration(labelText: loc.description),
+                minLines: 1,
+                maxLines: 3,
+              ),
+            ),
+            // Gebetszeit Einstellungen
+            SwitchListTile.adaptive(
+              title: Text(loc.relatedToPrayerTimes),
+              subtitle: Text(loc.relatedToPrayerTimesSubtitle),
+              value: _isRelatedToPrayerTimes,
+              onChanged: (bool value) {
+                setState(() {
+                  _isRelatedToPrayerTimes = value;
+                  if (value && _startTime != null) {
+                    _endTime = _startTime!.add(const Duration(hours: 1));
+                  }
+                });
+              },
+            ),
+            if (_isRelatedToPrayerTimes) ...[
+              ListTile(
+                leading: const Icon(Icons.calendar_today),
+                title: Text(loc.selectDate),
+                subtitle: Text(_startTime != null
+                    ? '${_startTime!.day}/${_startTime!.month}/${_startTime!.year}'
+                    : loc.selectDate),
+                onTap: () async {
+                  final picked = await _showAdaptiveDatePicker(
+                    context: context,
+                    initialDate: _startTime ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                  );
+                  if (picked != null) {
+                    setState(() {
+                      _startTime = DateTime(
+                        picked.year,
+                        picked.month,
+                        picked.day,
+                        _startTime?.hour ?? 12,
+                        _startTime?.minute ?? 0,
+                      );
+                      _endTime = _startTime!.add(const Duration(hours: 1));
+                    });
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.timer),
+                title: Text(loc.prayerTime),
+                subtitle: Text(_selectedPrayerTime != null
+                    ? loc.getPrayerTimeLabel(_selectedPrayerTime!)
+                    : loc.selectPrayerTime),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () {
+                  _showPrayerTimeSelectionDialog(loc);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.schedule),
+                title: Text(loc.timeRelation),
+                subtitle: Text(_selectedTimeRelation != null
+                    ? loc.getTimeRelationLabel(_selectedTimeRelation!)
+                    : loc.timeRelation),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () {
+                  _showTimeRelationSelectionDialog(loc);
+                },
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        initialValue: _minutesBeforeAfter?.toString(),
+                        keyboardType: TextInputType.number,
+                        decoration:
+                            InputDecoration(labelText: loc.minutesBeforeAfter),
+                        onChanged: (value) {
+                          setState(() {
+                            _minutesBeforeAfter = int.tryParse(value);
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        initialValue: _duration?.inMinutes.toString(),
+                        keyboardType: TextInputType.number,
+                        decoration:
+                            InputDecoration(labelText: loc.durationMinutes),
+                        onChanged: (value) {
+                          setState(() {
+                            _duration =
+                                Duration(minutes: int.tryParse(value) ?? 30);
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            // Standort (Länder/City)
+            ListTile(
+              leading: const Icon(Icons.location_on),
+              title: Text(loc.country),
+              subtitle: Text(_selectedCountry ?? loc.selectCountry),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: () {
+                _showCountrySelectionDialog(loc);
+              },
+            ),
+            if (_selectedCountry != null)
+              ListTile(
+                leading: const Icon(Icons.location_city),
+                title: Text(loc.city),
+                subtitle: Text(_selectedCity ?? loc.selectCity),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () {
+                  _showCitySelectionDialog(loc);
+                },
+              ),
+            // Recurrence
+            ListTile(
+              leading: const Icon(Icons.repeat),
+              title: Text(loc.recurrence),
+              subtitle: Text(_isRecurring ? loc.recurringEvent : ''),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: () {
+                setState(() {
+                  _isRecurring = !_isRecurring;
+                });
+              },
+            ),
+            if (_isRecurring) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: DropdownButtonFormField<RecurrenceType>(
+                  value: _recurrenceType,
+                  decoration: InputDecoration(labelText: loc.recurrenceType),
+                  onChanged: (value) {
+                    setState(() {
+                      _recurrenceType = value!;
+                      if (_recurrenceType == RecurrenceType.weekly) {
+                        _selectedWeekDays = List.filled(7, false);
+                        if (_startTime != null) {
+                          final index = (_startTime!.weekday - 1) % 7;
+                          _selectedWeekDays[index] = true;
+                        }
+                      }
+                    });
+                  },
+                  items: RecurrenceType.values.map((type) {
+                    return DropdownMenuItem<RecurrenceType>(
+                      value: type,
+                      child: Text(loc.getRecurrenceTypeLabel(type)),
+                    );
+                  }).toList(),
+                ),
+              ),
+              if (_recurrenceType == RecurrenceType.weekly)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Wrap(
+                    spacing: 8.0,
+                    children: List.generate(7, (index) {
+                      final dayNames = [
+                        'MON',
+                        'TUE',
+                        'WED',
+                        'THU',
+                        'FRI',
+                        'SAT',
+                        'SUN'
+                      ];
+                      return FilterChip(
+                        label: Text(dayNames[index]),
+                        selected: _selectedWeekDays[index],
+                        onSelected: (bool selected) {
+                          setState(() {
+                            _selectedWeekDays[index] = selected;
+                          });
+                        },
+                      );
+                    }),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: TextFormField(
+                  initialValue: _recurrenceInterval.toString(),
+                  keyboardType: TextInputType.number,
+                  decoration:
+                      InputDecoration(labelText: loc.recurrenceInterval),
+                  onChanged: (value) {
+                    setState(() {
+                      _recurrenceInterval = int.tryParse(value) ?? 1;
+                    });
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: DropdownButtonFormField<RecurrenceRange>(
+                  value: _recurrenceRange,
+                  decoration: InputDecoration(labelText: loc.recurrenceRange),
+                  onChanged: (value) {
+                    setState(() {
+                      _recurrenceRange = value!;
+                    });
+                  },
+                  items: RecurrenceRange.values.map((range) {
+                    return DropdownMenuItem<RecurrenceRange>(
+                      value: range,
+                      child: Text(loc.getRecurrenceRangeLabel(range)),
+                    );
+                  }).toList(),
+                ),
+              ),
+              if (_recurrenceRange == RecurrenceRange.count)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: TextFormField(
+                    initialValue: _recurrenceCount?.toString(),
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(labelText: loc.recurrenceCount),
+                    onChanged: (value) {
+                      setState(() {
+                        _recurrenceCount = int.tryParse(value);
+                      });
+                    },
+                  ),
+                ),
+              if (_recurrenceRange == RecurrenceRange.endDate)
+                ListTile(
+                  leading: const Icon(Icons.date_range),
+                  title: Text(loc.recurrenceEndDate),
+                  subtitle:
+                      Text(_recurrenceEndDate?.toString() ?? loc.selectEndDate),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () async {
+                    final selectedDate = await _showAdaptiveDatePicker(
+                      context: context,
+                      initialDate: _recurrenceEndDate ?? DateTime.now(),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (selectedDate != null) {
+                      setState(() {
+                        _recurrenceEndDate = selectedDate;
+                      });
+                    }
+                  },
+                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: FilledButton(
+                  onPressed: _addExceptionDate,
+                  child: Text(loc.addExceptionDate),
+                ),
+              ),
+              if (_exceptionDates.isNotEmpty)
+                Column(
+                  children: _exceptionDates.map((date) {
+                    return ListTile(
+                      title: Text(date.toIso8601String()),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () {
+                          setState(() {
+                            _exceptionDates.remove(date);
+                          });
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+            ],
+          ],
+          // Save Button
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: _isIos
+                ? CupertinoButton.filled(
+                    child: Text(loc.save),
+                    onPressed: _saveAppointment,
+                  )
+                : FilledButton(
+                    onPressed: _saveAppointment,
+                    child: Text(loc.save),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+  // --------------------------------------------------------------------------
+  // ENDE NEU: UI im Google Kalender-Stil
+  // --------------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
-    final headlineStyle = Theme.of(context)
-        .textTheme
-        .titleMedium
-        ?.copyWith(fontWeight: FontWeight.bold);
-
-    // WICHTIG: Wir packen das Ganze bei iOS in eine Material-Hülle, damit
-    // TextFormFields, Dropdowns usw. kein Problem verursachen.
     if (_isIos) {
       return CupertinoPageScaffold(
         navigationBar: CupertinoNavigationBar(
@@ -675,704 +1097,22 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           ),
         ),
         child: SafeArea(
-          child: Material(
-            child: _buildMainBody(headlineStyle, loc),
-          ),
+          child: _buildGoogleCalendarForm(loc),
         ),
       );
     } else {
-      // Android
       return Scaffold(
         appBar: AppBar(
           title: Text(widget.appointmentId == null
               ? loc.createAppointment
               : loc.editAppointment),
         ),
-        body: _buildMainBody(headlineStyle, loc),
+        body: _buildGoogleCalendarForm(loc),
       );
     }
   }
 
-  Widget _buildMainBody(TextStyle? headlineStyle, AppLocalizations loc) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(loc.general, style: headlineStyle),
-            const SizedBox(height: 12),
-
-            // Titel
-            TextFormField(
-              controller: _titleController,
-              decoration: InputDecoration(labelText: '${loc.titleLabel} *'),
-              validator: (value) =>
-                  (value == null || value.isEmpty) ? loc.titleLabel : null,
-            ),
-            const SizedBox(height: 12),
-
-            // NUR sichtbar, wenn NICHT auf PrayerTimes bezogen
-            if (!_isRelatedToPrayerTimes) ...[
-              // NEU: Start-Datum/-Zeit + End-Datum/-Zeit separat
-              Text(loc.startDate,
-                  style: Theme.of(context).textTheme.labelLarge),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  // Start-Datum
-                  Expanded(
-                    child: InkWell(
-                      onTap: _pickStartDate,
-                      child: _buildDateDisplay(
-                        label: loc.date,
-                        dateTime: _startTime,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Start-Zeit
-                  if (!_isAllDay)
-                    Expanded(
-                      child: InkWell(
-                        onTap: _pickStartTime,
-                        child: _buildTimeDisplay(
-                          label: loc.time,
-                          dateTime: _startTime,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(loc.endDate, style: Theme.of(context).textTheme.labelLarge),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  // End-Datum
-                  Expanded(
-                    child: InkWell(
-                      onTap: _pickEndDate,
-                      child: _buildDateDisplay(
-                        label: loc.date,
-                        dateTime: _endTime,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // End-Zeit
-                  if (!_isAllDay)
-                    Expanded(
-                      child: InkWell(
-                        onTap: _pickEndTime,
-                        child: _buildTimeDisplay(
-                          label: loc.time,
-                          dateTime: _endTime,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-            ],
-
-            // Kategorie & Farbe
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<CategoryModel>(
-                    value: _selectedCategory,
-                    decoration:
-                        InputDecoration(labelText: loc.selectCategoryLabel),
-                    items: _allCategories.map((cat) {
-                      return DropdownMenuItem<CategoryModel>(
-                        value: cat,
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 12,
-                              height: 12,
-                              margin: const EdgeInsets.only(right: 8),
-                              decoration: BoxDecoration(
-                                color: cat.color,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            Text(cat.name),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedCategory = value;
-                        _isCategoryDropdownClicked = true;
-                        if (_selectedCategory != null) {
-                          _color = _selectedCategory!.color;
-                        }
-                      });
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: () => _pickColor(context),
-                  child: Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      color: _color,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.color_lens,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Ganztägig
-            SwitchListTile.adaptive(
-              title: Text(loc.allDay),
-              subtitle: Text(loc.allDaySubtitle),
-              value: _isAllDay,
-              onChanged: !_isRelatedToPrayerTimes
-                  ? (bool value) {
-                      setState(() {
-                        _isAllDay = value;
-                        if (value && _startTime != null) {
-                          _endTime = _startTime!.add(const Duration(hours: 1));
-                        }
-                      });
-                    }
-                  : null,
-            ),
-            const SizedBox(height: 16),
-
-            // Erinnerung
-            DropdownButtonFormField<int?>(
-              value: _selectedReminderMinutes,
-              decoration: InputDecoration(labelText: loc.reminderInMinutes),
-              onChanged: (val) {
-                setState(() {
-                  _selectedReminderMinutes = val;
-                });
-              },
-              items: _reminderOptions.map((option) {
-                if (option == null) {
-                  return DropdownMenuItem<int?>(
-                    value: null,
-                    child: Text(loc.noReminder),
-                  );
-                } else if (option < 60) {
-                  return DropdownMenuItem<int?>(
-                    value: option,
-                    child: Text(loc.minutesBefore(option)),
-                  );
-                } else if (option < 1440) {
-                  final h = option ~/ 60;
-                  return DropdownMenuItem<int?>(
-                    value: option,
-                    child: Text(loc.hoursBefore(h)),
-                  );
-                } else {
-                  final d = option ~/ 1440;
-                  return DropdownMenuItem<int?>(
-                    value: option,
-                    child: Text(loc.daysBefore(d)),
-                  );
-                }
-              }).toList(),
-            ),
-
-            const SizedBox(height: 20),
-
-            FilledButton(
-              onPressed: () {
-                setState(() {
-                  _showAdvancedOptions = !_showAdvancedOptions;
-                });
-              },
-              child: Text(
-                _showAdvancedOptions ? loc.fewerOptions : loc.advancedOptions,
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: _showAdvancedOptions
-                  ? _buildAdvancedOptions(loc, headlineStyle)
-                  : const SizedBox(),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Speichern / Löschen Buttons (nur bei Android in der Footer-Leiste, bei iOS ins Nav)
-            if (!_isIos)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  FilledButton(
-                    onPressed: _saveAppointment,
-                    child: Text(loc.save),
-                  ),
-                  if (_currentAppointmentId != null) ...[
-                    const SizedBox(width: 10),
-                    OutlinedButton(
-                      onPressed: _deleteAppointment,
-                      child: Text(loc.delete),
-                    ),
-                  ],
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Erweitere Optionen
-  Widget _buildAdvancedOptions(AppLocalizations loc, TextStyle? headlineStyle) {
-    return Column(
-      key: const ValueKey('advancedOptions'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: _descriptionController,
-          minLines: 1,
-          maxLines: 3,
-          decoration: InputDecoration(labelText: loc.description),
-        ),
-        const SizedBox(height: 12),
-        Text(loc.prayerTimeSettings, style: headlineStyle),
-        SwitchListTile.adaptive(
-          title: Text(loc.relatedToPrayerTimes),
-          subtitle: Text(loc.relatedToPrayerTimesSubtitle),
-          value: _isRelatedToPrayerTimes,
-          onChanged: !_isAllDay
-              ? (bool value) {
-                  setState(() {
-                    _isRelatedToPrayerTimes = value;
-                    if (value && _startTime != null) {
-                      _endTime = _startTime!.add(const Duration(hours: 1));
-                    }
-                  });
-                }
-              : null,
-        ),
-        if (_isRelatedToPrayerTimes) ...[
-          ListTile(
-            title: Text(loc.selectDate),
-            subtitle: Text(_startTime != null
-                ? '${_startTime!.day}/${_startTime!.month}/${_startTime!.year}'
-                : loc.selectDate),
-            onTap: () async {
-              final picked = await _showAdaptiveDatePicker(
-                context: context,
-                initialDate: _startTime ?? DateTime.now(),
-                firstDate: DateTime(2000),
-                lastDate: DateTime(2100),
-              );
-              if (picked != null) {
-                setState(() {
-                  _startTime = DateTime(
-                    picked.year,
-                    picked.month,
-                    picked.day,
-                  );
-                  _endTime = _startTime!.add(const Duration(hours: 1));
-                });
-              }
-            },
-          ),
-          DropdownButtonFormField<PrayerTime>(
-            value: _selectedPrayerTime,
-            hint: Text(loc.selectPrayerTime),
-            decoration: InputDecoration(labelText: loc.prayerTime),
-            onChanged: (value) {
-              setState(() {
-                _selectedPrayerTime = value;
-              });
-            },
-            items: PrayerTime.values.map((pt) {
-              return DropdownMenuItem<PrayerTime>(
-                value: pt,
-                child: Text(loc.getPrayerTimeLabel(pt)),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<TimeRelation>(
-            value: _selectedTimeRelation,
-            decoration: InputDecoration(labelText: loc.timeRelation),
-            items: TimeRelation.values.map((timeRelation) {
-              return DropdownMenuItem<TimeRelation>(
-                value: timeRelation,
-                child: Text(loc.getTimeRelationLabel(timeRelation)),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedTimeRelation = value;
-              });
-            },
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            initialValue: _minutesBeforeAfter?.toString(),
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: loc.minutesBeforeAfter),
-            onChanged: (value) {
-              _minutesBeforeAfter = int.tryParse(value);
-            },
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            initialValue: _duration?.inMinutes.toString(),
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: loc.durationMinutes),
-            onChanged: (value) {
-              _duration = Duration(minutes: int.tryParse(value) ?? 30);
-            },
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            value: _countryCityData.keys.contains(_selectedCountry)
-                ? _selectedCountry
-                : null,
-            hint: Text(loc.selectCountry),
-            decoration: InputDecoration(labelText: loc.country),
-            onChanged: (value) {
-              setState(() {
-                _selectedCountry = value;
-                _selectedCity = null;
-              });
-            },
-            items: _countryCityData.keys.map((c) {
-              return DropdownMenuItem<String>(
-                value: c,
-                child: Text(c),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 12),
-          if (_selectedCountry != null)
-            DropdownButtonFormField<String>(
-              value: (_selectedCity != null &&
-                      _countryCityData[_selectedCountry]!
-                          .contains(_selectedCity))
-                  ? _selectedCity
-                  : null,
-              hint: Text(loc.selectCity),
-              decoration: InputDecoration(labelText: loc.city),
-              onChanged: (value) {
-                setState(() {
-                  _selectedCity = value;
-                });
-              },
-              items: _countryCityData[_selectedCountry]!.map((city) {
-                return DropdownMenuItem<String>(
-                  value: city,
-                  child: Text(city),
-                );
-              }).toList(),
-            ),
-        ],
-        const SizedBox(height: 24),
-        Text(loc.recurrence, style: headlineStyle),
-        SwitchListTile.adaptive(
-          title: Text(loc.recurringEvent),
-          value: _isRecurring,
-          onChanged: (value) {
-            setState(() {
-              _isRecurring = value;
-            });
-          },
-        ),
-        if (_isRecurring) ...[
-          DropdownButtonFormField<RecurrenceType>(
-            value: _recurrenceType,
-            decoration: InputDecoration(labelText: loc.recurrenceType),
-            onChanged: (value) {
-              setState(() {
-                _recurrenceType = value!;
-                if (_recurrenceType == RecurrenceType.weekly) {
-                  _selectedWeekDays = List.filled(7, false);
-                  if (_startTime != null) {
-                    final index = (_startTime!.weekday - 1) % 7;
-                    _selectedWeekDays[index] = true;
-                  }
-                }
-              });
-            },
-            items: RecurrenceType.values.map((type) {
-              return DropdownMenuItem<RecurrenceType>(
-                value: type,
-                child: Text(loc.getRecurrenceTypeLabel(type)),
-              );
-            }).toList(),
-          ),
-          if (_recurrenceType == RecurrenceType.weekly) ...[
-            const SizedBox(height: 12),
-            Text(
-              loc.recurrenceDays,
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8.0,
-              children: List.generate(7, (index) {
-                final dayNames = [
-                  'MON',
-                  'TUE',
-                  'WED',
-                  'THU',
-                  'FRI',
-                  'SAT',
-                  'SUN'
-                ];
-                return FilterChip(
-                  label: Text(dayNames[index]),
-                  selected: _selectedWeekDays[index],
-                  shape: const StadiumBorder(),
-                  onSelected: (bool selected) {
-                    setState(() {
-                      _selectedWeekDays[index] = selected;
-                    });
-                  },
-                );
-              }),
-            ),
-          ],
-          const SizedBox(height: 12),
-          TextFormField(
-            initialValue: _recurrenceInterval.toString(),
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: loc.recurrenceInterval),
-            onChanged: (value) {
-              _recurrenceInterval = int.tryParse(value) ?? 1;
-            },
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<RecurrenceRange>(
-            value: _recurrenceRange,
-            decoration: InputDecoration(labelText: loc.recurrenceRange),
-            onChanged: (value) {
-              setState(() {
-                _recurrenceRange = value!;
-              });
-            },
-            items: RecurrenceRange.values.map((range) {
-              return DropdownMenuItem<RecurrenceRange>(
-                value: range,
-                child: Text(loc.getRecurrenceRangeLabel(range)),
-              );
-            }).toList(),
-          ),
-          if (_recurrenceRange == RecurrenceRange.count) ...[
-            const SizedBox(height: 12),
-            TextFormField(
-              initialValue: _recurrenceCount?.toString(),
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: loc.recurrenceCount),
-              onChanged: (value) {
-                _recurrenceCount = int.tryParse(value);
-              },
-            ),
-          ],
-          if (_recurrenceRange == RecurrenceRange.endDate) ...[
-            const SizedBox(height: 12),
-            ListTile(
-              title: Text(loc.recurrenceEndDate),
-              subtitle: Text(
-                _recurrenceEndDate?.toString() ?? loc.selectEndDate,
-              ),
-              onTap: () async {
-                final selectedDate = await _showAdaptiveDatePicker(
-                  context: context,
-                  initialDate: _recurrenceEndDate ?? DateTime.now(),
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime(2100),
-                );
-                if (selectedDate != null) {
-                  setState(() {
-                    _recurrenceEndDate = selectedDate;
-                  });
-                }
-              },
-            ),
-          ],
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: _addExceptionDate,
-            child: Text(loc.addExceptionDate),
-          ),
-          if (_exceptionDates.isNotEmpty)
-            Column(
-              children: _exceptionDates.map((date) {
-                return ListTile(
-                  title: Text(date.toIso8601String()),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete),
-                    onPressed: () {
-                      setState(() {
-                        _exceptionDates.remove(date);
-                      });
-                    },
-                  ),
-                );
-              }).toList(),
-            ),
-        ],
-      ],
-    );
-  }
-
-  // >>> NEU: Separate UI-Bausteine für Datum und Zeit
-
-  Widget _buildDateDisplay({
-    required String label,
-    required DateTime? dateTime,
-  }) {
-    final text = (dateTime != null)
-        ? '${dateTime.day}.${dateTime.month}.${dateTime.year}'
-        : '---';
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final containerColor =
-        isDark ? Colors.grey[800]! : const Color.fromARGB(255, 245, 245, 245);
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: containerColor,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            text,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimeDisplay({
-    required String label,
-    required DateTime? dateTime,
-  }) {
-    final text = (dateTime != null) ? _formatTime(dateTime) : '---';
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final containerColor =
-        isDark ? Colors.grey[800]! : const Color.fromARGB(255, 245, 245, 245);
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: containerColor,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            text,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Farbwahl
-  void _pickColor(BuildContext context) {
-    Color tempColor = _color;
-    final loc = Provider.of<AppLocalizations>(context, listen: false);
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        final dialog = AlertDialog(
-          title: Text(loc.select),
-          content: SingleChildScrollView(
-            child: BlockPicker(
-              pickerColor: _color,
-              onColorChanged: (Color c) {
-                tempColor = c;
-              },
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text(loc.cancel),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            FilledButton(
-              child: Text(loc.select),
-              onPressed: () {
-                setState(() {
-                  _color = tempColor;
-                });
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-
-        return Platform.isIOS
-            ? CupertinoAlertDialog(
-                title: Text(loc.select),
-                content: SizedBox(
-                  height: 300,
-                  child: BlockPicker(
-                    pickerColor: _color,
-                    onColorChanged: (Color c) {
-                      tempColor = c;
-                    },
-                  ),
-                ),
-                actions: [
-                  CupertinoDialogAction(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text(loc.cancel),
-                  ),
-                  CupertinoDialogAction(
-                    onPressed: () {
-                      setState(() {
-                        _color = tempColor;
-                      });
-                      Navigator.of(context).pop();
-                    },
-                    child: Text(loc.select),
-                  ),
-                ],
-              )
-            : dialog;
-      },
-    );
-  }
-
-  /// Zeigt einen adaptiven Dialog (Bestätigung)
+  /// Adaptive Dialog (Bestätigung)
   Future<bool> _showAdaptiveDialog({
     required BuildContext context,
     required String title,
@@ -1381,7 +1121,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     required String cancelText,
   }) async {
     if (Platform.isIOS) {
-      // Cupertino
       final result = await showCupertinoDialog<bool>(
         context: context,
         builder: (ctx) => CupertinoAlertDialog(
@@ -1401,7 +1140,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       );
       return result ?? false;
     } else {
-      // Material
       final result = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -1423,7 +1161,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     }
   }
 
-  /// Zeigt einen adaptiven DatePicker (vereinfacht)
+  /// Adaptive DatePicker
   Future<DateTime?> _showAdaptiveDatePicker({
     required BuildContext context,
     required DateTime initialDate,
@@ -1432,10 +1170,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     String? helpText,
   }) async {
     if (Platform.isIOS) {
-      // iOS: Wir zeigen ein CupertinoDatePicker in einem Modal
       DateTime tempDate = initialDate;
       bool confirmed = false;
-
       await showCupertinoModalPopup(
         context: context,
         builder: (ctx) => Container(
@@ -1480,7 +1216,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       );
       return confirmed ? tempDate : null;
     } else {
-      // Android / Material
       return showDatePicker(
         context: context,
         initialDate: initialDate,
@@ -1491,13 +1226,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     }
   }
 
-  /// Zeigt einen adaptiven TimePicker
+  /// Adaptive TimePicker
   Future<DateTime?> _pickAdaptiveTime(DateTime dateBase) async {
     if (Platform.isIOS) {
-      // iOS: CupertinoTimePicker in einem Modal
       DateTime tempDateTime = dateBase;
       bool confirmed = false;
-
       await showCupertinoModalPopup(
         context: context,
         builder: (ctx) => Container(
@@ -1547,7 +1280,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       );
       return confirmed ? tempDateTime : null;
     } else {
-      // Android / Material
       final timeOfDay = await showTimePicker(
         context: context,
         initialTime: TimeOfDay(hour: dateBase.hour, minute: dateBase.minute),
@@ -1561,7 +1293,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         },
       );
       if (timeOfDay == null) return null;
-
       return DateTime(
         dateBase.year,
         dateBase.month,
@@ -1576,8 +1307,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   }
 }
 
-/// >>> NEU: Hilfs-Widget, um bei Eingabe-Feldern (Std/Min) alles zu selektieren,
-/// sodass direkt überschrieben wird.
+/// >>> NEU: Hilfs-Widget zum automatischen Selektieren beim Fokus (wie im Original)
 class _OverwriteOnFocus extends StatelessWidget {
   final Widget child;
   const _OverwriteOnFocus({required this.child, Key? key}) : super(key: key);
@@ -1590,8 +1320,6 @@ class _OverwriteOnFocus extends StatelessWidget {
   }
 }
 
-/// Kümmert sich darum, die Flutter-internen Textfelder für Stunden/Minuten
-/// zu finden und bei Fokus alles zu markieren.
 class _SelectAllOnFocusChild extends StatefulWidget {
   final Widget child;
   const _SelectAllOnFocusChild({required this.child, Key? key})
@@ -1630,4 +1358,163 @@ class _SelectAllTextOnFocusInherited extends InheritedWidget {
 
   @override
   bool updateShouldNotify(_SelectAllTextOnFocusInherited oldWidget) => false;
+}
+
+// --------------------------------------------------------------------------
+// NEU: Zusätzliche Dialog-Methoden für Reminder, Gebetszeit, Länder/City etc.
+// --------------------------------------------------------------------------
+
+extension _DialogHelpers on _AppointmentCreationPageState {
+  Future<void> _showReminderSelectionDialog(AppLocalizations loc) async {
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(loc.reminderInMinutes),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView(
+              shrinkWrap: true,
+              children: _reminderOptions.map((option) {
+                String text;
+                if (option == null) {
+                  text = loc.noReminder;
+                } else if (option < 60) {
+                  text = loc.minutesBefore(option);
+                } else if (option < 1440) {
+                  text = loc.hoursBefore(option ~/ 60);
+                } else {
+                  text = loc.daysBefore(option ~/ 1440);
+                }
+                return ListTile(
+                  title: Text(text),
+                  onTap: () {
+                    setState(() {
+                      _selectedReminderMinutes = option;
+                    });
+                    Navigator.pop(context);
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showPrayerTimeSelectionDialog(AppLocalizations loc) async {
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(loc.prayerTime),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView(
+              shrinkWrap: true,
+              children: PrayerTime.values.map((pt) {
+                return ListTile(
+                  title: Text(loc.getPrayerTimeLabel(pt)),
+                  onTap: () {
+                    setState(() {
+                      _selectedPrayerTime = pt;
+                    });
+                    Navigator.pop(context);
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showTimeRelationSelectionDialog(AppLocalizations loc) async {
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(loc.timeRelation),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView(
+              shrinkWrap: true,
+              children: TimeRelation.values.map((tr) {
+                return ListTile(
+                  title: Text(loc.getTimeRelationLabel(tr)),
+                  onTap: () {
+                    setState(() {
+                      _selectedTimeRelation = tr;
+                    });
+                    Navigator.pop(context);
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showCountrySelectionDialog(AppLocalizations loc) async {
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(loc.selectCountry),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView(
+              shrinkWrap: true,
+              children: _countryCityData.keys.map((country) {
+                return ListTile(
+                  title: Text(country),
+                  onTap: () {
+                    setState(() {
+                      _selectedCountry = country;
+                      _selectedCity = null;
+                    });
+                    Navigator.pop(context);
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showCitySelectionDialog(AppLocalizations loc) async {
+    if (_selectedCountry == null) return;
+    List<String> cities = _countryCityData[_selectedCountry]!;
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(loc.selectCity),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView(
+              shrinkWrap: true,
+              children: cities.map((city) {
+                return ListTile(
+                  title: Text(city),
+                  onTap: () {
+                    setState(() {
+                      _selectedCity = city;
+                    });
+                    Navigator.pop(context);
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

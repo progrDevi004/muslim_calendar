@@ -266,7 +266,7 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
             Positioned(
               left: centerPoint + markerX - 12,
               top: centerPoint + markerY - 12,
-              child: Column(
+              child: const Column(
                 mainAxisSize: MainAxisSize.min,
                 children: const [
                   Icon(

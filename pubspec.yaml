@@ -25,6 +25,7 @@ dependencies:
   flutter_native_timezone: ^2.0.0
   intl: ^0.19.0
   flutter_launcher_icons: ^0.13.1
+  dropdown_search: ^5.0.2
 
 
 
@@ -43,6 +44,9 @@ flutter_icons:
 flutter:
   uses-material-design: true
   assets:
-    - assets/country_city_data.json
+    - assets/country_city_en.json
+    - assets/country_city_de.json
+    - assets/country_city_tr.json
+    - assets/country_city_ar.json
     - assets/icons/icon.png
     - assets/images/logo.png

@@ -10,12 +10,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/data/services/notification_service.dart';
 import 'package:muslim_calendar/providers/theme_notifier.dart';
-
-// Neu: Für reDownloadAndRecalcAll()
+// NEU: Für reDownloadAndRecalcAll()
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 
 // Beispiel-Enum, kann auch global in app_language.dart liegen:
-
 enum LocationMode {
   automatic,
   manual,
@@ -80,11 +78,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _use24hFormat = prefs.getBool('use24hFormat') ?? false;
 
     final modeString = prefs.getString('locationMode') ?? 'automatic';
-    if (modeString == 'manual') {
-      _locationMode = LocationMode.manual;
-    } else {
-      _locationMode = LocationMode.automatic;
-    }
+    _locationMode =
+        (modeString == 'manual') ? LocationMode.manual : LocationMode.automatic;
     _defaultCountry = prefs.getString('defaultCountry');
     _defaultCity = prefs.getString('defaultCity');
 
@@ -110,6 +105,9 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _loadCountryCityData() async {
+    // Verwende listen: false, damit sich das Widget nicht unnötig rebuilt
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    final languageCode = loc.mapAppLanguageToCode(loc.currentLanguage);
     setState(() {
       _isLoadingCountries = true;
       _loadError = null;
@@ -117,9 +115,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
     try {
       final jsonString =
-          await rootBundle.loadString('assets/country_city_data.json');
+          await rootBundle.loadString('assets/country_city_$languageCode.json');
       final Map<String, dynamic> jsonMap = json.decode(jsonString);
-
       final Map<String, List<String>> parsed = jsonMap.map((k, v) {
         final list = (v as List).map((e) => e.toString()).toList();
         return MapEntry(k, list);
@@ -161,7 +158,7 @@ class _SettingsPageState extends State<SettingsPage> {
     await prefs.setInt('calculationMethod', _selectedCalcMethod);
   }
 
-  /// Ruft die Logik zum Neuladen auf
+  /// Ruft die Logik zum Neuladen der Gebetszeiten auf.
   Future<void> _updatePrayerTimes() async {
     final prayerTimeService = context.read<PrayerTimeService>();
     await prayerTimeService.reDownloadAndRecalcAll();
@@ -170,16 +167,13 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
-
     return _isIos
         ? CupertinoPageScaffold(
             navigationBar: CupertinoNavigationBar(
               middle: Text(loc.settings),
               trailing: GestureDetector(
                 onTap: () async {
-                  // Speichern
                   await _saveSettings();
-                  // Danach pop mit "true" => Dashboard kann neu laden
                   if (!mounted) return;
                   Navigator.of(context).pop(true);
                 },
@@ -190,9 +184,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             child: SafeArea(
-              child: Material(
-                child: _buildSettingsList(loc),
-              ),
+              child: Material(child: _buildSettingsList(loc)),
             ),
           )
         : Scaffold(
@@ -323,7 +315,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   value ? LocationMode.manual : LocationMode.automatic;
             });
             await _saveSettings();
-            // Gebetszeiten anstoßen, falls wir auf manuell umstellen
             if (_locationMode == LocationMode.manual) {
               await _updatePrayerTimes();
             }
@@ -400,7 +391,6 @@ class _SettingsPageState extends State<SettingsPage> {
               _selectedCalcMethod = value;
             });
             await _saveSettings();
-            // Neu laden
             await _updatePrayerTimes();
           },
           items: _calcMethodMap.entries.map((entry) {
@@ -411,14 +401,12 @@ class _SettingsPageState extends State<SettingsPage> {
           }).toList(),
         ),
 
-        // Falls Android => Speichern-Knopf
         if (!_isIos) ...[
           const SizedBox(height: 40),
           Center(
             child: FilledButton(
               onPressed: () async {
                 await _saveSettings();
-                // Wichtig: Pop mit true
                 if (!mounted) return;
                 Navigator.pop(context, true);
               },
@@ -446,7 +434,6 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ];
     }
-
     final countries = _countryCityData.keys.toList()..sort();
     return [
       const SizedBox(height: 8),
@@ -459,14 +446,14 @@ class _SettingsPageState extends State<SettingsPage> {
             padding: EdgeInsets.only(right: 8.0),
             child: Icon(
               Icons.arrow_drop_down,
-              size: 24, // Icon-Größe anpassen, wenn nötig
+              size: 24,
             ),
           ),
         ),
         onChanged: (value) async {
           setState(() {
             _defaultCountry = value;
-            _defaultCity = null; // reset
+            _defaultCity = null;
           });
           await _saveSettings();
           if (_defaultCountry != null && _defaultCountry!.isNotEmpty) {
@@ -495,7 +482,7 @@ class _SettingsPageState extends State<SettingsPage> {
               padding: EdgeInsets.only(right: 8.0),
               child: Icon(
                 Icons.arrow_drop_down,
-                size: 24, // Icon-Größe anpassen, wenn nötig
+                size: 24,
               ),
             ),
           ),
@@ -541,6 +528,8 @@ class _SettingsPageState extends State<SettingsPage> {
                             });
                             loc.setLanguage(lang);
                             await _saveSettings();
+                            // Beim Sprachwechsel Länderliste neu laden:
+                            await _loadCountryCityData();
                           },
                           child: Text(loc.getLanguageName(lang)),
                         );
@@ -575,6 +564,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     });
                     loc.setLanguage(lang);
                     await _saveSettings();
+                    // Beim Sprachwechsel Länderliste neu laden:
+                    await _loadCountryCityData();
                   },
                 );
               }).toList(),
