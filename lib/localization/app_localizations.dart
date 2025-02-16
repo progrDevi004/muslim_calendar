@@ -78,6 +78,66 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
+  String get initialLocationPageTitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Standort-Einstellungen';
+      case AppLanguage.turkish:
+        return 'Konum Ayarları';
+      case AppLanguage.arabic:
+        return 'إعدادات الموقع';
+      case AppLanguage.bosnian:
+        return 'Postavke lokacije';
+      case AppLanguage.spanish:
+        return 'Ajustes de ubicación';
+      case AppLanguage.persian:
+        return 'تنظیمات موقعیت';
+      case AppLanguage.english:
+      default:
+        return 'Location Settings';
+    }
+  }
+
+  String get next {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Weiter';
+      case AppLanguage.turkish:
+        return 'İleri';
+      case AppLanguage.arabic:
+        return 'التالي';
+      case AppLanguage.bosnian:
+        return 'Dalje';
+      case AppLanguage.spanish:
+        return 'Siguiente';
+      case AppLanguage.persian:
+        return 'بعدی';
+      case AppLanguage.english:
+      default:
+        return 'Next';
+    }
+  }
+
+  String get back {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Zurück';
+      case AppLanguage.turkish:
+        return 'Geri';
+      case AppLanguage.arabic:
+        return 'رجوع';
+      case AppLanguage.bosnian:
+        return 'Nazad';
+      case AppLanguage.spanish:
+        return 'Atrás';
+      case AppLanguage.persian:
+        return 'بازگشت';
+      case AppLanguage.english:
+      default:
+        return 'Back';
+    }
+  }
+
   String get myCalendar {
     switch (_currentLanguage) {
       case AppLanguage.german:
