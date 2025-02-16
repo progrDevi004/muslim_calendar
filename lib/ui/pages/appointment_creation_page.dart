@@ -738,7 +738,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 : loc.selectCategoryLabel),
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () {
-              // Hier könnte ein separater Dialog zur Kategoriewahl geöffnet werden.
+              _showCategorySelectionDialog(loc);
             },
           ),
           // Erinnerung
@@ -1361,7 +1361,7 @@ class _SelectAllTextOnFocusInherited extends InheritedWidget {
 }
 
 // --------------------------------------------------------------------------
-// NEU: Zusätzliche Dialog-Methoden für Reminder, Gebetszeit, Länder/City etc.
+// NEU: Zusätzliche Dialog-Methoden für Reminder, Gebetszeit, Länder/City, Kategorie etc.
 // --------------------------------------------------------------------------
 
 extension _DialogHelpers on _AppointmentCreationPageState {
@@ -1514,6 +1514,79 @@ extension _DialogHelpers on _AppointmentCreationPageState {
             ),
           ),
         );
+      },
+    );
+  }
+
+  /// NEU: Dialog zur Kategoriewahl
+  Future<void> _showCategorySelectionDialog(AppLocalizations loc) async {
+    await showDialog(
+      context: context,
+      builder: (context) {
+        if (Platform.isIOS) {
+          return CupertinoAlertDialog(
+            title: Text(loc.selectCategoryLabel),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                children: _allCategories.map((cat) {
+                  return CupertinoDialogAction(
+                    onPressed: () {
+                      setState(() {
+                        _selectedCategory = cat;
+                        _color = cat.color;
+                      });
+                      Navigator.pop(context);
+                    },
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: cat.color,
+                          radius: 10,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(cat.name),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            // cancelButton: CupertinoDialogAction(
+            //   onPressed: () => Navigator.pop(context),
+            //   child: Text(loc.cancel),
+            // ),
+          );
+        } else {
+          return AlertDialog(
+            title: Text(loc.selectCategoryLabel),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView(
+                shrinkWrap: true,
+                children: _allCategories.map((cat) {
+                  return ListTile(
+                    leading: CircleAvatar(backgroundColor: cat.color),
+                    title: Text(cat.name),
+                    onTap: () {
+                      setState(() {
+                        _selectedCategory = cat;
+                        _color = cat.color;
+                      });
+                      Navigator.pop(context);
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(loc.cancel),
+              ),
+            ],
+          );
+        }
       },
     );
   }
