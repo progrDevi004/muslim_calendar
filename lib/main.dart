@@ -1,6 +1,8 @@
 // lib/main.dart
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:muslim_calendar/data/services/outlook_calendar_api.dart';
+import 'package:muslim_calendar/data/services/outlook_sync_service.dart';
 import 'package:provider/provider.dart';
 
 // Deine Localization
@@ -19,8 +21,8 @@ import 'package:muslim_calendar/data/services/notification_service.dart';
 
 import 'data/repositories/appointment_repository.dart';
 import 'data/repositories/prayer_time_repository.dart';
-import 'data/services/calendar_sync_service.dart';
-import 'data/services/google_calendar_service.dart';
+import 'data/services/google_sync_service.dart';
+import 'data/services/google_calendar_api.dart';
 import 'data/services/prayer_time_service.dart';
 import 'data/services/recurrence_service.dart';
 
@@ -42,9 +44,6 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => ThemeNotifier(),
         ),
-        Provider<GoogleCalendarService>(
-          create: (_) => GoogleCalendarService(),
-        ),
         Provider<AppointmentRepository>(
           create: (_) => AppointmentRepository(),
         ),
@@ -55,9 +54,17 @@ void main() async {
           create: (_) => PrayerTimeService(PrayerTimeRepository()),
         ),
         // Ardından, CalendarSyncService nesnelerini oluşturuyoruz:
-        Provider<CalendarSyncService>(
-          create: (context) => CalendarSyncService(
-            calendarProvider: context.read<GoogleCalendarService>(),
+        Provider<GoogleSyncService>(
+          create: (context) => GoogleSyncService(
+            calendarProvider: context.read<GoogleCalendarApi>(),
+            appointmentRepository: context.read<AppointmentRepository>(),
+            recurrenceService: context.read<RecurrenceService>(),
+            prayerTimeService: context.read<PrayerTimeService>(),
+          ),
+        ),
+        Provider<OutlookSyncService>(
+          create: (context) => OutlookSyncService(
+            calendarProvider: context.read<OutlookCalendarApi>(),
             appointmentRepository: context.read<AppointmentRepository>(),
             recurrenceService: context.read<RecurrenceService>(),
             prayerTimeService: context.read<PrayerTimeService>(),

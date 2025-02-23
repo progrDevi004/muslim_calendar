@@ -1,28 +1,26 @@
-// lib/data/services/calendar_sync_service.dart
+// lib/data/services/google_sync_service.dart
 import 'package:flutter/cupertino.dart';
 import 'package:googleapis/calendar/v3.dart';
 import 'package:intl/intl.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
 import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
-import 'package:muslim_calendar/data/services/google_calendar_service.dart';
+import 'package:muslim_calendar/data/services/google_calendar_api.dart';
 import 'package:muslim_calendar/data/services/recurrence_service.dart';
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 
-class CalendarSyncService {
-  /// Takvim sağlayıcısı; ileride Outlook, Apple gibi sağlayıcılar için de ortak interface tanımlanabilir.
-  final GoogleCalendarService calendarProvider;
+class GoogleSyncService {
+  final GoogleCalendarApi calendarProvider;
   final AppointmentRepository appointmentRepository;
   final RecurrenceService recurrenceService;
   final PrayerTimeService prayerTimeService;
 
-  CalendarSyncService({
+  GoogleSyncService({
     required this.calendarProvider,
     required this.appointmentRepository,
     required this.recurrenceService,
     required this.prayerTimeService,
   });
 
-  /// Ortak import fonksiyonu: Sağlayıcı (örneğin Google) üzerinden event’leri çekip yerel veritabanına ekler.
   Future<void> importAppointments() async {
   await calendarProvider.autoSignIn();
   List<Event> events = await calendarProvider.fetchCalendarEvents();

@@ -70,4 +70,17 @@ class AppointmentRepository {
     return null;
   }
 
+    Future<AppointmentModel?> getAppointmentByExternalIdOutlook(String externalId) async {
+    final db = await dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'appointments',
+      where: 'externalIdOutlook = ?',
+      whereArgs: [externalId],
+    );
+    if (maps.isNotEmpty) {
+      return AppointmentModel.fromMap(maps.first);
+    }
+    return null;
+  }
+
 }

@@ -1,4 +1,4 @@
-// lib/data/services/google_calendar_service.dart
+// lib/data/services/google_calendar_api.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -6,7 +6,7 @@ import 'package:googleapis/calendar/v3.dart';
 import 'package:http/http.dart' as http;
 import 'package:muslim_calendar/models/appointment_model.dart';
 
-class GoogleCalendarService {
+class GoogleCalendarApi {
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: [
       'https://www.googleapis.com/auth/calendar',

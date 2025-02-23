@@ -1,0 +1,14 @@
+{
+    "client_id" : "5780a779-225f-4a70-83dd-ecd78a413584",
+    "authorization_user_agent" : "DEFAULT",
+    "redirect_uri" : "msauth://com.example.muslim_calendar/Bmce%2B9aHdOoVtE7fS3B07tfj7Bc%3D",
+    "authorities" : [
+      {
+        "type": "AAD",
+        "audience": {
+          "type": "PersonalMicrosoftAccount",
+          "tenant_id": "consumers"
+        }
+      }
+    ]
+  }

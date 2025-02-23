@@ -5,14 +5,15 @@ import 'dart:io' show Platform;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:muslim_calendar/data/services/google_calendar_service.dart';
+import 'package:muslim_calendar/data/services/google_calendar_api.dart';
+import 'package:muslim_calendar/data/services/outlook_sync_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/data/services/notification_service.dart';
 import 'package:muslim_calendar/providers/theme_notifier.dart';
 
-import '../../data/services/calendar_sync_service.dart';
+import '../../data/services/google_sync_service.dart';
 
 enum LocationMode {
   automatic,
@@ -202,7 +203,8 @@ class _SettingsPageState extends State<SettingsPage> {
     );
     
     if (success == true) {
-      await GoogleCalendarService().signIn();
+      
+      //await Provider.of<OutlookSyncService>(context, listen: false).calendarProvider.signIn();
       setState(() => _googleCalendarConnected = true);
       return true;
     }
@@ -230,7 +232,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
 
     if (action == 'disconnect') {
-      await GoogleCalendarService().signOut();
+      await Provider.of<GoogleSyncService>(context, listen: false).calendarProvider.signOut();
       setState(() => _googleCalendarConnected = false);
       await _saveSettings();
     }
@@ -246,8 +248,33 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<bool> _connectToOutlookCalendar(BuildContext context) async {
-    // Implement Outlook integration
-    return true;
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    
+    final success = await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(loc.connectOutlook),
+        content: Text(loc.connectOutlookDescription),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(loc.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(loc.connect),
+          ),
+        ],
+      ),
+    );
+    
+    if (success == true) {
+      
+      await Provider.of<GoogleSyncService>(context, listen: false).calendarProvider.signIn();
+      setState(() => _googleCalendarConnected = true);
+      return true;
+    }
+    return false;
   }
 
   Future<void> _manageOutlookCalendarConnection(BuildContext context) async {
@@ -826,7 +853,7 @@ class _SettingsPageState extends State<SettingsPage> {
   try {
     // İf-else ile servis karşılaştırması yapıyoruz
     if (serviceName == google) {
-      final googleSyncService = Provider.of<CalendarSyncService>(context, listen: false);
+      final googleSyncService = Provider.of<GoogleSyncService>(context, listen: false);
       if (isImport) {
         await googleSyncService.importAppointments();
       } else {

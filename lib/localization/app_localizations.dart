@@ -1407,6 +1407,34 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
+    String get connectOutlook {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Outlook Kalender verbinden';
+      case AppLanguage.turkish:
+        return 'Outlook Takvimine Bağlan';
+      case AppLanguage.arabic:
+        return 'الاتصال بتقويم جوجل';
+      case AppLanguage.english:
+      default:
+        return 'Connect Outlook Calendar';
+    }
+  }
+
+  String get connectOutlookDescription {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Dies öffnet die Outlook Anmeldung, um deinen Kalender zu verbinden';
+      case AppLanguage.turkish:
+        return 'Bu, takviminizi bağlamak için Outlook Girişini açacaktır';
+      case AppLanguage.arabic:
+        return 'سيفتح هذا تسجيل الدخول إلى جوجل لربط تقويمك';
+      case AppLanguage.english:
+      default:
+        return 'This will open Outlook Sign-In to connect your calendar';
+    }
+  }
+
   String get connect {
     switch (_currentLanguage) {
       case AppLanguage.german:
