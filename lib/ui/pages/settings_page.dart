@@ -270,8 +270,8 @@ class _SettingsPageState extends State<SettingsPage> {
     
     if (success == true) {
       
-      await Provider.of<GoogleSyncService>(context, listen: false).calendarProvider.signIn();
-      setState(() => _googleCalendarConnected = true);
+      await Provider.of<OutlookSyncService>(context, listen: false).calendarProvider.signIn();
+      setState(() => _outlookCalendarConnected = true);
       return true;
     }
     return false;

@@ -21,7 +21,7 @@ class OutlookSyncService {
   });
 
   Future<void> importAppointments() async {
-    await calendarProvider.autoSignIn();
+    await calendarProvider.signIn();
     final events = await calendarProvider.fetchEvents();
 
     for (var event in events) {
@@ -117,7 +117,7 @@ class OutlookSyncService {
   }
 
   Future<void> exportAppointments() async {
-    await calendarProvider.autoSignIn();
+    await calendarProvider.signIn();
     final appointments = await appointmentRepository.getAllAppointments();
 
     for (final appointment in appointments) {

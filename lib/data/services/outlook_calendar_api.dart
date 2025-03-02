@@ -2,91 +2,83 @@
 import 'dart:convert';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:http/http.dart' as http;
+import 'package:msal_auth/msal_auth.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
 
 class OutlookCalendarApi {
-  // Azure AD configuration
-  static const String _authority = 'login.microsoftonline.com';
-  static const String _tokenPath = '/c3517793-4c85-4977-ac5a-2c919bcccf8f/oauth2/v2.0/token';
+  // Microsoft Graph API base URL
   static const String _graphUrl = 'https://graph.microsoft.com/v1.0';
 
-  // Package info for Android
-  static const String _packageName = 'com.example.muslim_calendar';
-  static const String _signatureHash = 'Bmce+9aHdOoVtE7fS3B07tfj7Bc=';
-
   final String clientId;
-  final String clientSecret; // Note: Client secret should be stored securely
+  final String clientSecret; // Bu örnekte artık kullanılmasa da saklama yöntemine dikkat edin.
   final String redirectUrl;
 
+  // msal_auth için SingleAccountPca örneği
+  SingleAccountPca? _msalAuth;
   String? _accessToken;
-  String? _refreshToken;
-  DateTime? _tokenExpiration;
 
   OutlookCalendarApi({
     this.clientId = '5780a779-225f-4a70-83dd-ecd78a413584',
-    this.clientSecret = '', // Client secret should be provided through secure means
-    this.redirectUrl = 'msauth://com.example.muslim_calendar/Bmce%2B9aHdOoVtE7fS3B07tfj7Bc%3D',
+    this.clientSecret = '',
+    this.redirectUrl = 'msauth://com.example.muslim_calendar/ackRbDvBxO%2FBggu6EyZBRWAl%2B2c%3D',
   });
-  
 
-  Future<void> signIn(String code) async {
-    final response = await http.post(
-      Uri.https(_authority, _tokenPath),
-      body: {
-        'client_id': clientId,
-        'client_secret': clientSecret,
-        'code': code,
-        'redirect_uri': redirectUrl,
-        'grant_type': 'authorization_code',
-        'scope': 'Calendars.ReadWrite offline_access',
-      },
+  /// msal_auth’ı yapılandırmak için gerekli ayarların yüklendiği metod.
+  Future<void> initAuth() async {
+    _msalAuth = await SingleAccountPca.create(
+      clientId: clientId,
+      androidConfig: AndroidConfig(
+        configFilePath: 'assets/msal_config.json',
+        redirectUri: redirectUrl,
+      ),
+      appleConfig: AppleConfig(
+        authority: 'https://login.microsoftonline.com/common',
+        broker: Broker.msAuthenticator,
+        authorityType: AuthorityType.aad,
+      ),
     );
-
-    _handleTokenResponse(response);
   }
 
-  Future<void> autoSignIn() async {
-    if (_refreshToken == null) return;
-    
-    final response = await http.post(
-      Uri.https(_authority, _tokenPath),
-      body: {
-        'client_id': clientId,
-        'client_secret': clientSecret,
-        'refresh_token': _refreshToken,
-        'grant_type': 'refresh_token',
-        'scope': 'Calendars.ReadWrite offline_access',
-      },
+  /// Kullanıcıdan interaktif olarak oturum açmasını isteyip access token alır.
+  Future<void> signIn() async {
+    if (_msalAuth == null) {
+      await initAuth();
+    }
+    final result = await _msalAuth!.acquireToken(
+      scopes: ['Calendars.ReadWrite', 'offline_access'],
     );
-
-    _handleTokenResponse(response);
+    _accessToken = result.accessToken;
   }
 
-  void _handleTokenResponse(http.Response response) {
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      _accessToken = data['access_token'];
-      _refreshToken = data['refresh_token'];
-      _tokenExpiration = DateTime.now().add(
-        Duration(seconds: data['expires_in']),
+  /// Sessiz token yenileme denemesi yapar; başarısız olursa interaktif oturum açma gerçekleştirir.
+  Future<void> _checkAuth() async {
+    if (_msalAuth == null) {
+      await initAuth();
+    }
+    try {
+      final result = await _msalAuth!.acquireTokenSilent(
+        scopes: ['Calendars.ReadWrite', 'offline_access'],
       );
-    } else {
-      throw Exception('Authentication failed: ${response.body}');
+      _accessToken = result.accessToken;
+    } catch (e) {
+      // Sessiz token yenileme başarısız olursa interaktif oturum açmayı tetikler.
+      await signIn();
     }
   }
 
-  Future<bool> isSignedIn() async {
-    return _accessToken != null && 
-        _tokenExpiration?.isAfter(DateTime.now()) == true;
-  }
-
-  Future<void> signOut() {
+  /// Oturumu kapatır.
+  Future<void> signOut() async {
+    if (_msalAuth != null) {
+      await _msalAuth!.signOut();
+    }
     _accessToken = null;
-    _refreshToken = null;
-    _tokenExpiration = null;
-    return Future.value();
   }
 
+  Map<String, String> get _authHeaders {
+    return {'Authorization': 'Bearer $_accessToken'};
+  }
+
+  /// Kullanıcının etkinliklerini getirir.
   Future<List<dynamic>> fetchEvents() async {
     await _checkAuth();
     final response = await http.get(
@@ -96,10 +88,11 @@ class OutlookCalendarApi {
     return json.decode(response.body)['value'];
   }
 
+  /// Belirtilen extended property anahtar ve değere göre etkinlikleri getirir.
   Future<List<dynamic>> fetchEventsByExtendedProperty(String key, String value) async {
     await _checkAuth();
-    final filter = 
-      "singleValueExtendedProperties/Any(ep: ep/id eq '$key' and ep/value eq '$value')";
+    final filter =
+        "singleValueExtendedProperties/Any(ep: ep/id eq '$key' and ep/value eq '$value')";
     
     final response = await http.get(
       Uri.parse('$_graphUrl/me/events?\$filter=$filter'),
@@ -109,6 +102,7 @@ class OutlookCalendarApi {
     return json.decode(response.body)['value'];
   }
 
+  /// Yeni bir etkinlik oluşturur.
   Future<dynamic> createEvent({
     required String summary,
     required String description,
@@ -135,7 +129,7 @@ class OutlookCalendarApi {
     }
 
     final response = await http.post(
-            Uri.parse('$_graphUrl/me/events'),
+      Uri.parse('$_graphUrl/me/events'),
       headers: _authHeaders,
       body: json.encode(event),
     );
@@ -143,6 +137,7 @@ class OutlookCalendarApi {
     return json.decode(response.body);
   }
 
+  /// Varolan bir etkinliği günceller.
   Future<dynamic> updateEvent({
     required String eventId,
     required String summary,
@@ -178,6 +173,7 @@ class OutlookCalendarApi {
     return json.decode(response.body);
   }
 
+  /// Belirtilen etkinliği siler.
   Future<void> deleteEvent(String eventId) async {
     await _checkAuth();
     await http.delete(
@@ -186,9 +182,10 @@ class OutlookCalendarApi {
     );
   }
 
+  /// Belirtilen tarih için randevuyla eşleşen etkinliği getirir.
   Future<dynamic> getEventForAppointmentOnDate(int appointmentId, DateTime date) async {
-    final filter = 
-      "singleValueExtendedProperties/Any(ep: ep/id eq 'muslimcalendarID' and ep/value eq '$appointmentId')";
+    final filter =
+        "singleValueExtendedProperties/Any(ep: ep/id eq 'muslimcalendarID' and ep/value eq '$appointmentId')";
     
     final response = await http.get(
       Uri.parse('$_graphUrl/me/events?\$filter=$filter'),
@@ -198,8 +195,8 @@ class OutlookCalendarApi {
     final events = json.decode(response.body)['value'];
     for (var event in events) {
       final eventStart = DateTime.parse(event['start']['dateTime']);
-      if (eventStart.year == date.year && 
-          eventStart.month == date.month && 
+      if (eventStart.year == date.year &&
+          eventStart.month == date.month &&
           eventStart.day == date.day) {
         return event;
       }
@@ -207,6 +204,7 @@ class OutlookCalendarApi {
     return null;
   }
 
+  /// Randevuya bağlı etkinliği senkronize eder; güncelleme veya oluşturma işlemi gerçekleştirir.
   Future<dynamic> syncAppointmentEvent({
     required AppointmentModel appointment,
     required DateTime startTime,
@@ -238,8 +236,7 @@ class OutlookCalendarApi {
       }
     } else {
       List<String>? recurrence;
-      if (appointment.recurrenceRule != null && 
-          appointment.recurrenceRule!.isNotEmpty) {
+      if (appointment.recurrenceRule != null && appointment.recurrenceRule!.isNotEmpty) {
         recurrence = [appointment.recurrenceRule!];
       }
 
@@ -267,12 +264,13 @@ class OutlookCalendarApi {
     }
   }
 
+  /// Belirtilen randevu ID'sine ait, geçerli tarihler dışında kalan etkinlikleri siler.
   Future<void> deleteEventsNotInDates({
     required int appointmentId,
     required List<DateTime> validDates,
   }) async {
-    final filter = 
-      "singleValueExtendedProperties/Any(ep: ep/id eq 'muslimcalendarID' and ep/value eq '$appointmentId')";
+    final filter =
+        "singleValueExtendedProperties/Any(ep: ep/id eq 'muslimcalendarID' and ep/value eq '$appointmentId')";
     
     final response = await http.get(
       Uri.parse('$_graphUrl/me/events?\$filter=$filter'),
@@ -289,16 +287,6 @@ class OutlookCalendarApi {
       if (!exists) {
         await deleteEvent(event['id']);
       }
-    }
-  }
-
-  Map<String, String> get _authHeaders {
-    return {'Authorization': 'Bearer $_accessToken'};
-  }
-
-  Future<void> _checkAuth() async {
-    if (_accessToken == null || _tokenExpiration?.isBefore(DateTime.now()) == true) {
-      await autoSignIn();
     }
   }
 

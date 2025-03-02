@@ -53,6 +53,10 @@ void main() async {
         Provider<PrayerTimeService>(
           create: (_) => PrayerTimeService(PrayerTimeRepository()),
         ),
+
+        Provider<GoogleCalendarApi>(create: (_) => GoogleCalendarApi()),
+        Provider<OutlookCalendarApi>(create: (_) => OutlookCalendarApi()),
+        
         // Ardından, CalendarSyncService nesnelerini oluşturuyoruz:
         Provider<GoogleSyncService>(
           create: (context) => GoogleSyncService(
