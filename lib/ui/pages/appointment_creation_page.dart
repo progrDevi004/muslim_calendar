@@ -694,15 +694,15 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
     switch (_recurrenceType) {
       case RecurrenceType.daily:
-        return loc.getRecurrenceTypeLabel(RecurrenceType.daily);
+        return loc.getRecurrenceTypeLabel("daily");
       case RecurrenceType.weekly:
-        return loc.getRecurrenceTypeLabel(RecurrenceType.weekly);
+        return loc.getRecurrenceTypeLabel("weekly");
       case RecurrenceType.monthly:
-        return loc.getRecurrenceTypeLabel(RecurrenceType.monthly);
+        return loc.getRecurrenceTypeLabel("monthly");
       case RecurrenceType.yearly:
-        return loc.getRecurrenceTypeLabel(RecurrenceType.yearly);
+        return loc.getRecurrenceTypeLabel("yearly");
       default:
-        return loc.getRecurrenceTypeLabel(RecurrenceType.weekly);
+        return loc.getRecurrenceTypeLabel("weekly");
     }
   }
 
@@ -1748,7 +1748,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               children: [
                 CupertinoDialogAction(
                   child: Text(
-                    loc.getRecurrenceTypeLabel(RecurrenceType.daily),
+                    loc.getRecurrenceTypeLabel("daily"),
                     style: TextStyle(
                       color: _recurrenceType == RecurrenceType.daily &&
                               _isRecurring
@@ -1766,7 +1766,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 ),
                 CupertinoDialogAction(
                   child: Text(
-                    loc.getRecurrenceTypeLabel(RecurrenceType.weekly),
+                    loc.getRecurrenceTypeLabel("weekly"),
                     style: TextStyle(
                       color: _recurrenceType == RecurrenceType.weekly &&
                               _isRecurring
@@ -1784,7 +1784,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 ),
                 CupertinoDialogAction(
                   child: Text(
-                    loc.getRecurrenceTypeLabel(RecurrenceType.monthly),
+                    loc.getRecurrenceTypeLabel("monthly"),
                     style: TextStyle(
                       color: _recurrenceType == RecurrenceType.monthly &&
                               _isRecurring
@@ -1802,7 +1802,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 ),
                 CupertinoDialogAction(
                   child: Text(
-                    loc.getRecurrenceTypeLabel(RecurrenceType.yearly),
+                    loc.getRecurrenceTypeLabel("yearly"),
                     style: TextStyle(
                       color: _recurrenceType == RecurrenceType.yearly &&
                               _isRecurring
@@ -1864,12 +1864,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     RadioListTile<String>(
-                      title: Text(
-                          loc.getRecurrenceTypeLabel(RecurrenceType.daily)),
-                      value: loc.getRecurrenceTypeLabel(RecurrenceType.daily),
+                      title: Text(loc.getRecurrenceTypeLabel("daily")),
+                      value: loc.getRecurrenceTypeLabel("daily"),
                       groupValue: _recurrenceType == RecurrenceType.daily &&
                               _isRecurring
-                          ? loc.getRecurrenceTypeLabel(RecurrenceType.daily)
+                          ? loc.getRecurrenceTypeLabel("daily")
                           : null,
                       onChanged: (value) {
                         setState(() {
@@ -1880,12 +1879,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                       },
                     ),
                     RadioListTile<String>(
-                      title: Text(
-                          loc.getRecurrenceTypeLabel(RecurrenceType.weekly)),
-                      value: loc.getRecurrenceTypeLabel(RecurrenceType.weekly),
+                      title: Text(loc.getRecurrenceTypeLabel("weekly")),
+                      value: loc.getRecurrenceTypeLabel("weekly"),
                       groupValue: _recurrenceType == RecurrenceType.weekly &&
                               _isRecurring
-                          ? loc.getRecurrenceTypeLabel(RecurrenceType.weekly)
+                          ? loc.getRecurrenceTypeLabel("weekly")
                           : null,
                       onChanged: (value) {
                         setState(() {
@@ -1896,12 +1894,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                       },
                     ),
                     RadioListTile<String>(
-                      title: Text(
-                          loc.getRecurrenceTypeLabel(RecurrenceType.monthly)),
-                      value: loc.getRecurrenceTypeLabel(RecurrenceType.monthly),
+                      title: Text(loc.getRecurrenceTypeLabel("monthly")),
+                      value: loc.getRecurrenceTypeLabel("monthly"),
                       groupValue: _recurrenceType == RecurrenceType.monthly &&
                               _isRecurring
-                          ? loc.getRecurrenceTypeLabel(RecurrenceType.monthly)
+                          ? loc.getRecurrenceTypeLabel("monthly")
                           : null,
                       onChanged: (value) {
                         setState(() {
@@ -1912,12 +1909,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                       },
                     ),
                     RadioListTile<String>(
-                      title: Text(
-                          loc.getRecurrenceTypeLabel(RecurrenceType.yearly)),
-                      value: loc.getRecurrenceTypeLabel(RecurrenceType.yearly),
+                      title: Text(loc.getRecurrenceTypeLabel("yearly")),
+                      value: loc.getRecurrenceTypeLabel("yearly"),
                       groupValue: _recurrenceType == RecurrenceType.yearly &&
                               _isRecurring
-                          ? loc.getRecurrenceTypeLabel(RecurrenceType.yearly)
+                          ? loc.getRecurrenceTypeLabel("yearly")
                           : null,
                       onChanged: (value) {
                         setState(() {
@@ -2013,7 +2009,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   items: RecurrenceType.values.map((type) {
                     return DropdownMenuItem<RecurrenceType>(
                       value: type,
-                      child: Text(loc.getRecurrenceTypeLabel(type)),
+                      child: Text(loc.getRecurrenceTypeLabel(
+                          type.toString().split('.').last)),
                     );
                   }).toList(),
                 ),
