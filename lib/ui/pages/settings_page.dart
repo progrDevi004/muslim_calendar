@@ -5,18 +5,28 @@ import 'dart:io' show Platform;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:muslim_calendar/data/services/google_calendar_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/data/services/notification_service.dart';
 import 'package:muslim_calendar/providers/theme_notifier.dart';
-// NEU: Für reDownloadAndRecalcAll()
+// Für reDownloadAndRecalcAll()
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
+import '../../data/services/calendar_sync_service.dart';
 
 // Beispiel-Enum, kann auch global in app_language.dart liegen:
+
 enum LocationMode {
   automatic,
   manual,
+}
+
+enum SyncFrequency {
+  none,
+  daily,
+  weekly,
+  monthly,
 }
 
 class SettingsPage extends StatefulWidget {
@@ -27,127 +37,242 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  AppLanguage _selectedLanguage = AppLanguage.english;
-  LocationMode _locationMode = LocationMode.automatic;
-  String? _defaultCountry;
-  String? _defaultCity;
+  final bool _isIos = Platform.isIOS;
+  bool _isDarkMode = false;
   bool _notificationsEnabled = true;
-
-  bool _darkModeEnabled = false;
-  bool _useSystemTheme = false;
-  bool _use24hFormat = false;
-  bool _showPrayerSlotsInDashboard = true;
+  bool _use24HourFormat = true;
   bool _showPrayerTimesInDayView = true;
   bool _showPrayerTimesInWeekView = true;
-  int _selectedCalcMethod = 13;
-
-  final Map<int, String> _calcMethodMap = {
-    13: 'Diyanet (Turkey)', // Standard
-    3: 'MWL (Muslim World League)',
-    4: 'Umm Al-Qura, Makkah',
-    5: 'Egypt (GAS)',
-    2: 'ISNA (N. America)',
-    1: 'Karachi',
-    7: 'Tehran (Univ. of Geophysics)',
-    8: 'Gulf Region',
-    9: 'Kuwait',
-    10: 'Qatar',
-  };
-
+  bool _showPrayerSlotsInDashboard = true;
+  bool _automaticLocation = true;
+  String? _defaultCountry;
+  String? _defaultCity;
+  int _selectedCalcMethod = 0;
+  Map<int, String> _calcMethodMap = {};
+  Map<String, List<String>> _countryCityData = {};
   bool _isLoadingCountries = true;
   String? _loadError;
-  Map<String, List<String>> _countryCityData = {};
+  int _selectedLanguageIndex = 0;
+  AppLanguage _selectedLanguage = AppLanguage.english;
 
-  bool get _isIos => Platform.isIOS;
+  // Calendar Sync
+  bool _googleCalendarEnabled = false;
+  bool _appleCalendarEnabled = false;
+  bool _outlookCalendarEnabled = false;
+  bool _googleCalendarConnected = false;
+  bool _appleCalendarConnected = false;
+  bool _outlookCalendarConnected = false;
+  SyncFrequency _googleCalendarSyncFrequency = SyncFrequency.none;
+  SyncFrequency _appleCalendarSyncFrequency = SyncFrequency.none;
+  SyncFrequency _outlookCalendarSyncFrequency = SyncFrequency.none;
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
     _loadCountryCityData();
+    _initCalcMethodMap();
+    _checkCalendarConnections();
+  }
+
+  void _initCalcMethodMap() {
+    _calcMethodMap = {
+      0: 'Muslim World League',
+      1: 'Egyptian General Authority',
+      2: 'University of Islamic Sciences, Karachi',
+      3: 'Umm al-Qura University, Makkah',
+      4: 'Islamic Society of North America',
+      5: 'Union des Organisations Islamiques de France',
+      6: 'Majlis Ugama Islam Singapura',
+      7: 'Institute of Geophysics, University of Tehran',
+      8: 'Shia Ithna-Ashari',
+      9: 'Gulf Region',
+      10: 'Kuwait',
+      11: 'Qatar',
+      12: 'Singapore',
+      13: 'Turkey',
+      14: 'Dubai',
+      15: 'Moonsighting Committee Worldwide',
+    };
   }
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
-
     final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
-    _darkModeEnabled = themeNotifier.isDarkMode;
-    _useSystemTheme = themeNotifier.useSystemTheme;
 
-    _use24hFormat = prefs.getBool('use24hFormat') ?? false;
+    setState(() {
+      _isDarkMode = prefs.getBool('isDarkMode') ?? false;
+      _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
+      _use24HourFormat = prefs.getBool('use24HourFormat') ?? true;
+      _showPrayerTimesInDayView =
+          prefs.getBool('showPrayerTimesInDayView') ?? true;
+      _showPrayerTimesInWeekView =
+          prefs.getBool('showPrayerTimesInWeekView') ?? true;
+      _showPrayerSlotsInDashboard =
+          prefs.getBool('showPrayerSlotsInDashboard') ?? true;
+      _automaticLocation = prefs.getBool('automaticLocation') ?? true;
+      _defaultCountry = prefs.getString('defaultCountry');
+      _defaultCity = prefs.getString('defaultCity');
+      _selectedCalcMethod = prefs.getInt('calculationMethod') ?? 0;
+      _selectedLanguageIndex = prefs.getInt('selectedLanguageIndex') ?? 0;
+      _selectedLanguage = AppLanguage.values[_selectedLanguageIndex];
 
-    final modeString = prefs.getString('locationMode') ?? 'automatic';
-    _locationMode =
-        (modeString == 'manual') ? LocationMode.manual : LocationMode.automatic;
-    _defaultCountry = prefs.getString('defaultCountry');
-    _defaultCity = prefs.getString('defaultCity');
+      // Calendar Sync
+      _googleCalendarEnabled = prefs.getBool('googleCalendarEnabled') ?? false;
+      _appleCalendarEnabled = prefs.getBool('appleCalendarEnabled') ?? false;
+      _outlookCalendarEnabled =
+          prefs.getBool('outlookCalendarEnabled') ?? false;
+      _googleCalendarSyncFrequency = SyncFrequency.values[
+          prefs.getInt('googleSyncFrequency') ?? SyncFrequency.none.index];
+      _appleCalendarSyncFrequency = SyncFrequency.values[
+          prefs.getInt('appleSyncFrequency') ?? SyncFrequency.none.index];
+      _outlookCalendarSyncFrequency = SyncFrequency.values[
+          prefs.getInt('outlookSyncFrequency') ?? SyncFrequency.none.index];
+    });
 
-    final savedLangIndex = prefs.getInt('selectedLanguageIndex');
-    if (savedLangIndex != null &&
-        savedLangIndex >= 0 &&
-        savedLangIndex < AppLanguage.values.length) {
-      _selectedLanguage = AppLanguage.values[savedLangIndex];
-      Provider.of<AppLocalizations>(context, listen: false)
-          .setLanguage(_selectedLanguage);
-    }
-
-    _showPrayerSlotsInDashboard =
-        prefs.getBool('showPrayerSlotsInDashboard') ?? true;
-    _showPrayerTimesInDayView =
-        prefs.getBool('showPrayerTimesInDayView') ?? true;
-    _showPrayerTimesInWeekView =
-        prefs.getBool('showPrayerTimesInWeekView') ?? true;
-
-    _selectedCalcMethod = prefs.getInt('calculationMethod') ?? 13;
-
-    setState(() {});
+    // Aktualisieren des Themes über den ThemeNotifier
+    themeNotifier.toggleTheme(_isDarkMode);
   }
 
   Future<void> _loadCountryCityData() async {
-    // Verwende listen: false, damit sich das Widget nicht unnötig rebuilt
-    final loc = Provider.of<AppLocalizations>(context, listen: false);
-    final languageCode = loc.mapAppLanguageToCode(loc.currentLanguage);
     setState(() {
       _isLoadingCountries = true;
       _loadError = null;
     });
 
     try {
-      final jsonString =
-          await rootBundle.loadString('assets/country_city_$languageCode.json');
-      final Map<String, dynamic> jsonMap = json.decode(jsonString);
-      final Map<String, List<String>> parsed = jsonMap.map((k, v) {
-        final list = (v as List).map((e) => e.toString()).toList();
-        return MapEntry(k, list);
+      final String jsonString =
+          await rootBundle.loadString('assets/data/country_city_data.json');
+      final Map<String, dynamic> jsonData = json.decode(jsonString);
+
+      final Map<String, List<String>> data = {};
+      jsonData.forEach((key, value) {
+        if (value is List) {
+          data[key] = List<String>.from(value);
+        }
       });
 
       setState(() {
-        _countryCityData = parsed;
+        _countryCityData = data;
         _isLoadingCountries = false;
       });
     } catch (e) {
       setState(() {
-        _loadError = 'Error loading country list: $e';
+        _loadError = 'Failed to load country data: $e';
         _isLoadingCountries = false;
       });
     }
   }
 
-  /// Speichert aktuelle Settings
+  Future<void> _checkCalendarConnections() async {
+    final calendarService = context.read<CalendarSyncService>();
+
+    // Temporäre Mock-Implementierung, bis die eigentlichen Methoden implementiert sind
+    final googleConnected =
+        false; // await calendarService.isGoogleCalendarConnected();
+    final appleConnected =
+        false; // await calendarService.isAppleCalendarConnected();
+    final outlookConnected =
+        false; // await calendarService.isOutlookCalendarConnected();
+
+    setState(() {
+      _googleCalendarConnected = googleConnected;
+      _appleCalendarConnected = appleConnected;
+      _outlookCalendarConnected = outlookConnected;
+    });
+  }
+
+  Future<bool> _connectToGoogleCalendar(BuildContext context) async {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    final calendarService = context.read<CalendarSyncService>();
+
+    try {
+      // Temporäre Mock-Implementierung
+      // final success = await calendarService.connectGoogleCalendar();
+      final success = false; // Mock-Antwort
+      if (success) {
+        setState(() {
+          _googleCalendarConnected = true;
+        });
+      }
+      return success;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error connecting to Google Calendar: $e')),
+        );
+      }
+      return false;
+    }
+  }
+
+  Future<void> _manageGoogleCalendarConnection(BuildContext context) async {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    final calendarService = context.read<CalendarSyncService>();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(loc.manageConnection),
+        content: Text(loc.manageConnectionPrompt),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              // await calendarService.disconnectGoogleCalendar();
+              // Temporäre Mock-Implementierung
+              setState(() {
+                _googleCalendarConnected = false;
+              });
+              Navigator.of(ctx).pop();
+            },
+            child: Text(loc.disconnect),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _connectToAppleCalendar(BuildContext context) async {
+    // Implementation for Apple Calendar connection
+    return false;
+  }
+
+  Future<void> _manageAppleCalendarConnection(BuildContext context) async {
+    // Implementation for managing Apple Calendar connection
+  }
+
+  Future<bool> _connectToOutlookCalendar(BuildContext context) async {
+    // Implementation for Outlook Calendar connection
+    return false;
+  }
+
+  Future<void> _manageOutlookCalendarConnection(BuildContext context) async {
+    // Implementation for managing Outlook Calendar connection
+  }
+
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    final notificationService =
+        Provider.of<NotificationService>(context, listen: false);
+
+    // Aktualisieren des Themes über den ThemeNotifier
+    themeNotifier.toggleTheme(_isDarkMode);
+    await prefs.setBool('isDarkMode', _isDarkMode);
     await prefs.setBool('notificationsEnabled', _notificationsEnabled);
-    await prefs.setBool('use24hFormat', _use24hFormat);
-    await prefs.setString(
-      'locationMode',
-      _locationMode == LocationMode.manual ? 'manual' : 'automatic',
-    );
-    if (_defaultCountry != null) {
-      await prefs.setString('defaultCountry', _defaultCountry!);
-    }
-    if (_defaultCity != null) {
-      await prefs.setString('defaultCity', _defaultCity!);
+    await prefs.setBool('use24HourFormat', _use24HourFormat);
+    await prefs.setBool('automaticLocation', _automaticLocation);
+
+    if (!_automaticLocation) {
+      await prefs.setString('defaultCountry', _defaultCountry ?? '');
+      await prefs.setString('defaultCity', _defaultCity ?? '');
+    } else {
+      await prefs.remove('defaultCountry');
+      await prefs.remove('defaultCity');
     }
     await prefs.setInt('selectedLanguageIndex', _selectedLanguage.index);
     await prefs.setBool(
@@ -156,6 +281,15 @@ class _SettingsPageState extends State<SettingsPage> {
     await prefs.setBool(
         'showPrayerTimesInWeekView', _showPrayerTimesInWeekView);
     await prefs.setInt('calculationMethod', _selectedCalcMethod);
+
+    await prefs.setBool('googleCalendarEnabled', _googleCalendarEnabled);
+    await prefs.setBool('appleCalendarEnabled', _appleCalendarEnabled);
+    await prefs.setBool('outlookCalendarEnabled', _outlookCalendarEnabled);
+    await prefs.setInt(
+        'googleSyncFrequency', _googleCalendarSyncFrequency.index);
+    await prefs.setInt('appleSyncFrequency', _appleCalendarSyncFrequency.index);
+    await prefs.setInt(
+        'outlookSyncFrequency', _outlookCalendarSyncFrequency.index);
   }
 
   /// Ruft die Logik zum Neuladen der Gebetszeiten auf.
@@ -170,252 +304,252 @@ class _SettingsPageState extends State<SettingsPage> {
     return _isIos
         ? CupertinoPageScaffold(
             navigationBar: CupertinoNavigationBar(
-              middle: Text(loc.settings),
-              trailing: GestureDetector(
-                onTap: () async {
-                  await _saveSettings();
-                  if (!mounted) return;
-                  Navigator.of(context).pop(true);
-                },
-                child: Text(
-                  loc.save,
-                  style: const TextStyle(color: CupertinoColors.activeBlue),
-                ),
-              ),
+              middle: Text('Settings'),
             ),
             child: SafeArea(
-              child: Material(child: _buildSettingsList(loc)),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: _buildSettingsContent(context),
+                ),
+              ),
             ),
           )
         : Scaffold(
             appBar: AppBar(
-              title: Text(loc.settings),
+              title: Text('Settings'),
             ),
-            body: _buildSettingsList(loc),
+            body: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: _buildSettingsContent(context),
+                ),
+              ),
+            ),
           );
   }
 
-  Widget _buildSettingsList(AppLocalizations loc) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text(
-          loc.general,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 16),
-
-        // Sprache
-        ListTile(
-          title: Text(loc.language),
-          subtitle: Text(
-            Provider.of<AppLocalizations>(context, listen: false)
-                .getLanguageName(_selectedLanguage),
-          ),
-          onTap: () => _showLanguageSelector(context),
-          trailing: const Icon(Icons.chevron_right),
-        ),
-        const SizedBox(height: 16),
-
-        // System-Theme
-        SwitchListTile.adaptive(
-          title: Text(loc.useSystemTheme),
-          subtitle: Text(loc.autoSwitchDarkLightMode),
-          value: _useSystemTheme,
-          onChanged: (bool value) async {
-            setState(() {
-              _useSystemTheme = value;
-              if (value) {
-                _darkModeEnabled = false;
-              }
-            });
-            Provider.of<ThemeNotifier>(context, listen: false)
-                .toggleSystemTheme(value);
-            await _saveSettings();
-          },
-        ),
-
-        // Dark Mode
-        SwitchListTile.adaptive(
-          title: Text(loc.darkMode),
-          subtitle: Text(loc.darkModeSubtitle),
-          value: _darkModeEnabled,
-          onChanged: _useSystemTheme
-              ? null
-              : (bool value) async {
-                  setState(() {
-                    _darkModeEnabled = value;
-                  });
-                  Provider.of<ThemeNotifier>(context, listen: false)
-                      .toggleTheme(value);
-                  await _saveSettings();
-                },
-        ),
-        const SizedBox(height: 16),
-
-        // Notifications
-        SwitchListTile.adaptive(
-          title: Text(loc.enableNotifications),
-          subtitle: Text(loc.enableNotificationsSubtitle),
-          value: _notificationsEnabled,
-          onChanged: (bool value) async {
-            setState(() {
-              _notificationsEnabled = value;
-            });
-            if (value) {
-              await NotificationService().enableNotifications();
-            } else {
-              await NotificationService().disableNotifications();
-            }
-            await _saveSettings();
-          },
-        ),
-        const Divider(height: 40),
-
-        // Zeitformat
-        Text(
-          loc.timeFormat,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 8),
-        SwitchListTile.adaptive(
-          title: Text(loc.timeFormat24),
-          subtitle: Text(_use24hFormat
-              ? loc.timeFormat24Active
-              : loc.timeFormatAmPmActive),
-          value: _use24hFormat,
-          onChanged: (bool val) async {
-            setState(() {
-              _use24hFormat = val;
-            });
-            await _saveSettings();
-          },
-        ),
-        const Divider(height: 40),
-
-        // Standort
-        Text(
-          loc.locationSettings,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 8),
-        SwitchListTile.adaptive(
-          title: Text(loc.automaticLocation),
-          subtitle: Text(loc.automaticLocationSubtitle),
-          value: _locationMode == LocationMode.manual,
-          onChanged: (bool value) async {
-            setState(() {
-              _locationMode =
-                  value ? LocationMode.manual : LocationMode.automatic;
-            });
-            await _saveSettings();
-            if (_locationMode == LocationMode.manual) {
-              await _updatePrayerTimes();
-            }
-          },
-        ),
-        if (_locationMode == LocationMode.manual)
-          ..._buildManualLocationFields(loc.country, loc.city),
-
-        const Divider(height: 40),
-
-        // Gebetszeiten-Slots (Dashboard)
-        Text(
-          loc.prayerTimeSlots,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 8),
-        SwitchListTile.adaptive(
-          title: Text(loc.prayerTimeSlotsInDashboard),
-          subtitle: Text(loc.showTodayPrayerTimesAsSlots),
-          value: _showPrayerSlotsInDashboard,
-          onChanged: (bool val) async {
-            setState(() {
-              _showPrayerSlotsInDashboard = val;
-            });
-            await _saveSettings();
-          },
-        ),
-
-        // Gebetszeiten in Daily / Weekly
-        SwitchListTile.adaptive(
-          title: Text(loc.showPrayerTimesInDailyView),
-          subtitle: Text(loc.showPrayerTimesInDailyView),
-          value: _showPrayerTimesInDayView,
-          onChanged: (bool val) async {
-            setState(() {
-              _showPrayerTimesInDayView = val;
-            });
-            await _saveSettings();
-          },
-        ),
-        SwitchListTile.adaptive(
-          title: Text(loc.showPrayerTimesInWeeklyView),
-          subtitle: Text(loc.showPrayerTimesInWeeklyView),
-          value: _showPrayerTimesInWeekView,
-          onChanged: (bool val) async {
-            setState(() {
-              _showPrayerTimesInWeekView = val;
-            });
-            await _saveSettings();
-          },
-        ),
-
-        const Divider(height: 40),
-
-        // Berechnungsmethode
-        Text(
-          loc.prayerTimesCalculation,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<int>(
-          decoration: InputDecoration(
-            labelText: loc.calculationMethod,
-            border: const OutlineInputBorder(),
-          ),
-          value: _selectedCalcMethod,
-          onChanged: (value) async {
-            if (value == null) return;
-            setState(() {
-              _selectedCalcMethod = value;
-            });
-            await _saveSettings();
-            await _updatePrayerTimes();
-          },
-          items: _calcMethodMap.entries.map((entry) {
-            return DropdownMenuItem<int>(
-              value: entry.key,
-              child: Text(entry.value),
-            );
-          }).toList(),
-        ),
-
-        if (!_isIos) ...[
-          const SizedBox(height: 40),
-          Center(
-            child: FilledButton(
-              onPressed: () async {
-                await _saveSettings();
-                if (!mounted) return;
-                Navigator.pop(context, true);
-              },
-              child: Text(loc.save),
+  List<Widget> _buildSettingsContent(BuildContext context) {
+    final loc = Provider.of<AppLocalizations>(context);
+    return [
+      // Appearance Section
+      Text(
+        'Appearance',
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
             ),
+      ),
+      const SizedBox(height: 16),
+      SwitchListTile(
+        title: Text(loc.darkMode),
+        subtitle: Text(loc.darkModeSubtitle),
+        value: _isDarkMode,
+        onChanged: (value) async {
+          setState(() => _isDarkMode = value);
+          await _saveSettings();
+        },
+      ),
+      const Divider(height: 32),
+
+      // Notifications Section
+      Text(
+        'Notifications',
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+      ),
+      const SizedBox(height: 16),
+      SwitchListTile(
+        title: Text(loc.enableNotifications),
+        subtitle: Text(loc.enableNotificationsSubtitle),
+        value: _notificationsEnabled,
+        onChanged: (value) async {
+          setState(() => _notificationsEnabled = value);
+          await _saveSettings();
+        },
+      ),
+      const Divider(height: 32),
+
+      // Time Format Section
+      Text(
+        loc.timeFormat,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+      ),
+      const SizedBox(height: 16),
+      RadioListTile<bool>(
+        title: Text(loc.timeFormat24Active),
+        value: true,
+        groupValue: _use24HourFormat,
+        onChanged: (value) async {
+          if (value != null) {
+            setState(() => _use24HourFormat = value);
+            await _saveSettings();
+          }
+        },
+      ),
+      RadioListTile<bool>(
+        title: Text(loc.timeFormatAmPmActive),
+        value: false,
+        groupValue: _use24HourFormat,
+        onChanged: (value) async {
+          if (value != null) {
+            setState(() => _use24HourFormat = value);
+            await _saveSettings();
+          }
+        },
+      ),
+      const Divider(height: 32),
+
+      // Location Settings
+      Text(
+        loc.locationSettings,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+      ),
+      const SizedBox(height: 16),
+      SwitchListTile(
+        title: Text(loc.automaticLocation),
+        subtitle: Text(loc.automaticLocationSubtitle),
+        value: _automaticLocation,
+        onChanged: (value) async {
+          setState(() => _automaticLocation = value);
+          await _saveSettings();
+          await _updatePrayerTimes();
+        },
+      ),
+      if (!_automaticLocation) ..._buildManualLocationFields('Country', 'City'),
+      const Divider(height: 32),
+
+      // Prayer Time Calculation Method
+      Text(
+        'Prayer Time Calculation Method',
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+      ),
+      const SizedBox(height: 16),
+      DropdownButtonFormField<int>(
+        value: _selectedCalcMethod,
+        decoration: const InputDecoration(
+          labelText: 'Calculation Method',
+          border: OutlineInputBorder(),
+        ),
+        onChanged: (value) async {
+          setState(() {
+            _selectedCalcMethod = value ?? 0;
+          });
+          await _saveSettings();
+          await _updatePrayerTimes();
+        },
+        items: _calcMethodMap.entries.map((entry) {
+          return DropdownMenuItem<int>(
+            value: entry.key,
+            child: Text(entry.value),
+          );
+        }).toList(),
+      ),
+
+      // New Sync Section
+      const Divider(height: 40),
+      Text(
+        loc.calendarSync,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+      ),
+      const SizedBox(height: 16),
+
+      // Google Calendar Integration
+      _buildCalendarIntegration(
+        loc.googleCalendar,
+        Icons.calendar_today,
+        _googleCalendarEnabled,
+        _googleCalendarConnected,
+        _googleCalendarSyncFrequency,
+        (value) async {
+          setState(() => _googleCalendarEnabled = value);
+          await _saveSettings();
+        },
+        () async {
+          if (!_googleCalendarConnected) {
+            return _connectToGoogleCalendar(context);
+          } else {
+            await _manageGoogleCalendarConnection(context);
+            return _googleCalendarConnected;
+          }
+        },
+        (value) => _googleCalendarSyncFrequency = value,
+      ),
+
+      // Apple Calendar Integration
+      _buildCalendarIntegration(
+        loc.appleCalendar,
+        _isIos ? Icons.apple : Icons.calendar_month,
+        _appleCalendarEnabled,
+        _appleCalendarConnected,
+        _appleCalendarSyncFrequency,
+        (value) async {
+          setState(() => _appleCalendarEnabled = value);
+          await _saveSettings();
+        },
+        () async {
+          if (!_appleCalendarConnected) {
+            return _connectToAppleCalendar(context);
+          } else {
+            await _manageAppleCalendarConnection(context);
+            return _appleCalendarConnected;
+          }
+        },
+        (value) => _appleCalendarSyncFrequency = value,
+      ),
+
+      // Outlook Calendar Integration
+      _buildCalendarIntegration(
+        loc.outlookCalendar,
+        Icons.mail_outline,
+        _outlookCalendarEnabled,
+        _outlookCalendarConnected,
+        _outlookCalendarSyncFrequency,
+        (value) async {
+          setState(() => _outlookCalendarEnabled = value);
+          await _saveSettings();
+        },
+        () async {
+          if (!_outlookCalendarConnected) {
+            return _connectToOutlookCalendar(context);
+          } else {
+            await _manageOutlookCalendarConnection(context);
+            return _outlookCalendarConnected;
+          }
+        },
+        (value) => _outlookCalendarSyncFrequency = value,
+      ),
+
+      // Falls Android => Speichern-Knopf
+      if (!_isIos) ...[
+        const SizedBox(height: 40),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () async {
+              await _saveSettings();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Settings saved')),
+                );
+              }
+            },
+            child: const Text('Save Settings'),
           ),
-        ],
+        ),
       ],
-    );
+    ];
   }
 
   List<Widget> _buildManualLocationFields(String? country, String? city) {
@@ -470,7 +604,7 @@ class _SettingsPageState extends State<SettingsPage> {
           );
         }).toList(),
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: 16),
       if (_defaultCountry != null &&
           _countryCityData.containsKey(_defaultCountry))
         DropdownButtonFormField<String>(
@@ -495,84 +629,202 @@ class _SettingsPageState extends State<SettingsPage> {
               await _updatePrayerTimes();
             }
           },
-          items: _countryCityData[_defaultCountry]!
-              .map((city) => DropdownMenuItem<String>(
-                    value: city,
-                    child: Text(city),
-                  ))
-              .toList(),
+          items: _countryCityData[_defaultCountry]!.map((c) {
+            return DropdownMenuItem<String>(
+              value: c,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(c),
+              ),
+            );
+          }).toList(),
         ),
     ];
   }
 
-  void _showLanguageSelector(BuildContext context) {
-    if (_isIos) {
-      showCupertinoModalPopup(
-        context: context,
-        builder: (ctx) {
-          final loc = Provider.of<AppLocalizations>(ctx, listen: false);
-          return Container(
-            color: CupertinoColors.systemBackground.resolveFrom(ctx),
-            height: 300,
-            child: SafeArea(
-              child: Column(
-                children: [
-                  Expanded(
-                    child: ListView(
-                      children: AppLanguage.values.map((lang) {
-                        return CupertinoButton(
-                          onPressed: () async {
-                            Navigator.of(ctx).pop();
-                            setState(() {
-                              _selectedLanguage = lang;
-                            });
-                            loc.setLanguage(lang);
-                            await _saveSettings();
-                            // Beim Sprachwechsel Länderliste neu laden:
-                            await _loadCountryCityData();
-                          },
-                          child: Text(loc.getLanguageName(lang)),
-                        );
-                      }).toList(),
-                    ),
+  Widget _buildCalendarIntegration(
+    String title,
+    IconData icon,
+    bool isEnabled,
+    bool isConnected,
+    SyncFrequency syncFrequency,
+    Future<void> Function(bool) onEnabledChanged,
+    Future<bool> Function() onConnectPressed,
+    void Function(SyncFrequency) onSyncFrequencyChanged,
+  ) {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
-                  CupertinoButton(
-                    child: const Text('Close'),
-                    onPressed: () => Navigator.of(ctx).pop(),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-    } else {
-      showModalBottomSheet(
-        context: context,
-        builder: (ctx) {
-          final loc = Provider.of<AppLocalizations>(ctx, listen: false);
-          return SafeArea(
-            child: ListView(
-              shrinkWrap: true,
-              children: AppLanguage.values.map((lang) {
-                return ListTile(
-                  title: Text(loc.getLanguageName(lang)),
-                  onTap: () async {
-                    Navigator.of(ctx).pop();
-                    setState(() {
-                      _selectedLanguage = lang;
-                    });
-                    loc.setLanguage(lang);
-                    await _saveSettings();
-                    // Beim Sprachwechsel Länderliste neu laden:
-                    await _loadCountryCityData();
+                ),
+                const Spacer(),
+                Switch(
+                  value: isEnabled,
+                  onChanged: (value) async {
+                    await onEnabledChanged(value);
                   },
-                );
-              }).toList(),
+                ),
+              ],
             ),
-          );
-        },
-      );
+            if (isEnabled) ...[
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () async {
+                  final success = await onConnectPressed();
+                  setState(() {});
+                },
+                child: Text(isConnected ? loc.manageConnection : loc.connect),
+              ),
+              if (isConnected) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          await _handleManualSync(true, title);
+                        },
+                        child: Text(loc.importFromCalendar),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          await _handleManualSync(false, title);
+                        },
+                        child: Text(loc.exportToCalendar),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Text('Sync Frequency:'),
+                const SizedBox(height: 8),
+                _buildSyncFrequencyOptions(
+                    syncFrequency, onSyncFrequencyChanged),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleManualSync(bool isImport, String serviceName) async {
+    final calendarService = context.read<CalendarSyncService>();
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+
+    try {
+      if (isImport) {
+        // await calendarService.importFromCalendar(serviceName);
+        // Temporäre Mock-Implementierung
+        await _showSuccessDialog(loc.importSuccess(serviceName));
+      } else {
+        // await calendarService.exportToCalendar(serviceName);
+        // Temporäre Mock-Implementierung
+        await _showSuccessDialog(loc.exportSuccess(serviceName));
+      }
+    } catch (e) {
+      await _showErrorDialog(loc.syncError(e.toString()));
     }
+  }
+
+  Future<void> _showSuccessDialog(String message) async {
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(Provider.of<AppLocalizations>(ctx).success),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(Provider.of<AppLocalizations>(ctx).ok),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showErrorDialog(String message) async {
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(Provider.of<AppLocalizations>(ctx).error),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(Provider.of<AppLocalizations>(ctx).ok),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSyncFrequencyOptions(
+    SyncFrequency currentFrequency,
+    void Function(SyncFrequency) onChanged,
+  ) {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    return Wrap(
+      spacing: 8,
+      children: [
+        ChoiceChip(
+          label: Text(loc.noSync),
+          selected: currentFrequency == SyncFrequency.none,
+          onSelected: (selected) {
+            if (selected) {
+              setState(() => onChanged(SyncFrequency.none));
+              _saveSettings();
+            }
+          },
+        ),
+        ChoiceChip(
+          label: Text(loc.dailySync),
+          selected: currentFrequency == SyncFrequency.daily,
+          onSelected: (selected) {
+            if (selected) {
+              setState(() => onChanged(SyncFrequency.daily));
+              _saveSettings();
+            }
+          },
+        ),
+        ChoiceChip(
+          label: Text(loc.weeklySync),
+          selected: currentFrequency == SyncFrequency.weekly,
+          onSelected: (selected) {
+            if (selected) {
+              setState(() => onChanged(SyncFrequency.weekly));
+              _saveSettings();
+            }
+          },
+        ),
+        ChoiceChip(
+          label: Text(loc.monthlySync),
+          selected: currentFrequency == SyncFrequency.monthly,
+          onSelected: (selected) {
+            if (selected) {
+              setState(() => onChanged(SyncFrequency.monthly));
+              _saveSettings();
+            }
+          },
+        ),
+      ],
+    );
   }
 }

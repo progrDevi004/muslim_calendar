@@ -19,12 +19,24 @@ import 'package:muslim_calendar/data/services/notification_service.dart';
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
 
+import 'data/repositories/appointment_repository.dart';
+import 'data/repositories/prayer_time_repository.dart';
+import 'data/services/calendar_sync_service.dart';
+import 'data/services/google_calendar_service.dart';
+import 'data/services/prayer_time_service.dart';
+import 'data/services/recurrence_service.dart';
+
 void main() async {
   // Widgets binding sicherstellen, da asynchrone Aufrufe vor runApp durchgeführt werden sollen.
   WidgetsFlutterBinding.ensureInitialized();
 
   // NotificationService initialisieren (und ggf. um Berechtigung fragen, wenn iOS)
-  await NotificationService().init();
+  try {
+    await NotificationService().init();
+  } catch (e) {
+    // Bei Fehlern mit dem NotificationService loggen, aber App trotzdem starten
+    debugPrint("Fehler bei der Initialisierung des NotificationService: $e");
+  }
 
   runApp(
     MultiProvider(
@@ -37,9 +49,26 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => ThemeNotifier(),
         ),
-        // PrayerTimeService-Provider (mit dem zugehörigen Repository)
-        ChangeNotifierProvider(
+        Provider<GoogleCalendarService>(
+          create: (_) => GoogleCalendarService(),
+        ),
+        Provider<AppointmentRepository>(
+          create: (_) => AppointmentRepository(),
+        ),
+        Provider<RecurrenceService>(
+          create: (_) => RecurrenceService(),
+        ),
+        Provider<PrayerTimeService>(
           create: (_) => PrayerTimeService(PrayerTimeRepository()),
+        ),
+        // Ardından, CalendarSyncService nesnelerini oluşturuyoruz:
+        Provider<CalendarSyncService>(
+          create: (context) => CalendarSyncService(
+            calendarProvider: context.read<GoogleCalendarService>(),
+            appointmentRepository: context.read<AppointmentRepository>(),
+            recurrenceService: context.read<RecurrenceService>(),
+            prayerTimeService: context.read<PrayerTimeService>(),
+          ),
         ),
       ],
       child: const MyApp(),

@@ -977,20 +977,20 @@ class AppLocalizations extends ChangeNotifier {
   String get timeSettings {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return 'Zeiteinstellungen';
+        return "Zeiteinstellungen";
       case AppLanguage.turkish:
-        return 'Zaman Ayarları';
+        return "Zaman Ayarları";
       case AppLanguage.arabic:
-        return 'إعدادات الوقت';
+        return "إعدادات الوقت";
       case AppLanguage.bosnian:
-        return 'Postavke vremena';
+        return "Postavke vremena";
       case AppLanguage.spanish:
-        return 'Configuración de tiempo';
+        return "Configuración de tiempo";
       case AppLanguage.persian:
-        return 'تنظیمات زمان';
+        return "تنظیمات زمان";
       case AppLanguage.english:
       default:
-        return 'Time Settings';
+        return "Time Settings";
     }
   }
 
@@ -1354,7 +1354,7 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
-// >>> Getter für "filterCategories"
+  // >>> Getter für "filterCategories"
   String get filterCategories {
     switch (_currentLanguage) {
       case AppLanguage.german:
@@ -1719,7 +1719,7 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
-  String get qiblaCompassTitle {
+  String get qiblaCompass {
     switch (_currentLanguage) {
       case AppLanguage.german:
         return 'Qibla Kompass';
@@ -1727,12 +1727,6 @@ class AppLocalizations extends ChangeNotifier {
         return 'Kıble Pusulası';
       case AppLanguage.arabic:
         return 'بوصلة القبلة';
-      case AppLanguage.bosnian:
-        return 'Kibla kompas';
-      case AppLanguage.spanish:
-        return 'Brújula Qibla';
-      case AppLanguage.persian:
-        return 'قطب نما قبله';
       case AppLanguage.english:
       default:
         return 'Qibla Compass';
@@ -1946,13 +1940,7 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.turkish:
         return '$val Dakika önce';
       case AppLanguage.arabic:
-        return '$val دقيقة قبل';
-      case AppLanguage.bosnian:
-        return '$val min. prije';
-      case AppLanguage.spanish:
-        return '$val min. antes';
-      case AppLanguage.persian:
-        return '$val دقیقه قبل';
+        return '$val دقيقة قبل الموعد';
       case AppLanguage.english:
       default:
         return '$val min. before';
@@ -1966,16 +1954,10 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.turkish:
         return '$h Saat önce';
       case AppLanguage.arabic:
-        return '$h ساعة قبل';
-      case AppLanguage.bosnian:
-        return '$h sat prije';
-      case AppLanguage.spanish:
-        return '$h hr before';
-      case AppLanguage.persian:
-        return '$h ساعت قبل';
+        return '$h ساعة قبل الموعد';
       case AppLanguage.english:
       default:
-        return '$h hr before';
+        return '$h hour(s) before';
     }
   }
 
@@ -1986,492 +1968,10 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.turkish:
         return '$d Gün önce';
       case AppLanguage.arabic:
-        return '$d يوم قبل';
-      case AppLanguage.bosnian:
-        return '$d dan prije';
-      case AppLanguage.spanish:
-        return '$d d before';
-      case AppLanguage.persian:
-        return '$d روز قبل';
+        return '$d يوم قبل الموعد';
       case AppLanguage.english:
       default:
         return '$d day(s) before';
-    }
-  }
-
-  String get selectCategoryLabel {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Kategorie wählen';
-      case AppLanguage.turkish:
-        return 'Kategori seçiniz';
-      case AppLanguage.arabic:
-        return 'اختر الفئة';
-      case AppLanguage.bosnian:
-        return 'Izaberi kategoriju';
-      case AppLanguage.spanish:
-        return 'Seleccionar categoría';
-      case AppLanguage.persian:
-        return 'انتخاب دسته';
-      case AppLanguage.english:
-      default:
-        return 'Select Category';
-    }
-  }
-
-  String get fewerOptions {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Weniger Optionen';
-      case AppLanguage.turkish:
-        return 'Daha Az Seçenek';
-      case AppLanguage.arabic:
-        return 'خيارات أقل';
-      case AppLanguage.bosnian:
-        return 'Manje opcija';
-      case AppLanguage.spanish:
-        return 'Menos opciones';
-      case AppLanguage.persian:
-        return 'گزینه‌های کمتر';
-      case AppLanguage.english:
-      default:
-        return 'Fewer Options';
-    }
-  }
-
-  String get advancedOptions {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Erweiterte Optionen';
-      case AppLanguage.turkish:
-        return 'Gelişmiş Seçenekler';
-      case AppLanguage.arabic:
-        return 'خيارات متقدمة';
-      case AppLanguage.bosnian:
-        return 'Napredne opcije';
-      case AppLanguage.spanish:
-        return 'Opciones avanzadas';
-      case AppLanguage.persian:
-        return 'گزینه‌های پیشرفته';
-      case AppLanguage.english:
-      default:
-        return 'Advanced Options';
-    }
-  }
-
-  String getRecurrenceTypeLabel(RecurrenceType type) {
-    switch (type) {
-      case RecurrenceType.daily:
-        switch (_currentLanguage) {
-          case AppLanguage.german:
-            return 'Täglich';
-          case AppLanguage.turkish:
-            return 'Günlük';
-          case AppLanguage.arabic:
-            return 'يومي';
-          case AppLanguage.bosnian:
-            return 'Dnevno';
-          case AppLanguage.spanish:
-            return 'Diario';
-          case AppLanguage.persian:
-            return 'روزانه';
-          case AppLanguage.english:
-          default:
-            return 'Daily';
-        }
-      case RecurrenceType.weekly:
-        switch (_currentLanguage) {
-          case AppLanguage.german:
-            return 'Wöchentlich';
-          case AppLanguage.turkish:
-            return 'Haftalık';
-          case AppLanguage.arabic:
-            return 'أسبوعي';
-          case AppLanguage.bosnian:
-            return 'Sedmično';
-          case AppLanguage.spanish:
-            return 'Semanal';
-          case AppLanguage.persian:
-            return 'هفتگی';
-          case AppLanguage.english:
-          default:
-            return 'Weekly';
-        }
-      case RecurrenceType.monthly:
-        switch (_currentLanguage) {
-          case AppLanguage.german:
-            return 'Monatlich';
-          case AppLanguage.turkish:
-            return 'Aylık';
-          case AppLanguage.arabic:
-            return 'شهري';
-          case AppLanguage.bosnian:
-            return 'Mjesečno';
-          case AppLanguage.spanish:
-            return 'Mensual';
-          case AppLanguage.persian:
-            return 'ماهانه';
-          case AppLanguage.english:
-          default:
-            return 'Monthly';
-        }
-      case RecurrenceType.yearly:
-        switch (_currentLanguage) {
-          case AppLanguage.german:
-            return 'Jährlich';
-          case AppLanguage.turkish:
-            return 'Yıllık';
-          case AppLanguage.arabic:
-            return 'سنوي';
-          case AppLanguage.bosnian:
-            return 'Godišnje';
-          case AppLanguage.spanish:
-            return 'Anual';
-          case AppLanguage.persian:
-            return 'سالانه';
-          case AppLanguage.english:
-          default:
-            return 'Yearly';
-        }
-    }
-  }
-
-  String getRecurrenceRangeLabel(RecurrenceRange range) {
-    switch (range) {
-      case RecurrenceRange.noEndDate:
-        switch (_currentLanguage) {
-          case AppLanguage.german:
-            return 'Ohne Enddatum';
-          case AppLanguage.turkish:
-            return 'Bitiş Tarihi Yok';
-          case AppLanguage.arabic:
-            return 'بدون تاريخ انتهاء';
-          case AppLanguage.bosnian:
-            return 'Bez završetka';
-          case AppLanguage.spanish:
-            return 'Sin fecha de fin';
-          case AppLanguage.persian:
-            return 'بدون تاریخ پایان';
-          case AppLanguage.english:
-          default:
-            return 'No End Date';
-        }
-      case RecurrenceRange.endDate:
-        switch (_currentLanguage) {
-          case AppLanguage.german:
-            return 'Endet an einem bestimmten Datum';
-          case AppLanguage.turkish:
-            return 'Belirli bir tarihte sona erer';
-          case AppLanguage.arabic:
-            return 'ينتهي بتاريخ معين';
-          case AppLanguage.bosnian:
-            return 'Završava na određeni datum';
-          case AppLanguage.spanish:
-            return 'Termina en una fecha específica';
-          case AppLanguage.persian:
-            return 'در تاریخ مشخصی پایان می‌یابد';
-          case AppLanguage.english:
-          default:
-            return 'Ends on a Specific Date';
-        }
-      case RecurrenceRange.count:
-        switch (_currentLanguage) {
-          case AppLanguage.german:
-            return 'Endet nach einer Anzahl';
-          case AppLanguage.turkish:
-            return 'Belirli sayıda sona erer';
-          case AppLanguage.arabic:
-            return 'ينتهي بعد عدد محدد';
-          case AppLanguage.bosnian:
-            return 'Završava nakon određenog broja ponavljanja';
-          case AppLanguage.spanish:
-            return 'Termina después de un número';
-          case AppLanguage.persian:
-            return 'پس از تعداد مشخصی پایان می‌یابد';
-          case AppLanguage.english:
-          default:
-            return 'Ends After Count';
-        }
-    }
-  }
-
-  String get upcomingTasksLabel {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Termine heute';
-      case AppLanguage.turkish:
-        return 'Bugünkü randevular';
-      case AppLanguage.arabic:
-        return 'المواعيد القادمة';
-      case AppLanguage.bosnian:
-        return 'Današnji termini';
-      case AppLanguage.spanish:
-        return 'Citas de hoy';
-      case AppLanguage.persian:
-        return 'قرارهای امروز';
-      case AppLanguage.english:
-      default:
-        return 'Appointments today';
-    }
-  }
-
-  String get timeFormat24 {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return '24-Stunden-Format';
-      case AppLanguage.turkish:
-        return '24 Saat Formatı';
-      case AppLanguage.arabic:
-        return 'تنسيق 24 ساعة';
-      case AppLanguage.bosnian:
-        return '24-satni format';
-      case AppLanguage.spanish:
-        return 'Formato de 24 horas';
-      case AppLanguage.persian:
-        return 'فرمت 24 ساعته';
-      case AppLanguage.english:
-      default:
-        return '24-hour format';
-    }
-  }
-
-  String get timeFormat24Active {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Aktuell ist das 24h-Format aktiv';
-      case AppLanguage.turkish:
-        return 'Şu anda 24 saat formatı etkin';
-      case AppLanguage.arabic:
-        return 'حاليًا يتم استخدام تنسيق 24 ساعة';
-      case AppLanguage.bosnian:
-        return 'Trenutno je aktivan 24-satni format';
-      case AppLanguage.spanish:
-        return 'Actualmente, el formato de 24 horas está activo';
-      case AppLanguage.persian:
-        return 'در حال حاضر، فرمت 24 ساعته فعال است';
-      case AppLanguage.english:
-      default:
-        return 'Currently, 24-hour format is active';
-    }
-  }
-
-  String get timeFormatAmPmActive {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Aktuell ist das AM/PM-Format aktiv';
-      case AppLanguage.turkish:
-        return 'Şu anda AM/PM formatı etkin';
-      case AppLanguage.arabic:
-        return 'حاليًا يتم استخدام تنسيق ص/م';
-      case AppLanguage.bosnian:
-        return 'Trenutno je aktivan AM/PM format';
-      case AppLanguage.spanish:
-        return 'Actualmente, el formato AM/PM está activo';
-      case AppLanguage.persian:
-        return 'در حال حاضر، فرمت AM/PM فعال است';
-      case AppLanguage.english:
-      default:
-        return 'Currently, AM/PM format is active';
-    }
-  }
-
-  String get language {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Sprache';
-      case AppLanguage.turkish:
-        return 'Dil';
-      case AppLanguage.arabic:
-        return 'اللغة';
-      case AppLanguage.bosnian:
-        return 'Jezik';
-      case AppLanguage.spanish:
-        return 'Idioma';
-      case AppLanguage.persian:
-        return 'زبان';
-      case AppLanguage.english:
-      default:
-        return 'Language';
-    }
-  }
-
-  String get weather {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Wetter';
-      case AppLanguage.turkish:
-        return 'Hava';
-      case AppLanguage.arabic:
-        return 'الطقس';
-      case AppLanguage.bosnian:
-        return 'Vrijeme';
-      case AppLanguage.spanish:
-        return 'Tiempo';
-      case AppLanguage.persian:
-        return 'آب و هوا';
-      case AppLanguage.english:
-      default:
-        return 'Weather';
-    }
-  }
-
-  String get automaticLocationSubtitle {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Bestimmt Ihren Standort per GPS';
-      case AppLanguage.turkish:
-        return 'Konumu GPS üzerinden belirler';
-      case AppLanguage.arabic:
-        return 'يحدد موقعك عبر GPS';
-      case AppLanguage.bosnian:
-        return 'Određuje vašu lokaciju putem GPS-a';
-      case AppLanguage.spanish:
-        return 'Determina tu ubicación mediante GPS';
-      case AppLanguage.persian:
-        return 'مکان شما را از طریق GPS تعیین می‌کند';
-      case AppLanguage.english:
-      default:
-        return 'Determines your location via GPS';
-    }
-  }
-
-  String get automaticLocation {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Automatischer Standort';
-      case AppLanguage.turkish:
-        return 'Otomatik Konum';
-      case AppLanguage.arabic:
-        return 'الموقع التلقائي';
-      case AppLanguage.bosnian:
-        return 'Automatska lokacija';
-      case AppLanguage.spanish:
-        return 'Ubicación automática';
-      case AppLanguage.persian:
-        return 'مکان خودکار';
-      case AppLanguage.english:
-      default:
-        return 'Automatic Location';
-    }
-  }
-
-  String get locationSettings {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Standort-Einstellungen';
-      case AppLanguage.turkish:
-        return 'Konum Ayarları';
-      case AppLanguage.arabic:
-        return 'إعدادات الموقع';
-      case AppLanguage.bosnian:
-        return 'Postavke lokacije';
-      case AppLanguage.spanish:
-        return 'Configuración de ubicación';
-      case AppLanguage.persian:
-        return 'تنظیمات مکان';
-      case AppLanguage.english:
-      default:
-        return 'Location Settings';
-    }
-  }
-
-  String get timeFormat {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Zeitformat';
-      case AppLanguage.turkish:
-        return 'Zaman Formatı';
-      case AppLanguage.arabic:
-        return 'تنسيق الوقت';
-      case AppLanguage.bosnian:
-        return 'Format vremena';
-      case AppLanguage.spanish:
-        return 'Formato de hora';
-      case AppLanguage.persian:
-        return 'فرمت زمان';
-      case AppLanguage.english:
-      default:
-        return 'Time Format';
-    }
-  }
-
-  String get enableNotifications {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Benachrichtigungen aktivieren';
-      case AppLanguage.turkish:
-        return 'Bildirimleri Etkinleştir';
-      case AppLanguage.arabic:
-        return 'تفعيل الإشعارات';
-      case AppLanguage.bosnian:
-        return 'Omogući obavještenja';
-      case AppLanguage.spanish:
-        return 'Activar notificaciones';
-      case AppLanguage.persian:
-        return 'اعلان‌ها را فعال کن';
-      case AppLanguage.english:
-      default:
-        return 'Enable Notifications';
-    }
-  }
-
-  String get enableNotificationsSubtitle {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Erhalten Sie Mitteilungen zu Terminen und Gebetszeiten';
-      case AppLanguage.turkish:
-        return 'Randevular ve namaz vakitleriyle ilgili bildirimler alın';
-      case AppLanguage.arabic:
-        return 'تلقي إشعارات بالمواعيد وأوقات الصلاة';
-      case AppLanguage.bosnian:
-        return 'Primajte obavještenja o terminima i vremenima namaza';
-      case AppLanguage.spanish:
-        return 'Recibe notificaciones sobre citas y tiempos de oración';
-      case AppLanguage.persian:
-        return 'اطلاعیه‌های مربوط به قرارها و اوقات نماز را دریافت کنید';
-      case AppLanguage.english:
-      default:
-        return 'Receive alerts for appointments and prayer times';
-    }
-  }
-
-  String get darkMode {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Dunkler Modus';
-      case AppLanguage.turkish:
-        return 'Karanlık Mod';
-      case AppLanguage.arabic:
-        return 'الوضع الداكن';
-      case AppLanguage.bosnian:
-        return 'Tamni način';
-      case AppLanguage.spanish:
-        return 'Modo oscuro';
-      case AppLanguage.persian:
-        return 'حالت تاریک';
-      case AppLanguage.english:
-      default:
-        return 'Dark Mode';
-    }
-  }
-
-  String get darkModeSubtitle {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Aktivieren Sie das dunkle Design';
-      case AppLanguage.turkish:
-        return 'Koyu temayı etkinleştirin';
-      case AppLanguage.arabic:
-        return 'تفعيل المظهر الداكن';
-      case AppLanguage.bosnian:
-        return 'Uključite tamni način rada';
-      case AppLanguage.spanish:
-        return 'Habilitar el modo oscuro';
-      case AppLanguage.persian:
-        return 'حالت تاریک را فعال کنید';
-      case AppLanguage.english:
-      default:
-        return 'Enable dark theme';
     }
   }
 
@@ -2483,12 +1983,6 @@ class AppLocalizations extends ChangeNotifier {
         return 'Randevu yüklenirken hata oluştu';
       case AppLanguage.arabic:
         return 'حدث خطأ أثناء تحميل الموعد';
-      case AppLanguage.bosnian:
-        return 'Greška pri učitavanju termina';
-      case AppLanguage.spanish:
-        return 'Error al cargar la cita';
-      case AppLanguage.persian:
-        return 'خطا در بارگیری قرار';
       case AppLanguage.english:
       default:
         return 'Error loading appointment';
@@ -2498,40 +1992,14 @@ class AppLocalizations extends ChangeNotifier {
   String get noAppointmentToDelete {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return 'Kein Termin zum Löschen vorhanden.';
+        return 'Kein Termin zu löschen.';
       case AppLanguage.turkish:
-        return 'Silinecek randevu bulunamadı.';
+        return 'Silinecek bir randevu yok.';
       case AppLanguage.arabic:
         return 'لا يوجد موعد للحذف.';
-      case AppLanguage.bosnian:
-        return 'Nema termina za brisanje.';
-      case AppLanguage.spanish:
-        return 'No hay cita para eliminar.';
-      case AppLanguage.persian:
-        return 'هیچ قراردادی برای حذف وجود ندارد.';
       case AppLanguage.english:
       default:
         return 'No appointment to delete.';
-    }
-  }
-
-  String get appointmentDeletedSuccessfully {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Termin erfolgreich gelöscht.';
-      case AppLanguage.turkish:
-        return 'Randevu başarıyla silindi.';
-      case AppLanguage.arabic:
-        return 'تم حذف الموعد بنجاح.';
-      case AppLanguage.bosnian:
-        return 'Termin uspješno izbrisan.';
-      case AppLanguage.spanish:
-        return 'Cita eliminada con éxito.';
-      case AppLanguage.persian:
-        return 'قرار با موفقیت حذف شد.';
-      case AppLanguage.english:
-      default:
-        return 'Appointment deleted successfully.';
     }
   }
 
@@ -2543,75 +2011,23 @@ class AppLocalizations extends ChangeNotifier {
         return 'Randevu silinirken hata oluştu.';
       case AppLanguage.arabic:
         return 'حدث خطأ أثناء حذف الموعد.';
-      case AppLanguage.bosnian:
-        return 'Greška prilikom brisanja termina.';
-      case AppLanguage.spanish:
-        return 'Error al eliminar la cita.';
-      case AppLanguage.persian:
-        return 'خطا در حذف قرار.';
       case AppLanguage.english:
       default:
         return 'Error deleting appointment.';
     }
   }
 
-  String get pleaseSelectStartTimeError {
+  String get appointmentDeletedSuccessfully {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return 'Bitte wählen Sie eine Startzeit aus.';
+        return 'Termin erfolgreich gelöscht.';
       case AppLanguage.turkish:
-        return 'Lütfen bir başlangıç zamanı seçin.';
+        return 'Randevu başarıyla silindi.';
       case AppLanguage.arabic:
-        return 'من فضلك اختر وقت البدء.';
-      case AppLanguage.bosnian:
-        return 'Molimo odaberite vrijeme početka.';
-      case AppLanguage.spanish:
-        return 'Por favor, seleccione una hora de inicio.';
-      case AppLanguage.persian:
-        return 'لطفاً زمان شروع را انتخاب کنید.';
+        return 'تم حذف الموعد بنجاح.';
       case AppLanguage.english:
       default:
-        return 'Please select a start time.';
-    }
-  }
-
-  String get reminderTitle {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Erinnerung';
-      case AppLanguage.turkish:
-        return 'Hatırlatma';
-      case AppLanguage.arabic:
-        return 'تذكير';
-      case AppLanguage.bosnian:
-        return 'Podsjetnik';
-      case AppLanguage.spanish:
-        return 'Recordatorio';
-      case AppLanguage.persian:
-        return 'یادآوری';
-      case AppLanguage.english:
-      default:
-        return 'Reminder';
-    }
-  }
-
-  String get reminderBody {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Vergessen Sie Ihren Termin nicht!';
-      case AppLanguage.turkish:
-        return 'Randevunuzu unutmayın!';
-      case AppLanguage.arabic:
-        return 'لا تنس موعدك!';
-      case AppLanguage.bosnian:
-        return 'Ne zaboravite svoj termin!';
-      case AppLanguage.spanish:
-        return '¡No olvides tu cita!';
-      case AppLanguage.persian:
-        return 'قرار خود را فراموش نکنید!';
-      case AppLanguage.english:
-      default:
-        return 'Don\'t forget your appointment!';
+        return 'Appointment deleted successfully.';
     }
   }
 
@@ -2623,12 +2039,6 @@ class AppLocalizations extends ChangeNotifier {
         return 'Randevu kaydedilemedi.';
       case AppLanguage.arabic:
         return 'تعذر حفظ الموعد.';
-      case AppLanguage.bosnian:
-        return 'Termin nije mogao biti sačuvan.';
-      case AppLanguage.spanish:
-        return 'No se pudo guardar la cita.';
-      case AppLanguage.persian:
-        return 'خطا در ذخیره قرار.';
       case AppLanguage.english:
       default:
         return 'Failed to save the appointment.';
@@ -2652,6 +2062,1101 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.english:
       default:
         return 'Location';
+    }
+  }
+
+  String get locationPermissionDeniedMessage {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Die Standortberechtigung wurde verweigert.\nBitte erteile die Berechtigung, um den Kompass nutzen zu können.';
+      case AppLanguage.turkish:
+        return 'Konum izni reddedildi.\nLütfen pusulayı kullanabilmek için izni verin.';
+      case AppLanguage.arabic:
+        return 'تم رفض إذن الموقع.\nيرجى منح الإذن لاستخدام البوصلة.';
+      case AppLanguage.english:
+      default:
+        return 'Location permission was denied.\nPlease grant permission to use the compass.';
+    }
+  }
+
+  String get qiblaFetchError {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Fehler beim Abrufen der Qibla-Richtung';
+      case AppLanguage.turkish:
+        return 'Kıble yönü alınırken hata oluştu';
+      case AppLanguage.arabic:
+        return 'حدث خطأ أثناء استرجاع اتجاه القبلة';
+      case AppLanguage.english:
+      default:
+        return 'Error retrieving the Qibla direction';
+    }
+  }
+
+  String get deviceNotSupported {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Ihr Gerät unterstützt den Kompass nicht.';
+      case AppLanguage.turkish:
+        return 'Cihazınız pusulayı desteklemiyor.';
+      case AppLanguage.arabic:
+        return 'جهازك لا يدعم البوصلة.';
+      case AppLanguage.english:
+      default:
+        return 'Your device does not support the compass.';
+    }
+  }
+
+  String get qiblaLabel {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Qibla';
+      case AppLanguage.turkish:
+        return 'Kıble';
+      case AppLanguage.arabic:
+        return 'القبلة';
+      case AppLanguage.english:
+      default:
+        return 'Qibla';
+    }
+  }
+
+  // Neue Getter für InitialLocationPage
+  String get initialLocationInstructions {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Bitte wählen Sie Ihre Sprache";
+      case AppLanguage.turkish:
+        return "Lütfen dil seçin";
+      case AppLanguage.arabic:
+        return "الرجاء اختيار لغتك";
+      case AppLanguage.bosnian:
+        return "Molimo odaberite svoj jezik";
+      case AppLanguage.spanish:
+        return "Por favor seleccione su idioma";
+      case AppLanguage.persian:
+        return "لطفا زبان خود را انتخاب کنید";
+      case AppLanguage.english:
+      default:
+        return "Please select your language";
+    }
+  }
+
+  String get selectLocationInstructions {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Bitte wählen Sie Ihr Land und Ihre Stadt";
+      case AppLanguage.turkish:
+        return "Lütfen ülkenizi ve şehrinizi seçin";
+      case AppLanguage.arabic:
+        return "الرجاء اختيار بلدك ومدينتك";
+      case AppLanguage.bosnian:
+        return "Molimo odaberite svoju zemlju i grad";
+      case AppLanguage.spanish:
+        return "Por favor seleccione su país y ciudad";
+      case AppLanguage.persian:
+        return "لطفا کشور و شهر خود را انتخاب کنید";
+      case AppLanguage.english:
+      default:
+        return "Please select your country and city";
+    }
+  }
+
+  // Grundlegende UI-Elemente
+  String get language {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Sprache";
+      case AppLanguage.turkish:
+        return "Dil";
+      case AppLanguage.arabic:
+        return "اللغة";
+      case AppLanguage.bosnian:
+        return "Jezik";
+      case AppLanguage.spanish:
+        return "Idioma";
+      case AppLanguage.persian:
+        return "زبان";
+      case AppLanguage.english:
+      default:
+        return "Language";
+    }
+  }
+
+  String get timeFormat24 {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "24-Stunden-Format";
+      case AppLanguage.turkish:
+        return "24 saat formatı";
+      case AppLanguage.arabic:
+        return "تنسيق 24 ساعة";
+      case AppLanguage.bosnian:
+        return "24-satni format";
+      case AppLanguage.spanish:
+        return "Formato 24 horas";
+      case AppLanguage.persian:
+        return "فرمت 24 ساعته";
+      case AppLanguage.english:
+      default:
+        return "24-hour format";
+    }
+  }
+
+  String get timeFormat24Active {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "24-Stunden-Format aktiv";
+      case AppLanguage.turkish:
+        return "24 saat formatı etkin";
+      case AppLanguage.arabic:
+        return "تنسيق 24 ساعة نشط";
+      case AppLanguage.bosnian:
+        return "24-satni format aktivan";
+      case AppLanguage.spanish:
+        return "Formato 24 horas activo";
+      case AppLanguage.persian:
+        return "فرمت 24 ساعته فعال است";
+      case AppLanguage.english:
+      default:
+        return "24-hour format active";
+    }
+  }
+
+  String get timeFormatAmPmActive {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "AM/PM-Format aktiv";
+      case AppLanguage.turkish:
+        return "AM/PM formatı etkin";
+      case AppLanguage.arabic:
+        return "تنسيق صباحا/مساء نشط";
+      case AppLanguage.bosnian:
+        return "AM/PM format aktivan";
+      case AppLanguage.spanish:
+        return "Formato AM/PM activo";
+      case AppLanguage.persian:
+        return "فرمت AM/PM فعال است";
+      case AppLanguage.english:
+      default:
+        return "AM/PM format active";
+    }
+  }
+
+  String get locationSettings {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Standort-Einstellungen";
+      case AppLanguage.turkish:
+        return "Konum Ayarları";
+      case AppLanguage.arabic:
+        return "إعدادات الموقع";
+      case AppLanguage.bosnian:
+        return "Postavke lokacije";
+      case AppLanguage.spanish:
+        return "Configuración de ubicación";
+      case AppLanguage.persian:
+        return "تنظیمات مکان";
+      case AppLanguage.english:
+      default:
+        return "Location Settings";
+    }
+  }
+
+  // Appointment Creation Page Lokalisierungen
+  String get reminderTitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Erinnerung";
+      case AppLanguage.turkish:
+        return "Hatırlatma";
+      case AppLanguage.arabic:
+        return "تذكير";
+      case AppLanguage.bosnian:
+        return "Podsjetnik";
+      case AppLanguage.spanish:
+        return "Recordatorio";
+      case AppLanguage.persian:
+        return "یادآوری";
+      case AppLanguage.english:
+      default:
+        return "Reminder";
+    }
+  }
+
+  String get reminderBody {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Sie haben einen bevorstehenden Termin";
+      case AppLanguage.turkish:
+        return "Yaklaşan bir randevunuz var";
+      case AppLanguage.arabic:
+        return "لديك موعد قادم";
+      case AppLanguage.bosnian:
+        return "Imate predstojeći sastanak";
+      case AppLanguage.spanish:
+        return "Tiene una cita próxima";
+      case AppLanguage.persian:
+        return "شما یک قرار ملاقات پیش رو دارید";
+      case AppLanguage.english:
+      default:
+        return "You have an upcoming appointment";
+    }
+  }
+
+  String get selectCategoryLabel {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Kategorie auswählen";
+      case AppLanguage.turkish:
+        return "Kategori seçin";
+      case AppLanguage.arabic:
+        return "اختر الفئة";
+      case AppLanguage.bosnian:
+        return "Izaberite kategoriju";
+      case AppLanguage.spanish:
+        return "Seleccionar categoría";
+      case AppLanguage.persian:
+        return "انتخاب دسته‌بندی";
+      case AppLanguage.english:
+      default:
+        return "Select Category";
+    }
+  }
+
+  String get fewerOptions {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Weniger Optionen";
+      case AppLanguage.turkish:
+        return "Daha az seçenek";
+      case AppLanguage.arabic:
+        return "خيارات أقل";
+      case AppLanguage.bosnian:
+        return "Manje opcija";
+      case AppLanguage.spanish:
+        return "Menos opciones";
+      case AppLanguage.persian:
+        return "گزینه‌های کمتر";
+      case AppLanguage.english:
+      default:
+        return "Fewer Options";
+    }
+  }
+
+  String get advancedOptions {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Erweiterte Optionen";
+      case AppLanguage.turkish:
+        return "Gelişmiş seçenekler";
+      case AppLanguage.arabic:
+        return "خيارات متقدمة";
+      case AppLanguage.bosnian:
+        return "Napredne opcije";
+      case AppLanguage.spanish:
+        return "Opciones avanzadas";
+      case AppLanguage.persian:
+        return "گزینه‌های پیشرفته";
+      case AppLanguage.english:
+      default:
+        return "Advanced Options";
+    }
+  }
+
+  String getRecurrenceTypeLabel(String type) {
+    switch (type) {
+      case 'daily':
+        switch (_currentLanguage) {
+          case AppLanguage.german:
+            return "Täglich";
+          case AppLanguage.turkish:
+            return "Günlük";
+          case AppLanguage.arabic:
+            return "يومي";
+          case AppLanguage.bosnian:
+            return "Dnevno";
+          case AppLanguage.spanish:
+            return "Diario";
+          case AppLanguage.persian:
+            return "روزانه";
+          case AppLanguage.english:
+          default:
+            return "Daily";
+        }
+      case 'weekly':
+        switch (_currentLanguage) {
+          case AppLanguage.german:
+            return "Wöchentlich";
+          case AppLanguage.turkish:
+            return "Haftalık";
+          case AppLanguage.arabic:
+            return "أسبوعي";
+          case AppLanguage.bosnian:
+            return "Sedmično";
+          case AppLanguage.spanish:
+            return "Semanal";
+          case AppLanguage.persian:
+            return "هفتگی";
+          case AppLanguage.english:
+          default:
+            return "Weekly";
+        }
+      case 'monthly':
+        switch (_currentLanguage) {
+          case AppLanguage.german:
+            return "Monatlich";
+          case AppLanguage.turkish:
+            return "Aylık";
+          case AppLanguage.arabic:
+            return "شهري";
+          case AppLanguage.bosnian:
+            return "Mjesečno";
+          case AppLanguage.spanish:
+            return "Mensual";
+          case AppLanguage.persian:
+            return "ماهانه";
+          case AppLanguage.english:
+          default:
+            return "Monthly";
+        }
+      case 'yearly':
+        switch (_currentLanguage) {
+          case AppLanguage.german:
+            return "Jährlich";
+          case AppLanguage.turkish:
+            return "Yıllık";
+          case AppLanguage.arabic:
+            return "سنوي";
+          case AppLanguage.bosnian:
+            return "Godišnje";
+          case AppLanguage.spanish:
+            return "Anual";
+          case AppLanguage.persian:
+            return "سالانه";
+          case AppLanguage.english:
+          default:
+            return "Yearly";
+        }
+      case 'custom':
+        switch (_currentLanguage) {
+          case AppLanguage.german:
+            return "Benutzerdefiniert";
+          case AppLanguage.turkish:
+            return "Özel";
+          case AppLanguage.arabic:
+            return "مخصص";
+          case AppLanguage.bosnian:
+            return "Prilagođeno";
+          case AppLanguage.spanish:
+            return "Personalizado";
+          case AppLanguage.persian:
+            return "سفارشی";
+          case AppLanguage.english:
+          default:
+            return "Custom";
+        }
+      case 'none':
+      default:
+        switch (_currentLanguage) {
+          case AppLanguage.german:
+            return "Keine Wiederholung";
+          case AppLanguage.turkish:
+            return "Tekrar yok";
+          case AppLanguage.arabic:
+            return "بدون تكرار";
+          case AppLanguage.bosnian:
+            return "Bez ponavljanja";
+          case AppLanguage.spanish:
+            return "Sin repetición";
+          case AppLanguage.persian:
+            return "بدون تکرار";
+          case AppLanguage.english:
+          default:
+            return "No Recurrence";
+        }
+    }
+  }
+
+  String get pleaseSelectStartTimeError {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Bitte wähle eine Startzeit aus";
+      case AppLanguage.turkish:
+        return "Lütfen bir başlangıç saati seçin";
+      case AppLanguage.arabic:
+        return "الرجاء تحديد وقت البدء";
+      case AppLanguage.bosnian:
+        return "Molimo odaberite vrijeme početka";
+      case AppLanguage.spanish:
+        return "Por favor seleccione una hora de inicio";
+      case AppLanguage.persian:
+        return "لطفا زمان شروع را انتخاب کنید";
+      case AppLanguage.english:
+      default:
+        return "Please select a start time";
+    }
+  }
+
+  String get upcomingTasksLabel {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Anstehende Aufgaben";
+      case AppLanguage.turkish:
+        return "Yaklaşan Görevler";
+      case AppLanguage.arabic:
+        return "المهام القادمة";
+      case AppLanguage.bosnian:
+        return "Nadolazeći zadaci";
+      case AppLanguage.spanish:
+        return "Próximas tareas";
+      case AppLanguage.persian:
+        return "وظایف پیش رو";
+      case AppLanguage.english:
+      default:
+        return "Upcoming Tasks";
+    }
+  }
+
+  String get weather {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Wetter";
+      case AppLanguage.turkish:
+        return "Hava Durumu";
+      case AppLanguage.arabic:
+        return "الطقس";
+      case AppLanguage.bosnian:
+        return "Vrijeme";
+      case AppLanguage.spanish:
+        return "Clima";
+      case AppLanguage.persian:
+        return "آب و هوا";
+      case AppLanguage.english:
+      default:
+        return "Weather";
+    }
+  }
+
+  String get qiblaDirection {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Qibla-Richtung";
+      case AppLanguage.turkish:
+        return "Kıble Yönü";
+      case AppLanguage.arabic:
+        return "اتجاه القبلة";
+      case AppLanguage.bosnian:
+        return "Smjer Kible";
+      case AppLanguage.spanish:
+        return "Dirección de la Qibla";
+      case AppLanguage.persian:
+        return "جهت قبله";
+      case AppLanguage.english:
+      default:
+        return "Qibla Direction";
+    }
+  }
+
+  String get qiblaTitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Qibla";
+      case AppLanguage.turkish:
+        return "Kıble";
+      case AppLanguage.arabic:
+        return "القبلة";
+      case AppLanguage.bosnian:
+        return "Kibla";
+      case AppLanguage.spanish:
+        return "Qibla";
+      case AppLanguage.persian:
+        return "قبله";
+      case AppLanguage.english:
+      default:
+        return "Qibla";
+    }
+  }
+
+  // Einstellungsseite Lokalisierungen
+  String get darkMode {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Dunkler Modus";
+      case AppLanguage.turkish:
+        return "Karanlık Mod";
+      case AppLanguage.arabic:
+        return "الوضع المظلم";
+      case AppLanguage.bosnian:
+        return "Tamni način";
+      case AppLanguage.spanish:
+        return "Modo oscuro";
+      case AppLanguage.persian:
+        return "حالت تاریک";
+      case AppLanguage.english:
+      default:
+        return "Dark Mode";
+    }
+  }
+
+  String get darkModeSubtitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Aktiviere den dunklen Modus für die App";
+      case AppLanguage.turkish:
+        return "Uygulama için karanlık modu etkinleştir";
+      case AppLanguage.arabic:
+        return "تفعيل الوضع المظلم للتطبيق";
+      case AppLanguage.bosnian:
+        return "Aktivirajte tamni način za aplikaciju";
+      case AppLanguage.spanish:
+        return "Activar el modo oscuro para la aplicación";
+      case AppLanguage.persian:
+        return "حالت تاریک را برای برنامه فعال کنید";
+      case AppLanguage.english:
+      default:
+        return "Enable dark mode for the app";
+    }
+  }
+
+  String get enableNotifications {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Benachrichtigungen aktivieren";
+      case AppLanguage.turkish:
+        return "Bildirimleri Etkinleştir";
+      case AppLanguage.arabic:
+        return "تفعيل الإشعارات";
+      case AppLanguage.bosnian:
+        return "Omogući obavještenja";
+      case AppLanguage.spanish:
+        return "Habilitar notificaciones";
+      case AppLanguage.persian:
+        return "فعال کردن اعلان‌ها";
+      case AppLanguage.english:
+      default:
+        return "Enable Notifications";
+    }
+  }
+
+  String get enableNotificationsSubtitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Erhalte Benachrichtigungen für Termine und Gebetszeiten";
+      case AppLanguage.turkish:
+        return "Randevular ve namaz vakitleri için bildirim alın";
+      case AppLanguage.arabic:
+        return "تلقي إشعارات للمواعيد وأوقات الصلاة";
+      case AppLanguage.bosnian:
+        return "Primajte obavještenja za sastanke i vremena namaza";
+      case AppLanguage.spanish:
+        return "Recibir notificaciones para citas y horarios de oración";
+      case AppLanguage.persian:
+        return "دریافت اعلان‌ها برای قرارها و اوقات نماز";
+      case AppLanguage.english:
+      default:
+        return "Receive notifications for appointments and prayer times";
+    }
+  }
+
+  String get timeFormat {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Zeitformat";
+      case AppLanguage.turkish:
+        return "Zaman Formatı";
+      case AppLanguage.arabic:
+        return "تنسيق الوقت";
+      case AppLanguage.bosnian:
+        return "Format vremena";
+      case AppLanguage.spanish:
+        return "Formato de hora";
+      case AppLanguage.persian:
+        return "قالب زمان";
+      case AppLanguage.english:
+      default:
+        return "Time Format";
+    }
+  }
+
+  String get automaticLocation {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Automatischer Standort";
+      case AppLanguage.turkish:
+        return "Otomatik Konum";
+      case AppLanguage.arabic:
+        return "الموقع التلقائي";
+      case AppLanguage.bosnian:
+        return "Automatska lokacija";
+      case AppLanguage.spanish:
+        return "Ubicación automática";
+      case AppLanguage.persian:
+        return "مکان خودکار";
+      case AppLanguage.english:
+      default:
+        return "Automatic Location";
+    }
+  }
+
+  String get automaticLocationSubtitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Verwende den aktuellen Standort für Gebetszeiten";
+      case AppLanguage.turkish:
+        return "Namaz vakitleri için mevcut konumu kullanın";
+      case AppLanguage.arabic:
+        return "استخدام الموقع الحالي لأوقات الصلاة";
+      case AppLanguage.bosnian:
+        return "Koristite trenutnu lokaciju za vremena namaza";
+      case AppLanguage.spanish:
+        return "Usar ubicación actual para horarios de oración";
+      case AppLanguage.persian:
+        return "از مکان فعلی برای اوقات نماز استفاده کنید";
+      case AppLanguage.english:
+      default:
+        return "Use current location for prayer times";
+    }
+  }
+
+  // Kalender-Synchronisierung
+  String get calendarSync {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Kalendersynchronisierung";
+      case AppLanguage.turkish:
+        return "Takvim Senkronizasyonu";
+      case AppLanguage.arabic:
+        return "مزامنة التقويم";
+      case AppLanguage.bosnian:
+        return "Sinhronizacija kalendara";
+      case AppLanguage.spanish:
+        return "Sincronización de calendario";
+      case AppLanguage.persian:
+        return "همگام‌سازی تقویم";
+      case AppLanguage.english:
+      default:
+        return "Calendar Synchronization";
+    }
+  }
+
+  String get googleCalendar {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Google Kalender";
+      case AppLanguage.turkish:
+        return "Google Takvim";
+      case AppLanguage.arabic:
+        return "تقويم جوجل";
+      case AppLanguage.bosnian:
+        return "Google Kalendar";
+      case AppLanguage.spanish:
+        return "Calendario de Google";
+      case AppLanguage.persian:
+        return "تقویم گوگل";
+      case AppLanguage.english:
+      default:
+        return "Google Calendar";
+    }
+  }
+
+  String get appleCalendar {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Apple Kalender";
+      case AppLanguage.turkish:
+        return "Apple Takvim";
+      case AppLanguage.arabic:
+        return "تقويم آبل";
+      case AppLanguage.bosnian:
+        return "Apple Kalendar";
+      case AppLanguage.spanish:
+        return "Calendario de Apple";
+      case AppLanguage.persian:
+        return "تقویم اپل";
+      case AppLanguage.english:
+      default:
+        return "Apple Calendar";
+    }
+  }
+
+  String get outlookCalendar {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Outlook Kalender";
+      case AppLanguage.turkish:
+        return "Outlook Takvim";
+      case AppLanguage.arabic:
+        return "تقويم آوتلوك";
+      case AppLanguage.bosnian:
+        return "Outlook Kalendar";
+      case AppLanguage.spanish:
+        return "Calendario de Outlook";
+      case AppLanguage.persian:
+        return "تقویم اوت‌لوک";
+      case AppLanguage.english:
+      default:
+        return "Outlook Calendar";
+    }
+  }
+
+  String get connectGoogle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Mit Google verbinden";
+      case AppLanguage.turkish:
+        return "Google'a bağlan";
+      case AppLanguage.arabic:
+        return "الاتصال بجوجل";
+      case AppLanguage.bosnian:
+        return "Povežite se s Googleom";
+      case AppLanguage.spanish:
+        return "Conectar con Google";
+      case AppLanguage.persian:
+        return "اتصال به گوگل";
+      case AppLanguage.english:
+      default:
+        return "Connect to Google";
+    }
+  }
+
+  String get connectGoogleDescription {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Verbinde dein Google-Konto, um Termine zu synchronisieren";
+      case AppLanguage.turkish:
+        return "Randevuları senkronize etmek için Google hesabınızı bağlayın";
+      case AppLanguage.arabic:
+        return "ربط حساب جوجل الخاص بك لمزامنة المواعيد";
+      case AppLanguage.bosnian:
+        return "Povežite svoj Google račun za sinhronizaciju sastanaka";
+      case AppLanguage.spanish:
+        return "Conecte su cuenta de Google para sincronizar citas";
+      case AppLanguage.persian:
+        return "حساب گوگل خود را برای همگام‌سازی قرارها متصل کنید";
+      case AppLanguage.english:
+      default:
+        return "Connect your Google account to synchronize appointments";
+    }
+  }
+
+  String get connect {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Verbinden";
+      case AppLanguage.turkish:
+        return "Bağlan";
+      case AppLanguage.arabic:
+        return "اتصال";
+      case AppLanguage.bosnian:
+        return "Poveži";
+      case AppLanguage.spanish:
+        return "Conectar";
+      case AppLanguage.persian:
+        return "اتصال";
+      case AppLanguage.english:
+      default:
+        return "Connect";
+    }
+  }
+
+  String get manageConnection {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Verbindung verwalten";
+      case AppLanguage.turkish:
+        return "Bağlantıyı yönet";
+      case AppLanguage.arabic:
+        return "إدارة الاتصال";
+      case AppLanguage.bosnian:
+        return "Upravljanje vezom";
+      case AppLanguage.spanish:
+        return "Administrar conexión";
+      case AppLanguage.persian:
+        return "مدیریت اتصال";
+      case AppLanguage.english:
+      default:
+        return "Manage Connection";
+    }
+  }
+
+  String get manageConnectionPrompt {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Möchtest du die Verbindung trennen?";
+      case AppLanguage.turkish:
+        return "Bağlantıyı kesmek istiyor musunuz?";
+      case AppLanguage.arabic:
+        return "هل ترغب في قطع الاتصال؟";
+      case AppLanguage.bosnian:
+        return "Želite li prekinuti vezu?";
+      case AppLanguage.spanish:
+        return "¿Desea desconectar?";
+      case AppLanguage.persian:
+        return "آیا می‌خواهید اتصال را قطع کنید؟";
+      case AppLanguage.english:
+      default:
+        return "Do you want to disconnect?";
+    }
+  }
+
+  String get disconnect {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Trennen";
+      case AppLanguage.turkish:
+        return "Bağlantıyı kes";
+      case AppLanguage.arabic:
+        return "قطع الاتصال";
+      case AppLanguage.bosnian:
+        return "Prekini vezu";
+      case AppLanguage.spanish:
+        return "Desconectar";
+      case AppLanguage.persian:
+        return "قطع اتصال";
+      case AppLanguage.english:
+      default:
+        return "Disconnect";
+    }
+  }
+
+  String get importFromCalendar {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Aus Kalender importieren";
+      case AppLanguage.turkish:
+        return "Takvimden içe aktar";
+      case AppLanguage.arabic:
+        return "استيراد من التقويم";
+      case AppLanguage.bosnian:
+        return "Uvezi iz kalendara";
+      case AppLanguage.spanish:
+        return "Importar desde calendario";
+      case AppLanguage.persian:
+        return "وارد کردن از تقویم";
+      case AppLanguage.english:
+      default:
+        return "Import from Calendar";
+    }
+  }
+
+  String get exportToCalendar {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "In Kalender exportieren";
+      case AppLanguage.turkish:
+        return "Takvime dışa aktar";
+      case AppLanguage.arabic:
+        return "تصدير إلى التقويم";
+      case AppLanguage.bosnian:
+        return "Izvezi u kalendar";
+      case AppLanguage.spanish:
+        return "Exportar al calendario";
+      case AppLanguage.persian:
+        return "صادر کردن به تقویم";
+      case AppLanguage.english:
+      default:
+        return "Export to Calendar";
+    }
+  }
+
+  String get success {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Erfolg";
+      case AppLanguage.turkish:
+        return "Başarılı";
+      case AppLanguage.arabic:
+        return "نجاح";
+      case AppLanguage.bosnian:
+        return "Uspjeh";
+      case AppLanguage.spanish:
+        return "Éxito";
+      case AppLanguage.persian:
+        return "موفقیت";
+      case AppLanguage.english:
+      default:
+        return "Success";
+    }
+  }
+
+  String get error {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Fehler";
+      case AppLanguage.turkish:
+        return "Hata";
+      case AppLanguage.arabic:
+        return "خطأ";
+      case AppLanguage.bosnian:
+        return "Greška";
+      case AppLanguage.spanish:
+        return "Error";
+      case AppLanguage.persian:
+        return "خطا";
+      case AppLanguage.english:
+      default:
+        return "Error";
+    }
+  }
+
+  String get ok {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "OK";
+      case AppLanguage.turkish:
+        return "Tamam";
+      case AppLanguage.arabic:
+        return "موافق";
+      case AppLanguage.bosnian:
+        return "U redu";
+      case AppLanguage.spanish:
+        return "Aceptar";
+      case AppLanguage.persian:
+        return "تایید";
+      case AppLanguage.english:
+      default:
+        return "OK";
+    }
+  }
+
+  String get noSync {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Keine Synchronisierung";
+      case AppLanguage.turkish:
+        return "Senkronizasyon yok";
+      case AppLanguage.arabic:
+        return "لا مزامنة";
+      case AppLanguage.bosnian:
+        return "Bez sinhronizacije";
+      case AppLanguage.spanish:
+        return "Sin sincronización";
+      case AppLanguage.persian:
+        return "بدون همگام‌سازی";
+      case AppLanguage.english:
+      default:
+        return "No Sync";
+    }
+  }
+
+  String get dailySync {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Täglich";
+      case AppLanguage.turkish:
+        return "Günlük";
+      case AppLanguage.arabic:
+        return "يومي";
+      case AppLanguage.bosnian:
+        return "Dnevno";
+      case AppLanguage.spanish:
+        return "Diario";
+      case AppLanguage.persian:
+        return "روزانه";
+      case AppLanguage.english:
+      default:
+        return "Daily";
+    }
+  }
+
+  String get weeklySync {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Wöchentlich";
+      case AppLanguage.turkish:
+        return "Haftalık";
+      case AppLanguage.arabic:
+        return "أسبوعي";
+      case AppLanguage.bosnian:
+        return "Sedmično";
+      case AppLanguage.spanish:
+        return "Semanal";
+      case AppLanguage.persian:
+        return "هفتگی";
+      case AppLanguage.english:
+      default:
+        return "Weekly";
+    }
+  }
+
+  String get monthlySync {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Monatlich";
+      case AppLanguage.turkish:
+        return "Aylık";
+      case AppLanguage.arabic:
+        return "شهري";
+      case AppLanguage.bosnian:
+        return "Mjesečno";
+      case AppLanguage.spanish:
+        return "Mensual";
+      case AppLanguage.persian:
+        return "ماهانه";
+      case AppLanguage.english:
+      default:
+        return "Monthly";
+    }
+  }
+
+  String importSuccess(String serviceName) {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Termine erfolgreich aus $serviceName importiert";
+      case AppLanguage.turkish:
+        return "Randevular $serviceName'den başarıyla içe aktarıldı";
+      case AppLanguage.arabic:
+        return "تم استيراد المواعيد بنجاح من $serviceName";
+      case AppLanguage.bosnian:
+        return "Sastanci uspješno uvezeni iz $serviceName";
+      case AppLanguage.spanish:
+        return "Citas importadas con éxito desde $serviceName";
+      case AppLanguage.persian:
+        return "قرارها با موفقیت از $serviceName وارد شدند";
+      case AppLanguage.english:
+      default:
+        return "Appointments successfully imported from $serviceName";
+    }
+  }
+
+  String exportSuccess(String serviceName) {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Termine erfolgreich nach $serviceName exportiert";
+      case AppLanguage.turkish:
+        return "Randevular $serviceName'e başarıyla dışa aktarıldı";
+      case AppLanguage.arabic:
+        return "تم تصدير المواعيد بنجاح إلى $serviceName";
+      case AppLanguage.bosnian:
+        return "Sastanci uspješno izvezeni u $serviceName";
+      case AppLanguage.spanish:
+        return "Citas exportadas con éxito a $serviceName";
+      case AppLanguage.persian:
+        return "قرارها با موفقیت به $serviceName صادر شدند";
+      case AppLanguage.english:
+      default:
+        return "Appointments successfully exported to $serviceName";
+    }
+  }
+
+  String syncError(String errorMessage) {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Synchronisierungsfehler: $errorMessage";
+      case AppLanguage.turkish:
+        return "Senkronizasyon hatası: $errorMessage";
+      case AppLanguage.arabic:
+        return "خطأ في المزامنة: $errorMessage";
+      case AppLanguage.bosnian:
+        return "Greška sinhronizacije: $errorMessage";
+      case AppLanguage.spanish:
+        return "Error de sincronización: $errorMessage";
+      case AppLanguage.persian:
+        return "خطای همگام‌سازی: $errorMessage";
+      case AppLanguage.english:
+      default:
+        return "Synchronization error: $errorMessage";
     }
   }
 }

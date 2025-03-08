@@ -8,6 +8,7 @@ class AppointmentRepository {
 
   Future<int> insertAppointment(AppointmentModel appointment) async {
     final db = await dbHelper.database;
+    print(appointment.recurrenceRule);
     return await db.insert(
       'appointments',
       appointment.toMap(),
@@ -55,4 +56,18 @@ class AppointmentRepository {
     final List<Map<String, dynamic>> maps = await db.query('appointments');
     return maps.map((m) => AppointmentModel.fromMap(m)).toList();
   }
+
+  Future<AppointmentModel?> getAppointmentByExternalIdGoogle(String externalId) async {
+    final db = await dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'appointments',
+      where: 'externalIdGoogle = ?',
+      whereArgs: [externalId],
+    );
+    if (maps.isNotEmpty) {
+      return AppointmentModel.fromMap(maps.first);
+    }
+    return null;
+  }
+
 }

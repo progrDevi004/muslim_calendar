@@ -4,7 +4,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.5.3
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -22,28 +22,27 @@ dependencies:
   flutter_qiblah: ^3.0.4
   permission_handler: ^10.0.0
   flutter_spinkit: ^5.2.1
-  flutter_native_timezone: ^2.0.0
+  flutter_timezone: ^4.0.0
   intl: ^0.19.0
   flutter_launcher_icons: ^0.13.1
   dropdown_search: ^5.0.2
-
-
+  google_sign_in: ^6.2.2
+  googleapis: ^13.2.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
 
-
 flutter_icons:
   android: true
   ios: true
   image_path: "assets/icons/icon.png"
 
-
 flutter:
   uses-material-design: true
   assets:
+    - assets/data/country_city_data.json
     - assets/country_city_en.json
     - assets/country_city_de.json
     - assets/country_city_tr.json
