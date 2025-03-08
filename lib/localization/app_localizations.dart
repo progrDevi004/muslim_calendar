@@ -421,6 +421,166 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
+  String get noRecurrence {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Keine Wiederholung';
+      case AppLanguage.turkish:
+        return 'Tekrar yok';
+      case AppLanguage.arabic:
+        return 'لا تكرار';
+      case AppLanguage.bosnian:
+        return 'Bez ponavljanja';
+      case AppLanguage.spanish:
+        return 'Sin repetición';
+      case AppLanguage.persian:
+        return 'بدون تکرار';
+      case AppLanguage.english:
+      default:
+        return 'No Recurrence';
+    }
+  }
+
+  String get customRecurrence {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Benutzerdefinierte Wiederholung';
+      case AppLanguage.turkish:
+        return 'Özel Tekrar';
+      case AppLanguage.arabic:
+        return 'تكرار مخصص';
+      case AppLanguage.bosnian:
+        return 'Prilagođeno ponavljanje';
+      case AppLanguage.spanish:
+        return 'Repetición personalizada';
+      case AppLanguage.persian:
+        return 'تکرار سفارشی';
+      case AppLanguage.english:
+      default:
+        return 'Custom Recurrence';
+    }
+  }
+
+  String get custom {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Benutzerdefiniert';
+      case AppLanguage.turkish:
+        return 'Özel';
+      case AppLanguage.arabic:
+        return 'مخصص';
+      case AppLanguage.bosnian:
+        return 'Prilagođeno';
+      case AppLanguage.spanish:
+        return 'Personalizado';
+      case AppLanguage.persian:
+        return 'سفارشی';
+      case AppLanguage.english:
+      default:
+        return 'Custom';
+    }
+  }
+
+  String get interval {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Intervall';
+      case AppLanguage.turkish:
+        return 'Aralık';
+      case AppLanguage.arabic:
+        return 'الفاصل';
+      case AppLanguage.bosnian:
+        return 'Interval';
+      case AppLanguage.spanish:
+        return 'Intervalo';
+      case AppLanguage.persian:
+        return 'بازه زمانی';
+      case AppLanguage.english:
+      default:
+        return 'Interval';
+    }
+  }
+
+  String get recurrenceTypeFieldLabel {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Typ';
+      case AppLanguage.turkish:
+        return 'Tür';
+      case AppLanguage.arabic:
+        return 'النوع';
+      case AppLanguage.bosnian:
+        return 'Tip';
+      case AppLanguage.spanish:
+        return 'Tipo';
+      case AppLanguage.persian:
+        return 'نوع';
+      case AppLanguage.english:
+      default:
+        return 'Type';
+    }
+  }
+
+  String get count {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Anzahl';
+      case AppLanguage.turkish:
+        return 'Sayı';
+      case AppLanguage.arabic:
+        return 'العدد';
+      case AppLanguage.bosnian:
+        return 'Broj';
+      case AppLanguage.spanish:
+        return 'Número';
+      case AppLanguage.persian:
+        return 'تعداد';
+      case AppLanguage.english:
+      default:
+        return 'Count';
+    }
+  }
+
+  String get endDate {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Enddatum';
+      case AppLanguage.turkish:
+        return 'Bitiş Tarihi';
+      case AppLanguage.arabic:
+        return 'تاريخ الانتهاء';
+      case AppLanguage.bosnian:
+        return 'Datum završetka';
+      case AppLanguage.spanish:
+        return 'Fecha final';
+      case AppLanguage.persian:
+        return 'تاریخ پایان';
+      case AppLanguage.english:
+      default:
+        return 'End Date';
+    }
+  }
+
+  String get noEndDate {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Kein Enddatum';
+      case AppLanguage.turkish:
+        return 'Bitiş Tarihi Yok';
+      case AppLanguage.arabic:
+        return 'لا تاريخ انتهاء';
+      case AppLanguage.bosnian:
+        return 'Nema datuma završetka';
+      case AppLanguage.spanish:
+        return 'Sin fecha final';
+      case AppLanguage.persian:
+        return 'بدون تاریخ پایان';
+      case AppLanguage.english:
+      default:
+        return 'No End Date';
+    }
+  }
+
   String get general {
     switch (_currentLanguage) {
       case AppLanguage.german:
@@ -951,26 +1111,6 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.english:
       default:
         return 'Recurring Event';
-    }
-  }
-
-  String get recurrenceType {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Wiederholungstyp';
-      case AppLanguage.turkish:
-        return 'Tekrar Türü';
-      case AppLanguage.arabic:
-        return 'نوع التكرار';
-      case AppLanguage.bosnian:
-        return 'Tip ponavljanja';
-      case AppLanguage.spanish:
-        return 'Tipo de recurrencia';
-      case AppLanguage.persian:
-        return 'نوع تکرار';
-      case AppLanguage.english:
-      default:
-        return 'Recurrence Type';
     }
   }
 
@@ -1576,26 +1716,6 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.english:
       default:
         return 'Time';
-    }
-  }
-
-  String get endDate {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Enddatum';
-      case AppLanguage.turkish:
-        return 'Bitiş tarihi';
-      case AppLanguage.arabic:
-        return 'تاريخ الانتهاء';
-      case AppLanguage.bosnian:
-        return 'Datum završetka';
-      case AppLanguage.spanish:
-        return 'Fecha de fin';
-      case AppLanguage.persian:
-        return 'تاریخ پایان';
-      case AppLanguage.english:
-      default:
-        return 'End date';
     }
   }
 

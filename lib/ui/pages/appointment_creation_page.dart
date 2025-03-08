@@ -64,6 +64,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   // Start-/Endzeit
   DateTime? _startTime;
   DateTime? _endTime;
+  AppLocalizations? _loc;
 
   // Ort (Land / Stadt)
   String? _selectedCountry;
@@ -667,6 +668,26 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     return DateFormat('dd.MM.yyyy').format(dt);
   }
 
+  /// Gibt den Text für die ausgewählte Wiederholungsoption zurück
+  String _getRecurrenceText(AppLocalizations loc) {
+    if (!_isRecurring) {
+      return loc.noRecurrence;
+    }
+
+    switch (_recurrenceType) {
+      case RecurrenceType.daily:
+        return loc.getRecurrenceTypeLabel(RecurrenceType.daily);
+      case RecurrenceType.weekly:
+        return loc.getRecurrenceTypeLabel(RecurrenceType.weekly);
+      case RecurrenceType.monthly:
+        return loc.getRecurrenceTypeLabel(RecurrenceType.monthly);
+      case RecurrenceType.yearly:
+        return loc.getRecurrenceTypeLabel(RecurrenceType.yearly);
+      default:
+        return loc.getRecurrenceTypeLabel(RecurrenceType.weekly);
+    }
+  }
+
   // --------------------------------------------------------------------------
   // NEU: Aufbau des UI – Google Kalender–Stil
   Widget _buildGoogleCalendarForm(AppLocalizations loc) {
@@ -690,32 +711,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             ),
           ),
           const Divider(height: 1),
-          // Startzeit
-          ListTile(
-            leading: const Icon(Icons.access_time),
-            title: const Text('Start'),
-            subtitle: Text(_startTime != null
-                ? '${_formatDate(_startTime!)}, ${_formatTime(_startTime!)}'
-                : '---'),
-            onTap: () async {
-              await _pickStartDate();
-              await _pickStartTime();
-            },
-          ),
-          // Endzeit
-          ListTile(
-            leading: const Icon(Icons.access_time),
-            title: const Text('End'),
-            subtitle: Text(_endTime != null
-                ? '${_formatDate(_endTime!)}, ${_formatTime(_endTime!)}'
-                : '---'),
-            onTap: () async {
-              await _pickEndDate();
-              await _pickEndTime();
-            },
-          ),
           // All-Day Schalter
           SwitchListTile.adaptive(
+            secondary: const Icon(Icons.access_time),
             title: Text(loc.allDay),
             value: _isAllDay,
             onChanged: (bool value) {
@@ -727,6 +725,93 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               });
             },
           ),
+          // Startzeit
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: ListTile(
+                  //leading: const Text(''), //const Icon(Icons.start_rounded),
+                  //title: const Text('Start'),
+                  title: Center(
+                    child: Text(
+                        _startTime != null ? _formatDate(_startTime!) : '---'),
+                  ),
+                  onTap: () async {
+                    await _pickStartDate();
+                  },
+                ),
+              ),
+              Expanded(
+                child: ListTile(
+                  //leading: const Text(''), //const Icon(Icons.start_rounded),
+                  //title: const Text('Start'),
+                  title: Center(
+                    child: Text(
+                        _startTime != null ? _formatTime(_startTime!) : '---'),
+                  ),
+                  onTap: () async {
+                    await _pickStartTime();
+                  },
+                ),
+              ),
+            ],
+          ),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: ListTile(
+                  //leading: const Text(''), //const Icon(Icons.start_rounded),
+                  //title: const Text('Start'),
+                  title: Center(
+                    child:
+                        Text(_endTime != null ? _formatDate(_endTime!) : '---'),
+                  ),
+                  onTap: () async {
+                    await _pickEndDate();
+                  },
+                ),
+              ),
+              Expanded(
+                child: ListTile(
+                  //leading: const Text(''), //const Icon(Icons.start_rounded),
+                  //title: const Text('Start'),
+                  title: Center(
+                    child:
+                        Text(_endTime != null ? _formatTime(_endTime!) : '---'),
+                  ),
+                  onTap: () async {
+                    await _pickEndTime();
+                  },
+                ),
+              ),
+            ],
+          ),
+          const ListTile(
+            leading: Icon(Icons.public),
+            title: Text(
+                "Mitteleuropäische Normalzeit"), //TBD: In app_localizations einfügen
+          ),
+          // Wiederholungs-Widget mit Dialog statt Dropdown
+          ListTile(
+            leading: const Icon(Icons.autorenew),
+            title: Text(_getRecurrenceText(loc)),
+            trailing: const Icon(Icons.arrow_forward_ios),
+            onTap: () {
+              _showRecurrenceSelectionDialog();
+            },
+          ),
+          // Endzeit
+          // ListTile(
+          //   leading: const Text(''), //const Icon(Icons.access_time),
+          //   title: const Text('End'),
+          //   subtitle: Text(_endTime != null
+          //       ? '${_formatDate(_endTime!)}, ${_formatTime(_endTime!)}'
+          //       : '---'),
+          //   onTap: () async {
+          //     await _pickEndDate();
+          //     await _pickEndTime();
+          //   },
+          // ),
           const Divider(height: 1),
           // Kategorie & Farbe
           ListTile(
@@ -901,162 +986,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   _showCitySelectionDialog(loc);
                 },
               ),
-            // Recurrence
-            ListTile(
-              leading: const Icon(Icons.repeat),
-              title: Text(loc.recurrence),
-              subtitle: Text(_isRecurring ? loc.recurringEvent : ''),
-              trailing: const Icon(Icons.arrow_forward_ios),
-              onTap: () {
-                setState(() {
-                  _isRecurring = !_isRecurring;
-                });
-              },
-            ),
-            if (_isRecurring) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: DropdownButtonFormField<RecurrenceType>(
-                  value: _recurrenceType,
-                  decoration: InputDecoration(labelText: loc.recurrenceType),
-                  onChanged: (value) {
-                    setState(() {
-                      _recurrenceType = value!;
-                      if (_recurrenceType == RecurrenceType.weekly) {
-                        _selectedWeekDays = List.filled(7, false);
-                        if (_startTime != null) {
-                          final index = (_startTime!.weekday - 1) % 7;
-                          _selectedWeekDays[index] = true;
-                        }
-                      }
-                    });
-                  },
-                  items: RecurrenceType.values.map((type) {
-                    return DropdownMenuItem<RecurrenceType>(
-                      value: type,
-                      child: Text(loc.getRecurrenceTypeLabel(type)),
-                    );
-                  }).toList(),
-                ),
-              ),
-              if (_recurrenceType == RecurrenceType.weekly)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Wrap(
-                    spacing: 8.0,
-                    children: List.generate(7, (index) {
-                      final dayNames = [
-                        'MON',
-                        'TUE',
-                        'WED',
-                        'THU',
-                        'FRI',
-                        'SAT',
-                        'SUN'
-                      ];
-                      return FilterChip(
-                        label: Text(dayNames[index]),
-                        selected: _selectedWeekDays[index],
-                        onSelected: (bool selected) {
-                          setState(() {
-                            _selectedWeekDays[index] = selected;
-                          });
-                        },
-                      );
-                    }),
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: TextFormField(
-                  initialValue: _recurrenceInterval.toString(),
-                  keyboardType: TextInputType.number,
-                  decoration:
-                      InputDecoration(labelText: loc.recurrenceInterval),
-                  onChanged: (value) {
-                    setState(() {
-                      _recurrenceInterval = int.tryParse(value) ?? 1;
-                    });
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: DropdownButtonFormField<RecurrenceRange>(
-                  value: _recurrenceRange,
-                  decoration: InputDecoration(labelText: loc.recurrenceRange),
-                  onChanged: (value) {
-                    setState(() {
-                      _recurrenceRange = value!;
-                    });
-                  },
-                  items: RecurrenceRange.values.map((range) {
-                    return DropdownMenuItem<RecurrenceRange>(
-                      value: range,
-                      child: Text(loc.getRecurrenceRangeLabel(range)),
-                    );
-                  }).toList(),
-                ),
-              ),
-              if (_recurrenceRange == RecurrenceRange.count)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: TextFormField(
-                    initialValue: _recurrenceCount?.toString(),
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(labelText: loc.recurrenceCount),
-                    onChanged: (value) {
-                      setState(() {
-                        _recurrenceCount = int.tryParse(value);
-                      });
-                    },
-                  ),
-                ),
-              if (_recurrenceRange == RecurrenceRange.endDate)
-                ListTile(
-                  leading: const Icon(Icons.date_range),
-                  title: Text(loc.recurrenceEndDate),
-                  subtitle:
-                      Text(_recurrenceEndDate?.toString() ?? loc.selectEndDate),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () async {
-                    final selectedDate = await _showAdaptiveDatePicker(
-                      context: context,
-                      initialDate: _recurrenceEndDate ?? DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                    );
-                    if (selectedDate != null) {
-                      setState(() {
-                        _recurrenceEndDate = selectedDate;
-                      });
-                    }
-                  },
-                ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: FilledButton(
-                  onPressed: _addExceptionDate,
-                  child: Text(loc.addExceptionDate),
-                ),
-              ),
-              if (_exceptionDates.isNotEmpty)
-                Column(
-                  children: _exceptionDates.map((date) {
-                    return ListTile(
-                      title: Text(date.toIso8601String()),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () {
-                          setState(() {
-                            _exceptionDates.remove(date);
-                          });
-                        },
-                      ),
-                    );
-                  }).toList(),
-                ),
-            ],
           ],
           // Save Button
           Padding(
@@ -1552,10 +1481,6 @@ extension _DialogHelpers on _AppointmentCreationPageState {
                 }).toList(),
               ),
             ),
-            // cancelButton: CupertinoDialogAction(
-            //   onPressed: () => Navigator.pop(context),
-            //   child: Text(loc.cancel),
-            // ),
           );
         } else {
           return AlertDialog(
@@ -1587,6 +1512,356 @@ extension _DialogHelpers on _AppointmentCreationPageState {
             ],
           );
         }
+      },
+    );
+  }
+
+  Future<void> _showRecurrenceSelectionDialog() async {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    await showDialog(
+      context: context,
+      builder: (context) {
+        if (Platform.isIOS) {
+          return CupertinoAlertDialog(
+            title: Text(loc.recurrence),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CupertinoDialogAction(
+                  child: Text(loc.getRecurrenceTypeLabel(RecurrenceType.daily)),
+                  onPressed: () {
+                    setState(() {
+                      _recurrenceType = RecurrenceType.daily;
+                      _isRecurring = true;
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+                CupertinoDialogAction(
+                  child:
+                      Text(loc.getRecurrenceTypeLabel(RecurrenceType.weekly)),
+                  onPressed: () {
+                    setState(() {
+                      _recurrenceType = RecurrenceType.weekly;
+                      _isRecurring = true;
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+                CupertinoDialogAction(
+                  child:
+                      Text(loc.getRecurrenceTypeLabel(RecurrenceType.monthly)),
+                  onPressed: () {
+                    setState(() {
+                      _recurrenceType = RecurrenceType.monthly;
+                      _isRecurring = true;
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+                CupertinoDialogAction(
+                  child:
+                      Text(loc.getRecurrenceTypeLabel(RecurrenceType.yearly)),
+                  onPressed: () {
+                    setState(() {
+                      _recurrenceType = RecurrenceType.yearly;
+                      _isRecurring = true;
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+                CupertinoDialogAction(
+                  child: Text(loc.custom),
+                  onPressed: () {
+                    setState(() {
+                      _isRecurring = true;
+                    });
+                    Navigator.pop(context);
+                    _showCustomRecurrenceDialog();
+                  },
+                ),
+                CupertinoDialogAction(
+                  child: Text(loc.noRecurrence),
+                  onPressed: () {
+                    setState(() {
+                      _isRecurring = false;
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              CupertinoDialogAction(
+                isDefaultAction: true,
+                onPressed: () => Navigator.pop(context),
+                child: Text(loc.cancel),
+              ),
+            ],
+          );
+        } else {
+          return AlertDialog(
+            title: Text(loc.recurrence),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 300),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    RadioListTile<String>(
+                      title: Text(
+                          loc.getRecurrenceTypeLabel(RecurrenceType.daily)),
+                      value: loc.getRecurrenceTypeLabel(RecurrenceType.daily),
+                      groupValue: _recurrenceType == RecurrenceType.daily &&
+                              _isRecurring
+                          ? loc.getRecurrenceTypeLabel(RecurrenceType.daily)
+                          : null,
+                      onChanged: (value) {
+                        setState(() {
+                          _recurrenceType = RecurrenceType.daily;
+                          _isRecurring = true;
+                        });
+                        Navigator.pop(context);
+                      },
+                    ),
+                    RadioListTile<String>(
+                      title: Text(
+                          loc.getRecurrenceTypeLabel(RecurrenceType.weekly)),
+                      value: loc.getRecurrenceTypeLabel(RecurrenceType.weekly),
+                      groupValue: _recurrenceType == RecurrenceType.weekly &&
+                              _isRecurring
+                          ? loc.getRecurrenceTypeLabel(RecurrenceType.weekly)
+                          : null,
+                      onChanged: (value) {
+                        setState(() {
+                          _recurrenceType = RecurrenceType.weekly;
+                          _isRecurring = true;
+                        });
+                        Navigator.pop(context);
+                      },
+                    ),
+                    RadioListTile<String>(
+                      title: Text(
+                          loc.getRecurrenceTypeLabel(RecurrenceType.monthly)),
+                      value: loc.getRecurrenceTypeLabel(RecurrenceType.monthly),
+                      groupValue: _recurrenceType == RecurrenceType.monthly &&
+                              _isRecurring
+                          ? loc.getRecurrenceTypeLabel(RecurrenceType.monthly)
+                          : null,
+                      onChanged: (value) {
+                        setState(() {
+                          _recurrenceType = RecurrenceType.monthly;
+                          _isRecurring = true;
+                        });
+                        Navigator.pop(context);
+                      },
+                    ),
+                    RadioListTile<String>(
+                      title: Text(
+                          loc.getRecurrenceTypeLabel(RecurrenceType.yearly)),
+                      value: loc.getRecurrenceTypeLabel(RecurrenceType.yearly),
+                      groupValue: _recurrenceType == RecurrenceType.yearly &&
+                              _isRecurring
+                          ? loc.getRecurrenceTypeLabel(RecurrenceType.yearly)
+                          : null,
+                      onChanged: (value) {
+                        setState(() {
+                          _recurrenceType = RecurrenceType.yearly;
+                          _isRecurring = true;
+                        });
+                        Navigator.pop(context);
+                      },
+                    ),
+                    RadioListTile<String>(
+                      title: Text(loc.custom),
+                      value: "benutzerdefiniert",
+                      groupValue: _isRecurring &&
+                              (_recurrenceType != RecurrenceType.daily &&
+                                  _recurrenceType != RecurrenceType.weekly &&
+                                  _recurrenceType != RecurrenceType.monthly &&
+                                  _recurrenceType != RecurrenceType.yearly)
+                          ? "benutzerdefiniert"
+                          : null,
+                      onChanged: (value) {
+                        setState(() {
+                          _isRecurring = true;
+                        });
+                        Navigator.pop(context);
+                        _showCustomRecurrenceDialog();
+                      },
+                    ),
+                    RadioListTile<String>(
+                      title: Text(loc.noRecurrence),
+                      value: loc.noRecurrence,
+                      groupValue: !_isRecurring ? loc.noRecurrence : null,
+                      onChanged: (value) {
+                        setState(() {
+                          _isRecurring = false;
+                        });
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(loc.cancel),
+              ),
+            ],
+          );
+        }
+      },
+    );
+  }
+
+  Future<void> _showCustomRecurrenceDialog() async {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(loc.customRecurrence),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  initialValue: _recurrenceInterval.toString(),
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(labelText: loc.interval),
+                  onChanged: (value) {
+                    setState(() {
+                      _recurrenceInterval = int.tryParse(value) ?? 1;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<RecurrenceType>(
+                  value: _recurrenceType,
+                  decoration:
+                      InputDecoration(labelText: loc.recurrenceTypeFieldLabel),
+                  onChanged: (value) {
+                    setState(() {
+                      _recurrenceType = value!;
+                      if (_recurrenceType == RecurrenceType.weekly) {
+                        _selectedWeekDays = List.filled(7, false);
+                        if (_startTime != null) {
+                          final index = (_startTime!.weekday - 1) % 7;
+                          _selectedWeekDays[index] = true;
+                        }
+                      }
+                    });
+                  },
+                  items: RecurrenceType.values.map((type) {
+                    return DropdownMenuItem<RecurrenceType>(
+                      value: type,
+                      child: Text(loc.getRecurrenceTypeLabel(type)),
+                    );
+                  }).toList(),
+                ),
+                if (_recurrenceType == RecurrenceType.weekly)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: Wrap(
+                      spacing: 8.0,
+                      children: List.generate(7, (index) {
+                        final dayNames = [
+                          'MO',
+                          'DI',
+                          'MI',
+                          'DO',
+                          'FR',
+                          'SA',
+                          'SO'
+                        ];
+                        return FilterChip(
+                          label: Text(dayNames[index]),
+                          selected: _selectedWeekDays[index],
+                          onSelected: (bool selected) {
+                            setState(() {
+                              _selectedWeekDays[index] = selected;
+                            });
+                          },
+                        );
+                      }),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<RecurrenceRange>(
+                  value: _recurrenceRange,
+                  decoration: InputDecoration(labelText: loc.recurrenceRange),
+                  onChanged: (value) {
+                    setState(() {
+                      _recurrenceRange = value!;
+                    });
+                  },
+                  items: RecurrenceRange.values.map((range) {
+                    return DropdownMenuItem<RecurrenceRange>(
+                      value: range,
+                      child: Text(loc.getRecurrenceRangeLabel(range)),
+                    );
+                  }).toList(),
+                ),
+                if (_recurrenceRange == RecurrenceRange.count)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: TextFormField(
+                      initialValue: _recurrenceCount?.toString(),
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(labelText: loc.count),
+                      onChanged: (value) {
+                        setState(() {
+                          _recurrenceCount = int.tryParse(value);
+                        });
+                      },
+                    ),
+                  ),
+                if (_recurrenceRange == RecurrenceRange.endDate)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: InkWell(
+                      onTap: () async {
+                        final picked = await _showAdaptiveDatePicker(
+                          context: context,
+                          initialDate: _recurrenceEndDate ?? DateTime.now(),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _recurrenceEndDate = picked;
+                          });
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: InputDecoration(labelText: loc.endDate),
+                        child: Text(
+                          _recurrenceEndDate != null
+                              ? _formatDate(_recurrenceEndDate!)
+                              : loc.noEndDate,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(loc.cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text(loc.save),
+            ),
+          ],
+        );
       },
     );
   }
