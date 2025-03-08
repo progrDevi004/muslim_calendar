@@ -90,6 +90,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   // Erinnerung (Benachrichtigung)
   int? _selectedReminderMinutes;
   final List<int?> _reminderOptions = [null, 5, 15, 30, 60, 120, 1440];
+  // NEU: Liste für mehrere Erinnerungen
+  List<int> _remindersList = [];
+  final int _maxReminders = 4;
 
   // Repository
   final AppointmentRepository _appointmentRepo = AppointmentRepository();
@@ -247,6 +250,12 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             _color = appointment.color;
             _selectedReminderMinutes = appointment.reminderMinutesBefore;
 
+            // Erinnerung in die Liste übernehmen, falls vorhanden
+            if (appointment.reminderMinutesBefore != null &&
+                appointment.reminderMinutesBefore! > 0) {
+              _remindersList = [appointment.reminderMinutesBefore!];
+            }
+
             if (appointment.location != null) {
               final parts = appointment.location!.split(',');
               if (parts.length == 2) {
@@ -397,6 +406,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         }
 
         _endTime ??= _startTime!.add(const Duration(minutes: 30));
+
+        // Aktualisiere _selectedReminderMinutes aus der _remindersList
+        if (_remindersList.isNotEmpty) {
+          _selectedReminderMinutes = _remindersList.first;
+        }
 
         final location = (_isRelatedToPrayerTimes &&
                 _selectedCity != null &&
@@ -579,9 +593,13 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         } else {
           _startTime = pickedDate;
         }
-        // Wenn AllDay => Endzeit = +1h vom Start
+
+        // Wenn AllDay oder gebetszeit-bezogen => Endzeit anpassen
         if (_isAllDay) {
           _endTime = _startTime!.add(const Duration(hours: 1));
+        } else if (_isRelatedToPrayerTimes && _duration != null) {
+          // Wenn an Gebetszeit gebunden, Endzeit basierend auf Startzeit + Dauer setzen
+          _endTime = _startTime!.add(_duration!);
         }
       });
     }
@@ -711,165 +729,33 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             ),
           ),
           const Divider(height: 1),
+
           // All-Day Schalter
-          SwitchListTile.adaptive(
-            secondary: const Icon(Icons.access_time),
-            title: Text(loc.allDay),
-            value: _isAllDay,
-            onChanged: (bool value) {
-              setState(() {
-                _isAllDay = value;
-                if (value && _startTime != null) {
-                  _endTime = _startTime!.add(const Duration(hours: 1));
-                }
-              });
-            },
-          ),
-          // Startzeit
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: ListTile(
-                  //leading: const Text(''), //const Icon(Icons.start_rounded),
-                  //title: const Text('Start'),
-                  title: Center(
-                    child: Text(
-                        _startTime != null ? _formatDate(_startTime!) : '---'),
-                  ),
-                  onTap: () async {
-                    await _pickStartDate();
-                  },
-                ),
-              ),
-              Expanded(
-                child: ListTile(
-                  //leading: const Text(''), //const Icon(Icons.start_rounded),
-                  //title: const Text('Start'),
-                  title: Center(
-                    child: Text(
-                        _startTime != null ? _formatTime(_startTime!) : '---'),
-                  ),
-                  onTap: () async {
-                    await _pickStartTime();
-                  },
-                ),
-              ),
-            ],
-          ),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: ListTile(
-                  //leading: const Text(''), //const Icon(Icons.start_rounded),
-                  //title: const Text('Start'),
-                  title: Center(
-                    child:
-                        Text(_endTime != null ? _formatDate(_endTime!) : '---'),
-                  ),
-                  onTap: () async {
-                    await _pickEndDate();
-                  },
-                ),
-              ),
-              Expanded(
-                child: ListTile(
-                  //leading: const Text(''), //const Icon(Icons.start_rounded),
-                  //title: const Text('Start'),
-                  title: Center(
-                    child:
-                        Text(_endTime != null ? _formatTime(_endTime!) : '---'),
-                  ),
-                  onTap: () async {
-                    await _pickEndTime();
-                  },
-                ),
-              ),
-            ],
-          ),
-          const ListTile(
-            leading: Icon(Icons.public),
-            title: Text(
-                "Mitteleuropäische Normalzeit"), //TBD: In app_localizations einfügen
-          ),
-          // Wiederholungs-Widget mit Dialog statt Dropdown
-          ListTile(
-            leading: const Icon(Icons.autorenew),
-            title: Text(_getRecurrenceText(loc)),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () {
-              _showRecurrenceSelectionDialog();
-            },
-          ),
-          // Endzeit
-          // ListTile(
-          //   leading: const Text(''), //const Icon(Icons.access_time),
-          //   title: const Text('End'),
-          //   subtitle: Text(_endTime != null
-          //       ? '${_formatDate(_endTime!)}, ${_formatTime(_endTime!)}'
-          //       : '---'),
-          //   onTap: () async {
-          //     await _pickEndDate();
-          //     await _pickEndTime();
-          //   },
-          // ),
-          const Divider(height: 1),
-          // Kategorie & Farbe
-          ListTile(
-            leading: CircleAvatar(
-              backgroundColor: _color,
+          Material(
+            elevation: 0,
+            color: Colors.transparent,
+            child: SwitchListTile.adaptive(
+              secondary: const Icon(Icons.access_time),
+              title: Text(loc.allDay),
+              value: _isAllDay,
+              onChanged: (bool value) {
+                setState(() {
+                  _isAllDay = value;
+                  if (value && _startTime != null) {
+                    _endTime = _startTime!.add(const Duration(hours: 1));
+                  }
+                });
+              },
             ),
-            title: Text(_selectedCategory != null
-                ? _selectedCategory!.name
-                : loc.selectCategoryLabel),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () {
-              _showCategorySelectionDialog(loc);
-            },
           ),
-          // Erinnerung
-          ListTile(
-            leading: const Icon(Icons.alarm),
-            title: Text(loc.reminderInMinutes),
-            subtitle: Text(_selectedReminderMinutes != null
-                ? (_selectedReminderMinutes! < 60
-                    ? loc.minutesBefore(_selectedReminderMinutes!)
-                    : _selectedReminderMinutes! < 1440
-                        ? loc.hoursBefore(_selectedReminderMinutes! ~/ 60)
-                        : loc.daysBefore(_selectedReminderMinutes! ~/ 1440))
-                : loc.noReminder),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () {
-              _showReminderSelectionDialog(loc);
-            },
-          ),
-          const Divider(height: 1),
-          // Mehr Optionen ein-/ausklappen
-          ListTile(
-            leading: const Icon(Icons.more_horiz),
-            title: Text(
-                _showAdvancedOptions ? loc.fewerOptions : loc.advancedOptions),
-            trailing: const Icon(Icons.arrow_drop_down),
-            onTap: () {
-              setState(() {
-                _showAdvancedOptions = !_showAdvancedOptions;
-              });
-            },
-          ),
-          if (_showAdvancedOptions) ...[
-            // Beschreibung
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: TextFormField(
-                controller: _descriptionController,
-                decoration: InputDecoration(labelText: loc.description),
-                minLines: 1,
-                maxLines: 3,
-              ),
-            ),
-            // Gebetszeit Einstellungen
-            SwitchListTile.adaptive(
+
+          // Gebetszeit-Schalter (aus den fortgeschrittenen Optionen hierher verschoben)
+          Material(
+            elevation: 0,
+            color: Colors.transparent,
+            child: SwitchListTile.adaptive(
+              secondary: const Icon(Icons.mosque),
               title: Text(loc.relatedToPrayerTimes),
-              subtitle: Text(loc.relatedToPrayerTimesSubtitle),
               value: _isRelatedToPrayerTimes,
               onChanged: (bool value) {
                 setState(() {
@@ -880,92 +766,358 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 });
               },
             ),
-            if (_isRelatedToPrayerTimes) ...[
-              ListTile(
-                leading: const Icon(Icons.calendar_today),
-                title: Text(loc.selectDate),
-                subtitle: Text(_startTime != null
-                    ? '${_startTime!.day}/${_startTime!.month}/${_startTime!.year}'
-                    : loc.selectDate),
-                onTap: () async {
-                  final picked = await _showAdaptiveDatePicker(
-                    context: context,
-                    initialDate: _startTime ?? DateTime.now(),
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2100),
-                  );
-                  if (picked != null) {
-                    setState(() {
-                      _startTime = DateTime(
-                        picked.year,
-                        picked.month,
-                        picked.day,
-                        _startTime?.hour ?? 12,
-                        _startTime?.minute ?? 0,
-                      );
-                      _endTime = _startTime!.add(const Duration(hours: 1));
-                    });
-                  }
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.timer),
-                title: Text(loc.prayerTime),
-                subtitle: Text(_selectedPrayerTime != null
-                    ? loc.getPrayerTimeLabel(_selectedPrayerTime!)
-                    : loc.selectPrayerTime),
-                trailing: const Icon(Icons.arrow_forward_ios),
-                onTap: () {
-                  _showPrayerTimeSelectionDialog(loc);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.schedule),
-                title: Text(loc.timeRelation),
-                subtitle: Text(_selectedTimeRelation != null
-                    ? loc.getTimeRelationLabel(_selectedTimeRelation!)
-                    : loc.timeRelation),
-                trailing: const Icon(Icons.arrow_forward_ios),
-                onTap: () {
-                  _showTimeRelationSelectionDialog(loc);
-                },
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: _minutesBeforeAfter?.toString(),
-                        keyboardType: TextInputType.number,
-                        decoration:
-                            InputDecoration(labelText: loc.minutesBeforeAfter),
-                        onChanged: (value) {
-                          setState(() {
-                            _minutesBeforeAfter = int.tryParse(value);
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: _duration?.inMinutes.toString(),
-                        keyboardType: TextInputType.number,
-                        decoration:
-                            InputDecoration(labelText: loc.durationMinutes),
-                        onChanged: (value) {
-                          setState(() {
-                            _duration =
-                                Duration(minutes: int.tryParse(value) ?? 30);
-                          });
-                        },
-                      ),
-                    ),
-                  ],
+          ),
+
+          // Gebetszeit-Einstellungen direkt im Hauptbereich
+          if (_isRelatedToPrayerTimes)
+            Container(
+              margin:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.all(12.0),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .surfaceVariant
+                    .withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8.0),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
                 ),
               ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Überschrift für den Abschnitt
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Text(
+                      loc.prayerTimeSettings,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ),
+
+                  // Datum auswählen
+                  ListTile(
+                    leading: const Icon(Icons.calendar_today),
+                    title: Text(loc.selectDate),
+                    subtitle: Text(
+                        _startTime != null ? _formatDate(_startTime!) : '---'),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () async {
+                      await _pickStartDate();
+                    },
+                    // Größere Touch-Fläche für iOS
+                    contentPadding: _isIos
+                        ? const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 10.0)
+                        : const EdgeInsets.symmetric(horizontal: 16.0),
+                  ),
+
+                  // Gebetszeit auswählen
+                  ListTile(
+                    leading: const Icon(Icons.timer),
+                    title: Text(loc.prayerTime),
+                    subtitle: Text(_selectedPrayerTime != null
+                        ? loc.getPrayerTimeLabel(_selectedPrayerTime!)
+                        : loc.selectPrayerTime),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () {
+                      _showPrayerTimeSelectionDialog(loc);
+                    },
+                    // Größere Touch-Fläche für iOS
+                    contentPadding: _isIos
+                        ? const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 10.0)
+                        : const EdgeInsets.symmetric(horizontal: 16.0),
+                  ),
+
+                  // Zeit-Relation (vor/nach)
+                  ListTile(
+                    leading: const Icon(Icons.schedule),
+                    title: Text(loc.timeRelation),
+                    subtitle: Text(_selectedTimeRelation != null
+                        ? loc.getTimeRelationLabel(_selectedTimeRelation!)
+                        : loc.timeRelation),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () {
+                      _showTimeRelationSelectionDialog(loc);
+                    },
+                    // Größere Touch-Fläche für iOS
+                    contentPadding: _isIos
+                        ? const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 10.0)
+                        : const EdgeInsets.symmetric(horizontal: 16.0),
+                  ),
+
+                  // Minuten vor/nach & Dauer
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            initialValue:
+                                _minutesBeforeAfter?.toString() ?? '15',
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: loc.minutesBeforeAfter,
+                              border: const OutlineInputBorder(),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12.0, vertical: 8.0),
+                            ),
+                            onChanged: (value) {
+                              setState(() {
+                                _minutesBeforeAfter = int.tryParse(value) ?? 15;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue:
+                                _duration?.inMinutes.toString() ?? '30',
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: loc.durationMinutes,
+                              border: const OutlineInputBorder(),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12.0, vertical: 8.0),
+                            ),
+                            onChanged: (value) {
+                              setState(() {
+                                _duration = Duration(
+                                    minutes: int.tryParse(value) ?? 30);
+                                // Aktualisiere auch die Endzeit basierend auf der neuen Dauer
+                                if (_startTime != null) {
+                                  _endTime = _startTime!.add(_duration!);
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // Startzeit und Endzeit nur anzeigen, wenn NICHT an Gebetszeit gebunden
+          if (!_isRelatedToPrayerTimes) ...[
+            // Startzeit
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Material(
+                    elevation: 0,
+                    color: Colors.transparent,
+                    child: ListTile(
+                      title: Center(
+                        child: Text(
+                            _startTime != null
+                                ? _formatDate(_startTime!)
+                                : '---',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w500)),
+                      ),
+                      onTap: () async {
+                        await _pickStartDate();
+                      },
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Material(
+                    elevation: 0,
+                    color: Colors.transparent,
+                    child: ListTile(
+                      title: Center(
+                        child: Text(
+                            _startTime != null
+                                ? _formatTime(_startTime!)
+                                : '---',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w500)),
+                      ),
+                      onTap: () async {
+                        await _pickStartTime();
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            // Endzeit
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Material(
+                    elevation: 0,
+                    color: Colors.transparent,
+                    child: ListTile(
+                      title: Center(
+                        child: Text(
+                            _endTime != null ? _formatDate(_endTime!) : '---',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w500)),
+                      ),
+                      onTap: () async {
+                        await _pickEndDate();
+                      },
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Material(
+                    elevation: 0,
+                    color: Colors.transparent,
+                    child: ListTile(
+                      title: Center(
+                        child: Text(
+                            _endTime != null ? _formatTime(_endTime!) : '---',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w500)),
+                      ),
+                      onTap: () async {
+                        await _pickEndTime();
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+
+          // Wiederholungs-Widget
+          Material(
+            elevation: 0,
+            color: Colors.transparent,
+            child: ListTile(
+              leading: const Icon(Icons.autorenew),
+              title: Text(_getRecurrenceText(loc)),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {
+                _showRecurrenceSelectionDialog();
+              },
+            ),
+          ),
+
+          // Erinnerung
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Bereits hinzugefügte Erinnerungen
+              ..._remindersList.map((minutes) {
+                String text;
+                if (minutes < 60) {
+                  text = loc.minutesBefore(minutes);
+                } else if (minutes < 1440) {
+                  text = loc.hoursBefore(minutes ~/ 60);
+                } else {
+                  text = loc.daysBefore(minutes ~/ 1440);
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 4.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(text),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: () {
+                          setState(() {
+                            _remindersList.remove(minutes);
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+
+              // Button zum Hinzufügen neuer Erinnerungen
+              if (_remindersList.length < _maxReminders)
+                Material(
+                  elevation: 0,
+                  color: Colors.transparent,
+                  child: ListTile(
+                    leading: const Icon(Icons.notifications_none),
+                    title: Text("Add notification"),
+                    onTap: () {
+                      _showReminderSelectionDialog(loc);
+                    },
+                  ),
+                ),
+
+              const Divider(height: 1),
             ],
+          ),
+
+          // Kategorie & Farbe
+          Material(
+            elevation: 0,
+            color: Colors.transparent,
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: _color,
+              ),
+              title: Text(_selectedCategory != null
+                  ? _selectedCategory!.name
+                  : loc.selectCategoryLabel),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {
+                _showCategorySelectionDialog(loc);
+              },
+            ),
+          ),
+
+          // Beschreibung
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+            child: TextFormField(
+              controller: _descriptionController,
+              decoration: InputDecoration(labelText: loc.description),
+              minLines: 1,
+              maxLines: 3,
+            ),
+          ),
+
+          const Divider(height: 1),
+
+          // Mehr Optionen ein-/ausklappen
+          Material(
+            elevation: 0,
+            color: Colors.transparent,
+            child: ListTile(
+              leading: const Icon(Icons.more_horiz),
+              title: Text(_showAdvancedOptions
+                  ? loc.fewerOptions
+                  : loc.advancedOptions),
+              trailing: Icon(
+                _showAdvancedOptions
+                    ? Icons.arrow_drop_up
+                    : Icons.arrow_drop_down,
+              ),
+              onTap: () {
+                setState(() {
+                  _showAdvancedOptions = !_showAdvancedOptions;
+                });
+              },
+            ),
+          ),
+
+          if (_showAdvancedOptions) ...[
+            // Die Gebetszeit-Einstellungen wurden in den Hauptbereich verschoben
+
             // Standort (Länder/City)
             ListTile(
               leading: const Icon(Icons.location_on),
@@ -987,6 +1139,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 },
               ),
           ],
+
           // Save Button
           Padding(
             padding: const EdgeInsets.all(16.0),
@@ -996,6 +1149,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                     onPressed: _saveAppointment,
                   )
                 : FilledButton(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                    ),
                     onPressed: _saveAppointment,
                     child: Text(loc.save),
                   ),
@@ -1234,66 +1390,18 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       );
     }
   }
-}
 
-/// >>> NEU: Hilfs-Widget zum automatischen Selektieren beim Fokus (wie im Original)
-class _OverwriteOnFocus extends StatelessWidget {
-  final Widget child;
-  const _OverwriteOnFocus({required this.child, Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Builder(builder: (ctx) {
-      return _SelectAllOnFocusChild(child: child);
+  /// Aktualisiert sowohl die Erinnerungsliste als auch den selectedReminderMinutes-Wert
+  void _updateReminderState(int minutes) {
+    setState(() {
+      if (!_remindersList.contains(minutes) &&
+          _remindersList.length < _maxReminders) {
+        _remindersList.add(minutes);
+        _selectedReminderMinutes = minutes;
+      }
     });
   }
-}
 
-class _SelectAllOnFocusChild extends StatefulWidget {
-  final Widget child;
-  const _SelectAllOnFocusChild({required this.child, Key? key})
-      : super(key: key);
-
-  @override
-  State<_SelectAllOnFocusChild> createState() => _SelectAllOnFocusChildState();
-}
-
-class _SelectAllOnFocusChildState extends State<_SelectAllOnFocusChild> {
-  @override
-  Widget build(BuildContext context) {
-    return FocusTraversalGroup(
-      policy: OrderedTraversalPolicy(),
-      child: _SelectAllInterceptor(child: widget.child),
-    );
-  }
-}
-
-class _SelectAllInterceptor extends StatelessWidget {
-  final Widget child;
-  const _SelectAllInterceptor({required this.child, Key? key})
-      : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return _SelectAllTextOnFocusInherited(
-      child: child,
-    );
-  }
-}
-
-class _SelectAllTextOnFocusInherited extends InheritedWidget {
-  const _SelectAllTextOnFocusInherited({Key? key, required Widget child})
-      : super(key: key, child: child);
-
-  @override
-  bool updateShouldNotify(_SelectAllTextOnFocusInherited oldWidget) => false;
-}
-
-// --------------------------------------------------------------------------
-// NEU: Zusätzliche Dialog-Methoden für Reminder, Gebetszeit, Länder/City, Kategorie etc.
-// --------------------------------------------------------------------------
-
-extension _DialogHelpers on _AppointmentCreationPageState {
   Future<void> _showReminderSelectionDialog(AppLocalizations loc) async {
     await showDialog(
       context: context,
@@ -1304,30 +1412,140 @@ extension _DialogHelpers on _AppointmentCreationPageState {
             width: double.maxFinite,
             child: ListView(
               shrinkWrap: true,
-              children: _reminderOptions.map((option) {
-                String text;
-                if (option == null) {
-                  text = loc.noReminder;
-                } else if (option < 60) {
-                  text = loc.minutesBefore(option);
-                } else if (option < 1440) {
-                  text = loc.hoursBefore(option ~/ 60);
-                } else {
-                  text = loc.daysBefore(option ~/ 1440);
-                }
-                return ListTile(
-                  title: Text(text),
-                  onTap: () {
-                    setState(() {
-                      _selectedReminderMinutes = option;
-                    });
+              children: [
+                RadioListTile<int>(
+                  title: Text("5 minutes before"),
+                  value: 5,
+                  groupValue: null,
+                  onChanged: (value) {
+                    _updateReminderState(5);
                     Navigator.pop(context);
                   },
-                );
-              }).toList(),
+                ),
+                RadioListTile<int>(
+                  title: Text("10 minutes before"),
+                  value: 10,
+                  groupValue: null,
+                  onChanged: (value) {
+                    _updateReminderState(10);
+                    Navigator.pop(context);
+                  },
+                ),
+                RadioListTile<int>(
+                  title: Text("30 minutes before"),
+                  value: 30,
+                  groupValue: null,
+                  onChanged: (value) {
+                    _updateReminderState(30);
+                    Navigator.pop(context);
+                  },
+                ),
+                RadioListTile<int>(
+                  title: Text("1 hour before"),
+                  value: 60,
+                  groupValue: null,
+                  onChanged: (value) {
+                    _updateReminderState(60);
+                    Navigator.pop(context);
+                  },
+                ),
+                RadioListTile<int>(
+                  title: Text("1 day before"),
+                  value: 1440,
+                  groupValue: null,
+                  onChanged: (value) {
+                    _updateReminderState(1440);
+                    Navigator.pop(context);
+                  },
+                ),
+                RadioListTile<int>(
+                  title: Text("Custom..."),
+                  value: -1,
+                  groupValue: null,
+                  onChanged: (int? value) {
+                    Navigator.pop(context);
+                    _showCustomReminderDialog(loc);
+                  },
+                ),
+              ],
             ),
           ),
         );
+      },
+    );
+  }
+
+  // Dialog für benutzerdefinierte Erinnerung
+  Future<void> _showCustomReminderDialog(AppLocalizations loc) async {
+    int customMinutes = 15;
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        if (_isIos) {
+          return CupertinoAlertDialog(
+            title: Text("Custom reminder"),
+            content: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: CupertinoTextField(
+                keyboardType: TextInputType.number,
+                placeholder: "Minutes before event",
+                onChanged: (value) {
+                  customMinutes = int.tryParse(value) ?? 15;
+                },
+              ),
+            ),
+            actions: [
+              CupertinoDialogAction(
+                onPressed: () => Navigator.pop(context),
+                child: Text(loc.cancel),
+              ),
+              CupertinoDialogAction(
+                isDefaultAction: true,
+                onPressed: () {
+                  if (customMinutes > 0) {
+                    _updateReminderState(customMinutes);
+                  }
+                  Navigator.pop(context);
+                },
+                child: Text(loc.save),
+              ),
+            ],
+          );
+        } else {
+          return AlertDialog(
+            title: Text("Custom reminder"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: "Minutes before event",
+                  ),
+                  onChanged: (value) {
+                    customMinutes = int.tryParse(value) ?? 15;
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(loc.cancel),
+              ),
+              FilledButton(
+                onPressed: () {
+                  if (customMinutes > 0) {
+                    _updateReminderState(customMinutes);
+                  }
+                  Navigator.pop(context);
+                },
+                child: Text(loc.save),
+              ),
+            ],
+          );
+        }
       },
     );
   }
@@ -1522,13 +1740,22 @@ extension _DialogHelpers on _AppointmentCreationPageState {
       context: context,
       builder: (context) {
         if (Platform.isIOS) {
+          // iOS-optimierter Dialog mit größeren Elementen und plattformspezifischem Styling
           return CupertinoAlertDialog(
-            title: Text(loc.recurrence),
+            title: Text(loc.recurrence, style: const TextStyle(fontSize: 18)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 CupertinoDialogAction(
-                  child: Text(loc.getRecurrenceTypeLabel(RecurrenceType.daily)),
+                  child: Text(
+                    loc.getRecurrenceTypeLabel(RecurrenceType.daily),
+                    style: TextStyle(
+                      color: _recurrenceType == RecurrenceType.daily &&
+                              _isRecurring
+                          ? CupertinoColors.activeBlue
+                          : CupertinoColors.label,
+                    ),
+                  ),
                   onPressed: () {
                     setState(() {
                       _recurrenceType = RecurrenceType.daily;
@@ -1538,8 +1765,15 @@ extension _DialogHelpers on _AppointmentCreationPageState {
                   },
                 ),
                 CupertinoDialogAction(
-                  child:
-                      Text(loc.getRecurrenceTypeLabel(RecurrenceType.weekly)),
+                  child: Text(
+                    loc.getRecurrenceTypeLabel(RecurrenceType.weekly),
+                    style: TextStyle(
+                      color: _recurrenceType == RecurrenceType.weekly &&
+                              _isRecurring
+                          ? CupertinoColors.activeBlue
+                          : CupertinoColors.label,
+                    ),
+                  ),
                   onPressed: () {
                     setState(() {
                       _recurrenceType = RecurrenceType.weekly;
@@ -1549,8 +1783,15 @@ extension _DialogHelpers on _AppointmentCreationPageState {
                   },
                 ),
                 CupertinoDialogAction(
-                  child:
-                      Text(loc.getRecurrenceTypeLabel(RecurrenceType.monthly)),
+                  child: Text(
+                    loc.getRecurrenceTypeLabel(RecurrenceType.monthly),
+                    style: TextStyle(
+                      color: _recurrenceType == RecurrenceType.monthly &&
+                              _isRecurring
+                          ? CupertinoColors.activeBlue
+                          : CupertinoColors.label,
+                    ),
+                  ),
                   onPressed: () {
                     setState(() {
                       _recurrenceType = RecurrenceType.monthly;
@@ -1560,8 +1801,15 @@ extension _DialogHelpers on _AppointmentCreationPageState {
                   },
                 ),
                 CupertinoDialogAction(
-                  child:
-                      Text(loc.getRecurrenceTypeLabel(RecurrenceType.yearly)),
+                  child: Text(
+                    loc.getRecurrenceTypeLabel(RecurrenceType.yearly),
+                    style: TextStyle(
+                      color: _recurrenceType == RecurrenceType.yearly &&
+                              _isRecurring
+                          ? CupertinoColors.activeBlue
+                          : CupertinoColors.label,
+                    ),
+                  ),
                   onPressed: () {
                     setState(() {
                       _recurrenceType = RecurrenceType.yearly;
@@ -1581,7 +1829,14 @@ extension _DialogHelpers on _AppointmentCreationPageState {
                   },
                 ),
                 CupertinoDialogAction(
-                  child: Text(loc.noRecurrence),
+                  child: Text(
+                    loc.noRecurrence,
+                    style: TextStyle(
+                      color: !_isRecurring
+                          ? CupertinoColors.activeBlue
+                          : CupertinoColors.label,
+                    ),
+                  ),
                   onPressed: () {
                     setState(() {
                       _isRecurring = false;
@@ -1727,7 +1982,7 @@ extension _DialogHelpers on _AppointmentCreationPageState {
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: [
+              children: <Widget>[
                 TextFormField(
                   initialValue: _recurrenceInterval.toString(),
                   keyboardType: TextInputType.number,
@@ -1762,90 +2017,6 @@ extension _DialogHelpers on _AppointmentCreationPageState {
                     );
                   }).toList(),
                 ),
-                if (_recurrenceType == RecurrenceType.weekly)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16.0),
-                    child: Wrap(
-                      spacing: 8.0,
-                      children: List.generate(7, (index) {
-                        final dayNames = [
-                          'MO',
-                          'DI',
-                          'MI',
-                          'DO',
-                          'FR',
-                          'SA',
-                          'SO'
-                        ];
-                        return FilterChip(
-                          label: Text(dayNames[index]),
-                          selected: _selectedWeekDays[index],
-                          onSelected: (bool selected) {
-                            setState(() {
-                              _selectedWeekDays[index] = selected;
-                            });
-                          },
-                        );
-                      }),
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<RecurrenceRange>(
-                  value: _recurrenceRange,
-                  decoration: InputDecoration(labelText: loc.recurrenceRange),
-                  onChanged: (value) {
-                    setState(() {
-                      _recurrenceRange = value!;
-                    });
-                  },
-                  items: RecurrenceRange.values.map((range) {
-                    return DropdownMenuItem<RecurrenceRange>(
-                      value: range,
-                      child: Text(loc.getRecurrenceRangeLabel(range)),
-                    );
-                  }).toList(),
-                ),
-                if (_recurrenceRange == RecurrenceRange.count)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16.0),
-                    child: TextFormField(
-                      initialValue: _recurrenceCount?.toString(),
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(labelText: loc.count),
-                      onChanged: (value) {
-                        setState(() {
-                          _recurrenceCount = int.tryParse(value);
-                        });
-                      },
-                    ),
-                  ),
-                if (_recurrenceRange == RecurrenceRange.endDate)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16.0),
-                    child: InkWell(
-                      onTap: () async {
-                        final picked = await _showAdaptiveDatePicker(
-                          context: context,
-                          initialDate: _recurrenceEndDate ?? DateTime.now(),
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime(2100),
-                        );
-                        if (picked != null) {
-                          setState(() {
-                            _recurrenceEndDate = picked;
-                          });
-                        }
-                      },
-                      child: InputDecorator(
-                        decoration: InputDecoration(labelText: loc.endDate),
-                        child: Text(
-                          _recurrenceEndDate != null
-                              ? _formatDate(_recurrenceEndDate!)
-                              : loc.noEndDate,
-                        ),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
@@ -1865,4 +2036,57 @@ extension _DialogHelpers on _AppointmentCreationPageState {
       },
     );
   }
+}
+
+/// >>> NEU: Hilfs-Widget zum automatischen Selektieren beim Fokus (wie im Original)
+class _OverwriteOnFocus extends StatelessWidget {
+  final Widget child;
+  const _OverwriteOnFocus({required this.child, Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Builder(builder: (ctx) {
+      return _SelectAllOnFocusChild(child: child);
+    });
+  }
+}
+
+class _SelectAllOnFocusChild extends StatefulWidget {
+  final Widget child;
+  const _SelectAllOnFocusChild({required this.child, Key? key})
+      : super(key: key);
+
+  @override
+  State<_SelectAllOnFocusChild> createState() => _SelectAllOnFocusChildState();
+}
+
+class _SelectAllOnFocusChildState extends State<_SelectAllOnFocusChild> {
+  @override
+  Widget build(BuildContext context) {
+    return FocusTraversalGroup(
+      policy: OrderedTraversalPolicy(),
+      child: _SelectAllInterceptor(child: widget.child),
+    );
+  }
+}
+
+class _SelectAllInterceptor extends StatelessWidget {
+  final Widget child;
+  const _SelectAllInterceptor({required this.child, Key? key})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return _SelectAllTextOnFocusInherited(
+      child: child,
+    );
+  }
+}
+
+class _SelectAllTextOnFocusInherited extends InheritedWidget {
+  const _SelectAllTextOnFocusInherited({Key? key, required Widget child})
+      : super(key: key, child: child);
+
+  @override
+  bool updateShouldNotify(_SelectAllTextOnFocusInherited oldWidget) => false;
 }

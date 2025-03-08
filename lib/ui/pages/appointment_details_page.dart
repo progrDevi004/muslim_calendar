@@ -348,6 +348,30 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
             ),
           ),
 
+        // Erinnerung anzeigen (wenn vorhanden)
+        if (_appointment!.reminderMinutesBefore != null &&
+            _appointment!.reminderMinutesBefore! > 0)
+          Card(
+            color: Theme.of(context).cardColor,
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                children: [
+                  const Icon(Icons.notifications, color: Colors.purple),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _formatReminderText(
+                          _appointment!.reminderMinutesBefore!, loc),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
         const SizedBox(height: 16),
 
         // Buttons
@@ -467,6 +491,18 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         icon: Icon(icon),
         label: Text(label),
       );
+    }
+  }
+
+  String _formatReminderText(int minutesBefore, AppLocalizations loc) {
+    if (minutesBefore < 60) {
+      return loc.minutesBefore(minutesBefore);
+    } else if (minutesBefore < 1440) {
+      final hours = (minutesBefore / 60).floor();
+      return loc.hoursBefore(hours);
+    } else {
+      final days = (minutesBefore / 1440).floor();
+      return loc.daysBefore(days);
     }
   }
 }
