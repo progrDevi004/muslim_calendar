@@ -24,6 +24,11 @@ class PrayerTimeService with ChangeNotifier {
       return appointment.startTime;
     }
 
+    // Prüfe, ob location null ist
+    if (appointment.location == null) {
+      return appointment.startTime;
+    }
+
     final minutes = await prayerTimeRepo.getPrayerTimeMinutes(
       useAppointmentDate ? appointment.startTime! : fallbackDate,
       appointment.location!,

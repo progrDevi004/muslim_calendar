@@ -382,6 +382,41 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       const Divider(height: 32),
 
+      // Language Settings Section
+      Text(
+        loc.language,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+      ),
+      const SizedBox(height: 16),
+      DropdownButtonFormField<AppLanguage>(
+        value: _selectedLanguage,
+        decoration: InputDecoration(
+          labelText: loc.language,
+          border: const OutlineInputBorder(),
+        ),
+        onChanged: (value) async {
+          if (value != null) {
+            setState(() => _selectedLanguage = value);
+
+            // Aktualisiere die Sprache im AppLocalizations Provider
+            Provider.of<AppLocalizations>(context, listen: false)
+                .setLanguage(value);
+
+            // Speichere die Einstellung
+            await _saveSettings();
+          }
+        },
+        items: AppLanguage.values.map((lang) {
+          return DropdownMenuItem<AppLanguage>(
+            value: lang,
+            child: Text(loc.getLanguageName(lang)),
+          );
+        }).toList(),
+      ),
+      const Divider(height: 32),
+
       // Location Settings
       Text(
         loc.locationSettings,
@@ -897,13 +932,24 @@ class _SettingsPageState extends State<SettingsPage> {
     final calendarService = context.read<CalendarSyncService>();
     final loc = Provider.of<AppLocalizations>(context, listen: false);
 
+    // Bei Import: Kategorie-Behandlung abfragen
+    int? categoryOption = 0; // Standard: Kategorie 1 verwenden
+    if (isImport && mounted) {
+      categoryOption = await _showCategorySelectionDialog();
+      if (categoryOption == null) {
+        // Dialog abgebrochen
+        return;
+      }
+    }
+
     // Zeige Ladeindikator an
     final loadingDialog = _showLoadingDialog(isImport);
 
     try {
       if (isImport) {
         // Echte Implementierung für den Import
-        await calendarService.importAppointments();
+        await calendarService.importAppointments(
+            categoryOption: categoryOption);
         // Dialog schließen
         if (mounted) Navigator.of(context).pop();
 
@@ -927,6 +973,98 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) Navigator.of(context).pop();
       await _showErrorDialog(loc.syncError(e.toString()));
     }
+  }
+
+  /// Dialog zur Auswahl der Kategorie-Behandlung beim Import
+  Future<int?> _showCategorySelectionDialog() async {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+
+    // Kategorien aus der Datenbank laden
+    final appointmentRepo = context.read<AppointmentRepository>();
+    final categories = await appointmentRepo.getAllCategories();
+
+    return showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(loc.importCategoriesTitle),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(loc.importCategoriesDescription),
+              const SizedBox(height: 16),
+
+              // Option 1: Importer-Kategorie verwenden
+              ListTile(
+                title: Text(loc.useDefaultCategory),
+                subtitle: Text(loc.useDefaultCategoryDescription),
+                leading: Radio<int>(
+                  value: 0,
+                  groupValue: 0,
+                  onChanged: (value) => Navigator.of(context).pop(0),
+                ),
+                onTap: () => Navigator.of(context).pop(0),
+              ),
+
+              // Option 2: Google Calendar-Farben als Kategorien verwenden
+              ListTile(
+                title: Text(loc.useGoogleColors),
+                subtitle: Text(loc.useGoogleColorsDescription),
+                leading: Radio<int>(
+                  value: 1,
+                  groupValue: 0,
+                  onChanged: (value) => Navigator.of(context).pop(1),
+                ),
+                onTap: () => Navigator.of(context).pop(1),
+              ),
+
+              // Option 3: Kategorien automatisch zuordnen
+              ListTile(
+                title: Text(loc.autoMatchCategories),
+                subtitle: Text(loc.autoMatchCategoriesDescription),
+                leading: Radio<int>(
+                  value: 2,
+                  groupValue: 0,
+                  onChanged: (value) => Navigator.of(context).pop(2),
+                ),
+                onTap: () => Navigator.of(context).pop(2),
+              ),
+
+              const Divider(),
+              Text(loc.availableCategories,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+
+              // Verfügbare Kategorien anzeigen
+              ...categories.map((category) => Padding(
+                    padding: const EdgeInsets.only(left: 8.0, bottom: 4.0),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: category.color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text("${category.id}. ${category.name}"),
+                      ],
+                    ),
+                  )),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(null),
+            child: Text(loc.cancel),
+          ),
+        ],
+      ),
+    );
   }
 
   // Zeigt einen Debug-Dialog mit allen Terminen aus der Datenbank

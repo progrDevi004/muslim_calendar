@@ -596,6 +596,7 @@ class HomePageState extends State<HomePage> {
       },
     );
   }
+
   void _showAddCategoryDialog() {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
     final TextEditingController nameController = TextEditingController();
@@ -632,7 +633,7 @@ class HomePageState extends State<HomePage> {
               onPressed: () async {
                 final name = nameController.text.trim();
                 if (name.isNotEmpty) {
-                  final newCategory = CategoryModel(
+                  final newCategory = CategoryModel.newCategory(
                     name: name,
                     color: selectedColor,
                   );

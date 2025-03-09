@@ -3479,4 +3479,185 @@ class AppLocalizations extends ChangeNotifier {
         return "Total Appointments";
     }
   }
+
+  // Texte für Kategorie-Import-Dialog
+  String get importCategoriesTitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Kategorien beim Import";
+      case AppLanguage.turkish:
+        return "İçe Aktarma için Kategoriler";
+      case AppLanguage.arabic:
+        return "الفئات عند الاستيراد";
+      case AppLanguage.bosnian:
+        return "Kategorije pri uvozu";
+      case AppLanguage.spanish:
+        return "Categorías en la importación";
+      case AppLanguage.persian:
+        return "دسته‌بندی‌ها هنگام ورود";
+      case AppLanguage.english:
+      default:
+        return "Import Categories";
+    }
+  }
+
+  String get importCategoriesDescription {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Wie sollen die Kategorien für importierte Termine behandelt werden?";
+      case AppLanguage.turkish:
+        return "İçe aktarılan randevular için kategoriler nasıl ele alınmalı?";
+      case AppLanguage.arabic:
+        return "كيف يجب التعامل مع فئات المواعيد المستوردة؟";
+      case AppLanguage.bosnian:
+        return "Kako treba tretirati kategorije za uvezene sastanke?";
+      case AppLanguage.spanish:
+        return "¿Cómo deben tratarse las categorías de las citas importadas?";
+      case AppLanguage.persian:
+        return "چگونه باید با دسته‌های قرارهای وارد شده برخورد شود؟";
+      case AppLanguage.english:
+      default:
+        return "How should categories for imported appointments be handled?";
+    }
+  }
+
+  String get useDefaultCategory {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Standard-Kategorie verwenden";
+      case AppLanguage.turkish:
+        return "Varsayılan Kategoriyi Kullan";
+      case AppLanguage.arabic:
+        return "استخدام الفئة الافتراضية";
+      case AppLanguage.bosnian:
+        return "Koristi zadanu kategoriju";
+      case AppLanguage.spanish:
+        return "Usar categoría predeterminada";
+      case AppLanguage.persian:
+        return "استفاده از دسته پیش‌فرض";
+      case AppLanguage.english:
+      default:
+        return "Use Default Category";
+    }
+  }
+
+  String get useDefaultCategoryDescription {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Alle importierten Termine werden der Standard-Kategorie zugewiesen.";
+      case AppLanguage.turkish:
+        return "Tüm içe aktarılan randevular varsayılan kategoriye atanacak.";
+      case AppLanguage.arabic:
+        return "سيتم تعيين جميع المواعيد المستوردة إلى الفئة الافتراضية.";
+      case AppLanguage.bosnian:
+        return "Svi uvezeni sastanci bit će dodijeljeni zadanoj kategoriji.";
+      case AppLanguage.spanish:
+        return "Todas las citas importadas se asignarán a la categoría predeterminada.";
+      case AppLanguage.persian:
+        return "تمام قرارهای وارد شده به دسته پیش‌فرض اختصاص داده می‌شوند.";
+      case AppLanguage.english:
+      default:
+        return "All imported appointments will be assigned to the default category.";
+    }
+  }
+
+  String get useGoogleColors {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Google-Farben verwenden";
+      case AppLanguage.turkish:
+        return "Google Renklerini Kullan";
+      case AppLanguage.arabic:
+        return "استخدام ألوان Google";
+      case AppLanguage.bosnian:
+        return "Koristi Google boje";
+      case AppLanguage.spanish:
+        return "Usar colores de Google";
+      case AppLanguage.persian:
+        return "استفاده از رنگ‌های گوگل";
+      case AppLanguage.english:
+      default:
+        return "Use Google Colors";
+    }
+  }
+
+  String get useGoogleColorsDescription {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Die Farbkategorien aus dem Google-Kalender werden auf die App-Kategorien abgebildet.";
+      case AppLanguage.turkish:
+        return "Google Takvim'deki renk kategorileri uygulama kategorileriyle eşleştirilecek.";
+      case AppLanguage.arabic:
+        return "سيتم ترجمة فئات الألوان من تقويم Google إلى فئات التطبيق.";
+      case AppLanguage.bosnian:
+        return "Kategorije boja iz Google kalendara bit će povezane s kategorijama aplikacije.";
+      case AppLanguage.spanish:
+        return "Las categorías de colores del calendario de Google se asignarán a las categorías de la aplicación.";
+      case AppLanguage.persian:
+        return "دسته‌های رنگی از تقویم گوگل به دسته‌های برنامه نگاشت می‌شوند.";
+      case AppLanguage.english:
+      default:
+        return "Color categories from Google Calendar will be mapped to app categories.";
+    }
+  }
+
+  String get autoMatchCategories {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Kategorien automatisch abgleichen";
+      case AppLanguage.turkish:
+        return "Kategorileri Otomatik Eşleştir";
+      case AppLanguage.arabic:
+        return "مطابقة الفئات تلقائيًا";
+      case AppLanguage.bosnian:
+        return "Automatski podudaraj kategorije";
+      case AppLanguage.spanish:
+        return "Emparejar categorías automáticamente";
+      case AppLanguage.persian:
+        return "تطبیق خودکار دسته‌ها";
+      case AppLanguage.english:
+      default:
+        return "Auto-Match Categories";
+    }
+  }
+
+  String get autoMatchCategoriesDescription {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Versucht, Termine auf Basis des Titels den passenden Kategorien zuzuordnen.";
+      case AppLanguage.turkish:
+        return "Başlığa göre randevuları eşleşen kategorilere atamaya çalışır.";
+      case AppLanguage.arabic:
+        return "يحاول تعيين المواعيد إلى الفئات المطابقة بناءً على العنوان.";
+      case AppLanguage.bosnian:
+        return "Pokušava dodijeliti sastanke odgovarajućim kategorijama na osnovu naslova.";
+      case AppLanguage.spanish:
+        return "Intenta asignar citas a las categorías coincidentes según el título.";
+      case AppLanguage.persian:
+        return "تلاش می‌کند قرارها را بر اساس عنوان به دسته‌های مطابق اختصاص دهد.";
+      case AppLanguage.english:
+      default:
+        return "Attempts to assign appointments to matching categories based on title.";
+    }
+  }
+
+  String get availableCategories {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Verfügbare Kategorien:";
+      case AppLanguage.turkish:
+        return "Mevcut Kategoriler:";
+      case AppLanguage.arabic:
+        return "الفئات المتاحة:";
+      case AppLanguage.bosnian:
+        return "Dostupne kategorije:";
+      case AppLanguage.spanish:
+        return "Categorías disponibles:";
+      case AppLanguage.persian:
+        return "دسته‌های موجود:";
+      case AppLanguage.english:
+      default:
+        return "Available Categories:";
+    }
+  }
 }

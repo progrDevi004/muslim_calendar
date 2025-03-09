@@ -3,8 +3,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:googleapis/calendar/v3.dart';
 import 'package:intl/intl.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
+import 'package:muslim_calendar/models/category_model.dart';
 import 'package:muslim_calendar/models/enums.dart';
 import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
+import 'package:muslim_calendar/data/repositories/category_repository.dart';
 import 'package:muslim_calendar/data/services/google_calendar_service.dart';
 import 'package:muslim_calendar/data/services/recurrence_service.dart';
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
@@ -13,20 +15,23 @@ class CalendarSyncService {
   /// Takvim sağlayıcısı; ileride Outlook, Apple gibi sağlayıcılar için de ortak interface tanımlanabilir.
   final GoogleCalendarService calendarProvider;
   final AppointmentRepository appointmentRepository;
+  final CategoryRepository categoryRepository;
   final RecurrenceService recurrenceService;
   final PrayerTimeService prayerTimeService;
 
   CalendarSyncService({
     required this.calendarProvider,
     required this.appointmentRepository,
+    required this.categoryRepository,
     required this.recurrenceService,
     required this.prayerTimeService,
   });
 
   /// Ortak import fonksiyonu: Sağlayıcı (örneğin Google) üzerinden event'leri çekip yerel veritabanına ekler.
-  Future<void> importAppointments() async {
+  Future<void> importAppointments({int categoryOption = 0}) async {
     // Debug-Ausgabe für den Beginn des Imports
-    debugPrint("🔄 Importiere Termine aus Google Calendar");
+    debugPrint(
+        "🔄 Importiere Termine aus Google Calendar (Kategorie-Option: $categoryOption)");
 
     await calendarProvider.autoSignIn();
     List<Event> events = await calendarProvider.fetchCalendarEvents();
@@ -38,7 +43,18 @@ class CalendarSyncService {
     int importCount = 0;
     int updateCount = 0;
 
-    // Verwende Kategorie-ID 1 als Standard für importierte Termine
+    // Kategorie-Option 0: Standard-Kategorie (1)
+    // Kategorie-Option 1: Google-Farben als Kategorien
+    // Kategorie-Option 2: Automatisches Matching nach Namen
+
+    // Lade verfügbare Kategorien für Option 1 und 2
+    List<CategoryModel> categories = [];
+    if (categoryOption > 0) {
+      categories = await appointmentRepository.getAllCategories();
+      debugPrint("📂 ${categories.length} Kategorien geladen");
+    }
+
+    // Standard-Import-Kategorie (für Option 0)
     const int defaultCategoryId = 1;
 
     for (var event in events) {
@@ -86,6 +102,82 @@ class CalendarSyncService {
               convertGoogleToICalendarRRule(event.recurrence!.first.toString());
         }
       }
+
+      // Kategorie-ID je nach gewählter Option ermitteln
+      int appointmentCategoryId = defaultCategoryId;
+
+      if (categoryOption == 1) {
+        // Option 1: Google Calendar Farben als Kategorien verwenden
+        if (event.colorId != null) {
+          final colorIndex = int.tryParse(event.colorId!);
+          if (colorIndex != null &&
+              colorIndex > 0 &&
+              colorIndex <= categories.length) {
+            appointmentCategoryId = colorIndex;
+            debugPrint("🎨 Verwende Google-Farbe als Kategorie: $colorIndex");
+          }
+        }
+      } else if (categoryOption == 2) {
+        // Option 2: Erstelle oder finde Kategorien basierend auf dem Titel des Termins
+        final eventTitle = event.summary ?? '';
+
+        if (eventTitle.isNotEmpty) {
+          // Einfache Version: Verwende den kompletten Titel als Kategorienamen
+          // oder alternativ den ersten Teil des Titels bis zum Doppelpunkt als Kategorie
+          String categoryName = eventTitle;
+
+          // Wenn der Titel einen Doppelpunkt enthält, nimm den ersten Teil als Kategorie
+          if (eventTitle.contains(':')) {
+            categoryName = eventTitle.split(':').first.trim();
+          }
+
+          // Länge der Kategorie begrenzen
+          if (categoryName.length > 30) {
+            categoryName = categoryName.substring(0, 30);
+          }
+
+          // Wenn Google eine Farbe für den Termin definiert hat, nutze diese
+          Color? eventColor;
+          if (event.colorId != null) {
+            final colorIndex = int.tryParse(event.colorId!);
+            if (colorIndex != null) {
+              // Hier könnten wir ein Mapping der Google Calendar Farben haben
+              // Einfache Version: Erzeuge eine Farbe basierend auf der colorId
+              final colors = [
+                Color(0xFF5484ED), // Blau
+                Color(0xFFA4BDFC), // Hellblau
+                Color(0xFF7AE7BF), // Türkis
+                Color(0xFF51B749), // Grün
+                Color(0xFFFBD75B), // Gelb
+                Color(0xFFFFB878), // Orange
+                Color(0xFFFF887C), // Rot
+                Color(0xFFDC2127), // Dunkelrot
+                Color(0xFFDBDBDB), // Grau
+                Color(0xFFE1E1E1), // Hellgrau
+              ];
+
+              final index = colorIndex % colors.length;
+              eventColor = colors[index];
+            }
+          }
+
+          // Finde oder erstelle die Kategorie und nutze ihre ID
+          try {
+            final category = await categoryRepository.getCategoryByNameOrCreate(
+              categoryName,
+              color: eventColor,
+            );
+            appointmentCategoryId = category.id;
+            debugPrint(
+                "✅ Neue oder bestehende Kategorie verwendet: ${category.name} (ID: ${category.id})");
+          } catch (e) {
+            debugPrint("⚠️ Fehler beim Erstellen der Kategorie: $e");
+            // Fallback auf Standard-Kategorie
+            appointmentCategoryId = defaultCategoryId;
+          }
+        }
+      }
+
       AppointmentModel appointment = AppointmentModel(
         id: existingAppointment?.id,
         subject: event.summary ?? '',
@@ -111,7 +203,7 @@ class CalendarSyncService {
             : (event.end?.date != null
                 ? event.start!.date!.add(const Duration(minutes: 1))
                 : null),
-        categoryId: defaultCategoryId, // Verwende Kategorie-ID 1 als Standard
+        categoryId: appointmentCategoryId,
         reminderMinutesBefore: null,
         lastSyncedAt: DateTime.now(),
       );
@@ -121,11 +213,13 @@ class CalendarSyncService {
       }
 
       if (existingAppointment == null) {
-        debugPrint("➕ Neuer Termin hinzugefügt: ${appointment.subject}");
+        debugPrint(
+            "➕ Neuer Termin hinzugefügt: ${appointment.subject} (Kategorie: $appointmentCategoryId)");
         await appointmentRepository.insertAppointment(appointment);
         importCount++;
       } else {
-        debugPrint("🔄 Termin aktualisiert: ${appointment.subject}");
+        debugPrint(
+            "🔄 Termin aktualisiert: ${appointment.subject} (Kategorie: $appointmentCategoryId)");
         await appointmentRepository.updateAppointment(appointment);
         updateCount++;
       }

@@ -21,6 +21,7 @@ import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
 
 import 'data/repositories/appointment_repository.dart';
 import 'data/repositories/prayer_time_repository.dart';
+import 'data/repositories/category_repository.dart';
 import 'data/services/calendar_sync_service.dart';
 import 'data/services/google_calendar_service.dart';
 import 'data/services/recurrence_service.dart';
@@ -62,11 +63,16 @@ void main() async {
         ChangeNotifierProvider<PrayerTimeService>(
           create: (_) => PrayerTimeService(PrayerTimeRepository()),
         ),
-        // Ardından, CalendarSyncService nesnelerini oluşturuyoruz:
+        // CategoryRepository hinzufügen
+        Provider<CategoryRepository>(
+          create: (_) => CategoryRepository(),
+        ),
+        // Ardından, CalendarSyncService nesnelerini oluşYturuyoruz:
         Provider<CalendarSyncService>(
           create: (context) => CalendarSyncService(
             calendarProvider: context.read<GoogleCalendarService>(),
             appointmentRepository: context.read<AppointmentRepository>(),
+            categoryRepository: context.read<CategoryRepository>(),
             recurrenceService: context.read<RecurrenceService>(),
             prayerTimeService: context.read<PrayerTimeService>(),
           ),
