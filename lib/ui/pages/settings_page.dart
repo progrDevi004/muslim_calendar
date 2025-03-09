@@ -142,7 +142,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     try {
       final String jsonString =
-          await rootBundle.loadString('assets/data/country_city_data.json');
+          await rootBundle.loadString('assets/country_city_en.json');
       final Map<String, dynamic> jsonData = json.decode(jsonString);
 
       final Map<String, List<String>> data = {};

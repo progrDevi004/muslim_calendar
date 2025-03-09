@@ -23,7 +23,6 @@ import 'data/repositories/appointment_repository.dart';
 import 'data/repositories/prayer_time_repository.dart';
 import 'data/services/calendar_sync_service.dart';
 import 'data/services/google_calendar_service.dart';
-import 'data/services/prayer_time_service.dart';
 import 'data/services/recurrence_service.dart';
 
 void main() async {
@@ -58,7 +57,7 @@ void main() async {
         Provider<RecurrenceService>(
           create: (_) => RecurrenceService(),
         ),
-        Provider<PrayerTimeService>(
+        ChangeNotifierProvider<PrayerTimeService>(
           create: (_) => PrayerTimeService(PrayerTimeRepository()),
         ),
         // Ardından, CalendarSyncService nesnelerini oluşturuyoruz:

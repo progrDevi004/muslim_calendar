@@ -569,8 +569,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     }
   }
 
-  // --------------------------------------------------------------------------
-  // NEU: Separate Methoden für Datum und Zeit (unverändert)
+  /// NEU: Separate Methoden für Datum und Zeit (unverändert)
   Future<void> _pickStartDate() async {
     final pickedDate = await _showAdaptiveDatePicker(
       context: context,
@@ -596,7 +595,14 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
         // Wenn AllDay oder gebetszeit-bezogen => Endzeit anpassen
         if (_isAllDay) {
-          _endTime = _startTime!.add(const Duration(hours: 1));
+          // Bei ganztägigen Terminen endet der Tag um 23:59
+          _endTime = DateTime(
+            _startTime!.year,
+            _startTime!.month,
+            _startTime!.day,
+            23,
+            59,
+          );
         } else if (_isRelatedToPrayerTimes && _duration != null) {
           // Wenn an Gebetszeit gebunden, Endzeit basierend auf Startzeit + Dauer setzen
           _endTime = _startTime!.add(_duration!);
@@ -616,7 +622,14 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         _startTime = pickedTime;
         // Endzeit ggf. anpassen
         if (_isAllDay) {
-          _endTime = _startTime!.add(const Duration(hours: 1));
+          // Bei ganztägigen Terminen endet der Tag um 23:59
+          _endTime = DateTime(
+            _startTime!.year,
+            _startTime!.month,
+            _startTime!.day,
+            23,
+            59,
+          );
         } else if (_endTime != null && _endTime!.isBefore(_startTime!)) {
           // Wenn Endzeit vor Start liegt, Standard = +30min
           _endTime = _startTime!.add(const Duration(minutes: 30));
@@ -636,21 +649,42 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     if (pickedDate != null) {
       setState(() {
         if (_endTime != null) {
-          _endTime = DateTime(
-            pickedDate.year,
-            pickedDate.month,
-            pickedDate.day,
-            _endTime!.hour,
-            _endTime!.minute,
-          );
+          if (_isAllDay) {
+            // Bei ganztägigen Terminen endet der Tag um 23:59
+            _endTime = DateTime(
+              pickedDate.year,
+              pickedDate.month,
+              pickedDate.day,
+              23,
+              59,
+            );
+          } else {
+            _endTime = DateTime(
+              pickedDate.year,
+              pickedDate.month,
+              pickedDate.day,
+              _endTime!.hour,
+              _endTime!.minute,
+            );
+          }
         } else {
-          _endTime = pickedDate;
+          if (_isAllDay) {
+            _endTime = DateTime(
+                pickedDate.year, pickedDate.month, pickedDate.day, 23, 59);
+          } else {
+            _endTime = pickedDate;
+          }
         }
-        if (_isAllDay &&
-            _startTime != null &&
-            _endTime!.isBefore(_startTime!)) {
-          // End-Datum ist vor Start-Datum => nimm Start + 1h
-          _endTime = _startTime!.add(const Duration(hours: 1));
+
+        // Sicherstellen, dass das Enddatum nicht vor dem Startdatum liegt
+        if (_startTime != null && _endTime!.isBefore(_startTime!)) {
+          // End-Datum ist vor Start-Datum => nimm Start + 1h oder Ende des Tages bei ganztägigen
+          if (_isAllDay) {
+            _endTime = DateTime(
+                _startTime!.year, _startTime!.month, _startTime!.day, 23, 59);
+          } else {
+            _endTime = _startTime!.add(const Duration(hours: 1));
+          }
         }
       });
     }
@@ -672,8 +706,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       });
     }
   }
-  // --------------------------------------------------------------------------
-  // ENDE NEU
 
   /// Hilfsmethode zum Formatieren der Zeit (unverändert)
   String _formatTime(DateTime dt) {
@@ -741,8 +773,19 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               onChanged: (bool value) {
                 setState(() {
                   _isAllDay = value;
-                  if (value && _startTime != null) {
-                    _endTime = _startTime!.add(const Duration(hours: 1));
+                  // Ganztägige Termine können nicht an Gebetszeiten gebunden sein
+                  if (value) {
+                    _isRelatedToPrayerTimes = false;
+                    if (_startTime != null) {
+                      // Bei ganztägigen Terminen endet der Tag um 23:59
+                      _endTime = DateTime(
+                        _startTime!.year,
+                        _startTime!.month,
+                        _startTime!.day,
+                        23,
+                        59,
+                      );
+                    }
                   }
                 });
               },
@@ -760,8 +803,12 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               onChanged: (bool value) {
                 setState(() {
                   _isRelatedToPrayerTimes = value;
-                  if (value && _startTime != null) {
-                    _endTime = _startTime!.add(const Duration(hours: 1));
+                  // Gebetszeitbezogene Termine können nicht ganztägig sein
+                  if (value) {
+                    _isAllDay = false;
+                    if (_startTime != null && _duration != null) {
+                      _endTime = _startTime!.add(_duration!);
+                    }
                   }
                 });
               },
