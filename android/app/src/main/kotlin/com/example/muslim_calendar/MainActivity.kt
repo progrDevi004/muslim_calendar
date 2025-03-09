@@ -1,4 +1,4 @@
-package com.example.muslim_calendar
+package com.islamic_apps.taqvimi
 
 import io.flutter.embedding.android.FlutterActivity
 

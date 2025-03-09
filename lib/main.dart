@@ -49,7 +49,9 @@ void main() async {
           create: (_) => ThemeNotifier(),
         ),
         Provider<GoogleCalendarService>(
-          create: (_) => GoogleCalendarService(),
+          create: (context) => GoogleCalendarService(
+            localizations: context.read<AppLocalizations>(),
+          ),
         ),
         Provider<AppointmentRepository>(
           create: (_) => AppointmentRepository(),

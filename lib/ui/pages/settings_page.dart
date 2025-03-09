@@ -14,6 +14,7 @@ import 'package:muslim_calendar/providers/theme_notifier.dart';
 // Für reDownloadAndRecalcAll()
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 import '../../data/services/calendar_sync_service.dart';
+import '../../data/repositories/appointment_repository.dart';
 
 // Beispiel-Enum, kann auch global in app_language.dart liegen:
 
@@ -40,7 +41,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final bool _isIos = Platform.isIOS;
   bool _isDarkMode = false;
   bool _notificationsEnabled = true;
-  bool _use24HourFormat = true;
+  bool _use24hFormat = true;
   bool _showPrayerTimesInDayView = true;
   bool _showPrayerTimesInWeekView = true;
   bool _showPrayerSlotsInDashboard = true;
@@ -57,13 +58,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
   // Calendar Sync
   bool _googleCalendarEnabled = false;
-  bool _appleCalendarEnabled = false;
   bool _outlookCalendarEnabled = false;
   bool _googleCalendarConnected = false;
-  bool _appleCalendarConnected = false;
   bool _outlookCalendarConnected = false;
   SyncFrequency _googleCalendarSyncFrequency = SyncFrequency.none;
-  SyncFrequency _appleCalendarSyncFrequency = SyncFrequency.none;
   SyncFrequency _outlookCalendarSyncFrequency = SyncFrequency.none;
 
   @override
@@ -103,7 +101,7 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _isDarkMode = prefs.getBool('isDarkMode') ?? false;
       _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
-      _use24HourFormat = prefs.getBool('use24HourFormat') ?? true;
+      _use24hFormat = prefs.getBool('use24hFormat') ?? true;
       _showPrayerTimesInDayView =
           prefs.getBool('showPrayerTimesInDayView') ?? true;
       _showPrayerTimesInWeekView =
@@ -119,13 +117,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
       // Calendar Sync
       _googleCalendarEnabled = prefs.getBool('googleCalendarEnabled') ?? false;
-      _appleCalendarEnabled = prefs.getBool('appleCalendarEnabled') ?? false;
       _outlookCalendarEnabled =
           prefs.getBool('outlookCalendarEnabled') ?? false;
       _googleCalendarSyncFrequency = SyncFrequency.values[
           prefs.getInt('googleSyncFrequency') ?? SyncFrequency.none.index];
-      _appleCalendarSyncFrequency = SyncFrequency.values[
-          prefs.getInt('appleSyncFrequency') ?? SyncFrequency.none.index];
       _outlookCalendarSyncFrequency = SyncFrequency.values[
           prefs.getInt('outlookSyncFrequency') ?? SyncFrequency.none.index];
     });
@@ -166,40 +161,36 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _checkCalendarConnections() async {
     final calendarService = context.read<CalendarSyncService>();
+    final googleService = context.read<GoogleCalendarService>();
 
-    // Temporäre Mock-Implementierung, bis die eigentlichen Methoden implementiert sind
-    final googleConnected =
-        false; // await calendarService.isGoogleCalendarConnected();
-    final appleConnected =
-        false; // await calendarService.isAppleCalendarConnected();
-    final outlookConnected =
-        false; // await calendarService.isOutlookCalendarConnected();
+    // Tatsächliche Implementierung für Google
+    bool googleConnected = googleService.isSignedIn;
+
+    // Temporäre Mock-Implementierung für Outlook
+    final outlookConnected = false;
 
     setState(() {
       _googleCalendarConnected = googleConnected;
-      _appleCalendarConnected = appleConnected;
       _outlookCalendarConnected = outlookConnected;
     });
   }
 
   Future<bool> _connectToGoogleCalendar(BuildContext context) async {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
-    final calendarService = context.read<CalendarSyncService>();
+    final googleService = context.read<GoogleCalendarService>();
 
     try {
-      // Temporäre Mock-Implementierung
-      // final success = await calendarService.connectGoogleCalendar();
-      final success = false; // Mock-Antwort
-      if (success) {
-        setState(() {
-          _googleCalendarConnected = true;
-        });
-      }
-      return success;
+      await googleService.signIn();
+
+      setState(() {
+        _googleCalendarConnected = googleService.isSignedIn;
+      });
+
+      return googleService.isSignedIn;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error connecting to Google Calendar: $e')),
+          SnackBar(content: Text(loc.syncError(e.toString()))),
         );
       }
       return false;
@@ -208,7 +199,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _manageGoogleCalendarConnection(BuildContext context) async {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
-    final calendarService = context.read<CalendarSyncService>();
+    final googleService = context.read<GoogleCalendarService>();
 
     showDialog(
       context: context,
@@ -218,12 +209,11 @@ class _SettingsPageState extends State<SettingsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Cancel'),
+            child: Text(loc.cancel),
           ),
           TextButton(
             onPressed: () async {
-              // await calendarService.disconnectGoogleCalendar();
-              // Temporäre Mock-Implementierung
+              await googleService.signOut();
               setState(() {
                 _googleCalendarConnected = false;
               });
@@ -234,15 +224,6 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
-  }
-
-  Future<bool> _connectToAppleCalendar(BuildContext context) async {
-    // Implementation for Apple Calendar connection
-    return false;
-  }
-
-  Future<void> _manageAppleCalendarConnection(BuildContext context) async {
-    // Implementation for managing Apple Calendar connection
   }
 
   Future<bool> _connectToOutlookCalendar(BuildContext context) async {
@@ -257,14 +238,12 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
-    final notificationService =
-        Provider.of<NotificationService>(context, listen: false);
 
     // Aktualisieren des Themes über den ThemeNotifier
     themeNotifier.toggleTheme(_isDarkMode);
     await prefs.setBool('isDarkMode', _isDarkMode);
     await prefs.setBool('notificationsEnabled', _notificationsEnabled);
-    await prefs.setBool('use24HourFormat', _use24HourFormat);
+    await prefs.setBool('use24hFormat', _use24hFormat);
     await prefs.setBool('automaticLocation', _automaticLocation);
 
     if (!_automaticLocation) {
@@ -283,11 +262,9 @@ class _SettingsPageState extends State<SettingsPage> {
     await prefs.setInt('calculationMethod', _selectedCalcMethod);
 
     await prefs.setBool('googleCalendarEnabled', _googleCalendarEnabled);
-    await prefs.setBool('appleCalendarEnabled', _appleCalendarEnabled);
     await prefs.setBool('outlookCalendarEnabled', _outlookCalendarEnabled);
     await prefs.setInt(
         'googleSyncFrequency', _googleCalendarSyncFrequency.index);
-    await prefs.setInt('appleSyncFrequency', _appleCalendarSyncFrequency.index);
     await prefs.setInt(
         'outlookSyncFrequency', _outlookCalendarSyncFrequency.index);
   }
@@ -384,10 +361,10 @@ class _SettingsPageState extends State<SettingsPage> {
       RadioListTile<bool>(
         title: Text(loc.timeFormat24Active),
         value: true,
-        groupValue: _use24HourFormat,
+        groupValue: _use24hFormat,
         onChanged: (value) async {
           if (value != null) {
-            setState(() => _use24HourFormat = value);
+            setState(() => _use24hFormat = value);
             await _saveSettings();
           }
         },
@@ -395,10 +372,10 @@ class _SettingsPageState extends State<SettingsPage> {
       RadioListTile<bool>(
         title: Text(loc.timeFormatAmPmActive),
         value: false,
-        groupValue: _use24HourFormat,
+        groupValue: _use24hFormat,
         onChanged: (value) async {
           if (value != null) {
-            setState(() => _use24HourFormat = value);
+            setState(() => _use24hFormat = value);
             await _saveSettings();
           }
         },
@@ -455,81 +432,9 @@ class _SettingsPageState extends State<SettingsPage> {
         }).toList(),
       ),
 
-      // New Sync Section
+      // New Calendar Sync Section
       const Divider(height: 40),
-      Text(
-        loc.calendarSync,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-      ),
-      const SizedBox(height: 16),
-
-      // Google Calendar Integration
-      _buildCalendarIntegration(
-        loc.googleCalendar,
-        Icons.calendar_today,
-        _googleCalendarEnabled,
-        _googleCalendarConnected,
-        _googleCalendarSyncFrequency,
-        (value) async {
-          setState(() => _googleCalendarEnabled = value);
-          await _saveSettings();
-        },
-        () async {
-          if (!_googleCalendarConnected) {
-            return _connectToGoogleCalendar(context);
-          } else {
-            await _manageGoogleCalendarConnection(context);
-            return _googleCalendarConnected;
-          }
-        },
-        (value) => _googleCalendarSyncFrequency = value,
-      ),
-
-      // Apple Calendar Integration
-      _buildCalendarIntegration(
-        loc.appleCalendar,
-        _isIos ? Icons.apple : Icons.calendar_month,
-        _appleCalendarEnabled,
-        _appleCalendarConnected,
-        _appleCalendarSyncFrequency,
-        (value) async {
-          setState(() => _appleCalendarEnabled = value);
-          await _saveSettings();
-        },
-        () async {
-          if (!_appleCalendarConnected) {
-            return _connectToAppleCalendar(context);
-          } else {
-            await _manageAppleCalendarConnection(context);
-            return _appleCalendarConnected;
-          }
-        },
-        (value) => _appleCalendarSyncFrequency = value,
-      ),
-
-      // Outlook Calendar Integration
-      _buildCalendarIntegration(
-        loc.outlookCalendar,
-        Icons.mail_outline,
-        _outlookCalendarEnabled,
-        _outlookCalendarConnected,
-        _outlookCalendarSyncFrequency,
-        (value) async {
-          setState(() => _outlookCalendarEnabled = value);
-          await _saveSettings();
-        },
-        () async {
-          if (!_outlookCalendarConnected) {
-            return _connectToOutlookCalendar(context);
-          } else {
-            await _manageOutlookCalendarConnection(context);
-            return _outlookCalendarConnected;
-          }
-        },
-        (value) => _outlookCalendarSyncFrequency = value,
-      ),
+      _buildCalendarSection(context),
 
       // Falls Android => Speichern-Knopf
       if (!_isIos) ...[
@@ -541,11 +446,23 @@ class _SettingsPageState extends State<SettingsPage> {
               await _saveSettings();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Settings saved')),
+                  SnackBar(content: Text(loc.settingsSaved)),
                 );
               }
             },
-            child: const Text('Save Settings'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: Text(
+              loc.saveSettings,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ),
       ],
@@ -642,81 +559,261 @@ class _SettingsPageState extends State<SettingsPage> {
     ];
   }
 
-  Widget _buildCalendarIntegration(
-    String title,
-    IconData icon,
-    bool isEnabled,
-    bool isConnected,
-    SyncFrequency syncFrequency,
-    Future<void> Function(bool) onEnabledChanged,
-    Future<bool> Function() onConnectPressed,
-    void Function(SyncFrequency) onSyncFrequencyChanged,
-  ) {
-    final loc = Provider.of<AppLocalizations>(context, listen: false);
+  // Neues Widget für Kalender-Integration
+  Widget _buildCalendarSection(BuildContext context) {
+    final loc = Provider.of<AppLocalizations>(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Überschrift
+        Padding(
+          padding: const EdgeInsets.only(bottom: 20.0),
+          child: Row(
+            children: [
+              Icon(Icons.sync, size: 24, color: Theme.of(context).primaryColor),
+              const SizedBox(width: 8),
+              Text(
+                loc.calendarSync,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ],
+          ),
+        ),
+
+        // Google Kalender Card
+        _buildCalendarCard(
+          context: context,
+          title: loc.googleCalendar,
+          icon: Icons.calendar_today,
+          iconColor: const Color(0xFF4285F4), // Google Blue
+          isEnabled: _googleCalendarEnabled,
+          isConnected: _googleCalendarConnected,
+          syncFrequency: _googleCalendarSyncFrequency,
+          onEnabledChanged: (value) async {
+            setState(() => _googleCalendarEnabled = value);
+            await _saveSettings();
+          },
+          onConnectPressed: () async {
+            if (!_googleCalendarConnected) {
+              return _connectToGoogleCalendar(context);
+            } else {
+              await _manageGoogleCalendarConnection(context);
+              return _googleCalendarConnected;
+            }
+          },
+          onSyncFrequencyChanged: (value) {
+            setState(() => _googleCalendarSyncFrequency = value);
+            _saveSettings();
+          },
+          onImportPressed: () => _handleManualSync(true, "Google Calendar"),
+          onExportPressed: () => _handleManualSync(false, "Google Calendar"),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Outlook Kalender Card
+        _buildCalendarCard(
+          context: context,
+          title: loc.outlookCalendar,
+          icon: Icons.mail_outline,
+          iconColor: const Color(0xFF0078D4), // Outlook Blue
+          isEnabled: _outlookCalendarEnabled,
+          isConnected: _outlookCalendarConnected,
+          syncFrequency: _outlookCalendarSyncFrequency,
+          onEnabledChanged: (value) async {
+            setState(() => _outlookCalendarEnabled = value);
+            await _saveSettings();
+          },
+          onConnectPressed: () async {
+            if (!_outlookCalendarConnected) {
+              return _connectToOutlookCalendar(context);
+            } else {
+              await _manageOutlookCalendarConnection(context);
+              return _outlookCalendarConnected;
+            }
+          },
+          onSyncFrequencyChanged: (value) {
+            setState(() => _outlookCalendarSyncFrequency = value);
+            _saveSettings();
+          },
+          onImportPressed: () => _handleManualSync(true, "Outlook Calendar"),
+          onExportPressed: () => _handleManualSync(false, "Outlook Calendar"),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCalendarCard({
+    required BuildContext context,
+    required String title,
+    required IconData icon,
+    required Color iconColor,
+    required bool isEnabled,
+    required bool isConnected,
+    required SyncFrequency syncFrequency,
+    required Future<void> Function(bool) onEnabledChanged,
+    required Future<bool> Function() onConnectPressed,
+    required void Function(SyncFrequency) onSyncFrequencyChanged,
+    required Future<void> Function() onImportPressed,
+    required Future<void> Function() onExportPressed,
+  }) {
+    final loc = Provider.of<AppLocalizations>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark
+        ? Theme.of(context).cardColor
+        : Theme.of(context).cardColor.withOpacity(0.95);
+
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isEnabled
+              ? iconColor.withOpacity(0.5)
+              : Theme.of(context).dividerColor,
+          width: 1.5,
+        ),
+      ),
+      elevation: isEnabled ? 2 : 0,
+      color: cardColor,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Titel und Switch
             Row(
               children: [
-                Icon(icon, size: 24),
+                Icon(icon, size: 24, color: iconColor),
                 const SizedBox(width: 12),
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
                 const Spacer(),
                 Switch(
                   value: isEnabled,
+                  activeColor: iconColor,
                   onChanged: (value) async {
                     await onEnabledChanged(value);
                   },
                 ),
               ],
             ),
+
+            // Aktive Inhalte, wenn enabled
             if (isEnabled) ...[
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () async {
-                  final success = await onConnectPressed();
-                  setState(() {});
-                },
-                child: Text(isConnected ? loc.manageConnection : loc.connect),
+              const Divider(height: 24),
+
+              // Verbindungsstatus
+              Row(
+                children: [
+                  Icon(
+                    isConnected ? Icons.check_circle : Icons.info_outline,
+                    size: 16,
+                    color: isConnected
+                        ? Colors.green
+                        : Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    isConnected ? loc.connected : loc.notConnected,
+                    style: TextStyle(
+                      color: isConnected ? Colors.green : null,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
+
+              const SizedBox(height: 16),
+
+              // Connect/Manage Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final success = await onConnectPressed();
+                    setState(() {});
+                  },
+                  icon: Icon(
+                    isConnected ? Icons.settings : Icons.login,
+                    size: 18,
+                  ),
+                  label: Text(
+                    isConnected ? loc.manageConnection : loc.connect,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: iconColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Sync Optionen, wenn verbunden
               if (isConnected) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
+
+                // Import/Export Buttons
                 Row(
                   children: [
                     Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          await _handleManualSync(true, title);
-                        },
-                        child: Text(loc.importFromCalendar),
+                      child: OutlinedButton.icon(
+                        onPressed: onImportPressed,
+                        icon: const Icon(Icons.download, size: 16),
+                        label: Text(loc.import),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: iconColor),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          await _handleManualSync(false, title);
-                        },
-                        child: Text(loc.exportToCalendar),
+                      child: OutlinedButton.icon(
+                        onPressed: onExportPressed,
+                        icon: const Icon(Icons.upload, size: 16),
+                        label: Text(loc.export),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: iconColor),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 16),
-                const Text('Sync Frequency:'),
-                const SizedBox(height: 8),
+
+                // Sync Frequency
+                Text(
+                  loc.syncFrequency,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(height: 10),
                 _buildSyncFrequencyOptions(
-                    syncFrequency, onSyncFrequencyChanged),
+                  syncFrequency,
+                  onSyncFrequencyChanged,
+                  iconColor,
+                ),
               ],
             ],
           ],
@@ -725,23 +822,221 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Widget _buildSyncFrequencyOptions(
+    SyncFrequency currentFrequency,
+    void Function(SyncFrequency) onChanged,
+    Color activeColor,
+  ) {
+    final loc = Provider.of<AppLocalizations>(context);
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _buildFrequencyChip(
+          label: loc.noSync,
+          selected: currentFrequency == SyncFrequency.none,
+          onSelected: (selected) {
+            if (selected) onChanged(SyncFrequency.none);
+          },
+          activeColor: activeColor,
+        ),
+        _buildFrequencyChip(
+          label: loc.dailySync,
+          selected: currentFrequency == SyncFrequency.daily,
+          onSelected: (selected) {
+            if (selected) onChanged(SyncFrequency.daily);
+          },
+          activeColor: activeColor,
+        ),
+        _buildFrequencyChip(
+          label: loc.weeklySync,
+          selected: currentFrequency == SyncFrequency.weekly,
+          onSelected: (selected) {
+            if (selected) onChanged(SyncFrequency.weekly);
+          },
+          activeColor: activeColor,
+        ),
+        _buildFrequencyChip(
+          label: loc.monthlySync,
+          selected: currentFrequency == SyncFrequency.monthly,
+          onSelected: (selected) {
+            if (selected) onChanged(SyncFrequency.monthly);
+          },
+          activeColor: activeColor,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFrequencyChip({
+    required String label,
+    required bool selected,
+    required Function(bool) onSelected,
+    required Color activeColor,
+  }) {
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+          color: selected ? Colors.white : null,
+        ),
+      ),
+      selected: selected,
+      onSelected: onSelected,
+      selectedColor: activeColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+    );
+  }
+
   Future<void> _handleManualSync(bool isImport, String serviceName) async {
     final calendarService = context.read<CalendarSyncService>();
     final loc = Provider.of<AppLocalizations>(context, listen: false);
 
+    // Zeige Ladeindikator an
+    final loadingDialog = _showLoadingDialog(isImport);
+
     try {
       if (isImport) {
-        // await calendarService.importFromCalendar(serviceName);
-        // Temporäre Mock-Implementierung
+        // Echte Implementierung für den Import
+        await calendarService.importAppointments();
+        // Dialog schließen
+        if (mounted) Navigator.of(context).pop();
+
+        // Termine für Debugging lesen und anzeigen
+        _showDebugTermineDialog();
+
+        // Erfolgsmeldung anzeigen
         await _showSuccessDialog(loc.importSuccess(serviceName));
+        // UI aktualisieren, um die importierten Termine anzuzeigen
+        if (mounted) _refreshAppointmentsUI();
       } else {
-        // await calendarService.exportToCalendar(serviceName);
-        // Temporäre Mock-Implementierung
+        // Echte Implementierung für den Export
+        await calendarService.exportAppointments();
+        // Dialog schließen
+        if (mounted) Navigator.of(context).pop();
+        // Erfolgsmeldung anzeigen
         await _showSuccessDialog(loc.exportSuccess(serviceName));
       }
     } catch (e) {
+      // Dialog schließen im Fehlerfall
+      if (mounted) Navigator.of(context).pop();
       await _showErrorDialog(loc.syncError(e.toString()));
     }
+  }
+
+  // Zeigt einen Debug-Dialog mit allen Terminen aus der Datenbank
+  Future<void> _showDebugTermineDialog() async {
+    final appointmentRepo = context.read<AppointmentRepository>();
+    final termine = await appointmentRepo.getAllAppointments();
+
+    // Nur für Debug-Zwecke in Konsole ausgeben
+    debugPrint("🔍 TERMIN DEBUG LISTE (${termine.length} Termine):");
+    for (var t in termine) {
+      debugPrint(
+          "  - ${t.subject} | ID: ${t.id} | Kategorie: ${t.categoryId} | Start: ${t.startTime}");
+    }
+
+    // Im Debug-Modus (oder mit speziellem Flag) Dialog anzeigen
+    if (mounted) {
+      final loc = Provider.of<AppLocalizations>(context, listen: false);
+
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(loc.debugAppointments),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("${loc.totalAppointments}: ${termine.length}",
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                const Divider(),
+                ...termine
+                    .map((t) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: Text("${t.subject}\n"
+                              "ID: ${t.id} | Kategorie: ${t.categoryId}\n"
+                              "Start: ${t.startTime?.toString().substring(0, 16)}"),
+                        ))
+                    .toList(),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(loc.ok),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  // Aktualisiere die UI, um die importierten Termine anzuzeigen
+  void _refreshAppointmentsUI() {
+    // Intelligentere Aktualisierungsstrategie
+    try {
+      // Variante 1: EventBus/Provider-Benachrichtigung senden
+      final appointmentRepo = context.read<AppointmentRepository>();
+      if (appointmentRepo is ChangeNotifier) {
+        (appointmentRepo as ChangeNotifier).notifyListeners();
+        debugPrint("🔄 UI aktualisiert über ChangeNotifier");
+      }
+
+      // Variante 2: Snackbar anzeigen mit detaillierten Infos
+      final loc = Provider.of<AppLocalizations>(context, listen: false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(loc.appointmentsUpdated),
+          duration: const Duration(seconds: 2),
+          action: SnackBarAction(
+            label: loc.viewAppointments,
+            onPressed: () {
+              // Falls wir auf dem Stack sind
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context, true);
+              }
+              // Hier könnte man auch direkt zur Terminansicht navigieren
+            },
+          ),
+        ),
+      );
+
+      // Variante 3: Manuell Apps mit Dependency Injection aktualisieren
+      // Hier könnten spezifische Manager/Controller direkt aktualisiert werden
+
+      debugPrint("📱 UI-Aktualisierung für Termine durchgeführt");
+    } catch (e) {
+      debugPrint("⚠️ Fehler bei der UI-Aktualisierung: $e");
+    }
+  }
+
+  Future<void> _showLoadingDialog(bool isImport) {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    return showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              isImport ? loc.importingAppointments : loc.exportingAppointments,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _showSuccessDialog(String message) async {
@@ -773,58 +1068,6 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildSyncFrequencyOptions(
-    SyncFrequency currentFrequency,
-    void Function(SyncFrequency) onChanged,
-  ) {
-    final loc = Provider.of<AppLocalizations>(context, listen: false);
-    return Wrap(
-      spacing: 8,
-      children: [
-        ChoiceChip(
-          label: Text(loc.noSync),
-          selected: currentFrequency == SyncFrequency.none,
-          onSelected: (selected) {
-            if (selected) {
-              setState(() => onChanged(SyncFrequency.none));
-              _saveSettings();
-            }
-          },
-        ),
-        ChoiceChip(
-          label: Text(loc.dailySync),
-          selected: currentFrequency == SyncFrequency.daily,
-          onSelected: (selected) {
-            if (selected) {
-              setState(() => onChanged(SyncFrequency.daily));
-              _saveSettings();
-            }
-          },
-        ),
-        ChoiceChip(
-          label: Text(loc.weeklySync),
-          selected: currentFrequency == SyncFrequency.weekly,
-          onSelected: (selected) {
-            if (selected) {
-              setState(() => onChanged(SyncFrequency.weekly));
-              _saveSettings();
-            }
-          },
-        ),
-        ChoiceChip(
-          label: Text(loc.monthlySync),
-          selected: currentFrequency == SyncFrequency.monthly,
-          onSelected: (selected) {
-            if (selected) {
-              setState(() => onChanged(SyncFrequency.monthly));
-              _saveSettings();
-            }
-          },
-        ),
-      ],
     );
   }
 }

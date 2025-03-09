@@ -4,6 +4,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/calendar/v3.dart';
 import 'package:http/http.dart' as http;
+import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
 
 class GoogleCalendarService {
@@ -15,17 +16,28 @@ class GoogleCalendarService {
   );
 
   CalendarApi? _calendarApi;
+  final AppLocalizations _localizations;
+
+  GoogleCalendarService({required AppLocalizations localizations})
+      : _localizations = localizations;
+
+  /// Prüft, ob der Nutzer eingeloggt ist
+  bool get isSignedIn => _googleSignIn.currentUser != null;
 
   /// Temel sign-in işlemleri
   Future<void> signIn() async {
     try {
       await _googleSignIn.signIn();
-      var auth = await _googleSignIn.currentUser!.authentication;
-      var client = GoogleAuthClient(auth.accessToken!);
-      _calendarApi = CalendarApi(client);
+      if (_googleSignIn.currentUser != null) {
+        var auth = await _googleSignIn.currentUser!.authentication;
+        var client = GoogleAuthClient(auth.accessToken!);
+        _calendarApi = CalendarApi(client);
+      } else {
+        throw Exception(_localizations.signInRequired);
+      }
     } catch (error) {
-      print('Google Sign-In Error: $error');
-      throw error;
+      debugPrint('${_localizations.googleSignInError}: $error');
+      throw Exception('${_localizations.googleSignInError}: $error');
     }
   }
 
@@ -39,7 +51,8 @@ class GoogleCalendarService {
         await signIn();
       }
     } catch (error) {
-      print('Google Sign-In Error: $error');
+      debugPrint('${_localizations.googleSignInError}: $error');
+      throw Exception('${_localizations.syncError(error.toString())}');
     }
   }
 
@@ -48,19 +61,20 @@ class GoogleCalendarService {
     _calendarApi = null;
   }
 
-  /// Temel: Tüm event’leri getirir.
+  /// Temel: Tüm event'leri getirir.
   Future<List<Event>> fetchEvents() async {
-    if (_calendarApi == null) throw Exception('Not signed in');
+    if (_calendarApi == null) throw Exception(_localizations.notSignedIn);
     var events = await _calendarApi!.events.list('primary');
     return events.items ?? [];
   }
 
-  /// Temel: Extended property filtresiyle event’leri getirir.
-  Future<List<Event>> fetchEventsByExtendedProperty(String extendedProperty) async {
-    if (_calendarApi == null) throw Exception('Not signed in');
+  /// Temel: Extended property filtresiyle event'leri getirir.
+  Future<List<Event>> fetchEventsByExtendedProperty(
+      String extendedProperty) async {
+    if (_calendarApi == null) throw Exception(_localizations.notSignedIn);
     var events = await _calendarApi!.events.list(
       'primary',
-      // Google API’da filtreleme "key=value" formatında yapılır.
+      // Google API'da filtreleme "key=value" formatında yapılır.
       privateExtendedProperty: [extendedProperty],
     );
     return events.items ?? [];
@@ -83,7 +97,7 @@ class GoogleCalendarService {
     Map<String, String>? extendedProperties,
     String? location,
   }) async {
-    if (_calendarApi == null) throw Exception('Not signed in');
+    if (_calendarApi == null) throw Exception(_localizations.notSignedIn);
 
     // Cihazın saat dilimini alıyoruz.
     final timeZone = await _getLocalTimeZone();
@@ -103,14 +117,15 @@ class GoogleCalendarService {
       ..location = location;
 
     if (extendedProperties != null) {
-      event.extendedProperties = EventExtendedProperties(private: extendedProperties);
+      event.extendedProperties =
+          EventExtendedProperties(private: extendedProperties);
     }
 
     var createdEvent = await _calendarApi!.events.insert(event, 'primary');
     return createdEvent;
   }
 
-  /// Temel: Var olan event’i günceller.
+  /// Temel: Var olan event'i günceller.
   Future<Event> updateEvent({
     required String eventId,
     required String summary,
@@ -121,7 +136,7 @@ class GoogleCalendarService {
     Map<String, String>? extendedProperties,
     String? location,
   }) async {
-    if (_calendarApi == null) throw Exception('Not signed in');
+    if (_calendarApi == null) throw Exception(_localizations.notSignedIn);
 
     // Cihazın saat dilimini alıyoruz.
     final timeZone = await _getLocalTimeZone();
@@ -142,22 +157,24 @@ class GoogleCalendarService {
       ..location = location;
 
     if (extendedProperties != null) {
-      event.extendedProperties = EventExtendedProperties(private: extendedProperties);
+      event.extendedProperties =
+          EventExtendedProperties(private: extendedProperties);
     }
 
-    var updatedEvent = await _calendarApi!.events.update(event, 'primary', eventId);
+    var updatedEvent =
+        await _calendarApi!.events.update(event, 'primary', eventId);
     return updatedEvent;
   }
 
-  /// Temel: Event’i siler.
+  /// Temel: Event'i siler.
   Future<void> deleteEvent(String eventId) async {
-    if (_calendarApi == null) throw Exception('Not signed in');
+    if (_calendarApi == null) throw Exception(_localizations.notSignedIn);
     await _calendarApi!.events.delete('primary', eventId);
   }
 
   // ––––––– Ortak Kullanıma Uygun Fonksiyonlar –––––––
 
-  /// Opsiyonel: Extended property filtresi parametresine göre event’leri getirir.
+  /// Opsiyonel: Extended property filtresi parametresine göre event'leri getirir.
   Future<List<Event>> fetchCalendarEvents({String? extendedProperty}) async {
     if (extendedProperty != null) {
       return fetchEventsByExtendedProperty(extendedProperty);
@@ -166,8 +183,9 @@ class GoogleCalendarService {
     }
   }
 
-  /// Belirli bir tarih için (prayer-related) appointment event’ini getirir.
-  Future<Event?> getEventForAppointmentOnDate(int appointmentId, DateTime date) async {
+  /// Belirli bir tarih için (prayer-related) appointment event'ini getirir.
+  Future<Event?> getEventForAppointmentOnDate(
+      int appointmentId, DateTime date) async {
     String filter = 'muslimcalendarID=$appointmentId';
     List<Event> events = await fetchEventsByExtendedProperty(filter);
     for (var event in events) {
@@ -182,76 +200,77 @@ class GoogleCalendarService {
     return null;
   }
 
-  /// Verilen appointment için (normal veya prayer-related) event’i oluşturup/günceller.
+  /// Verilen appointment için (normal veya prayer-related) event'i oluşturup/günceller.
   ///
   /// - [prayerRelated] true ise, event extended property olarak 'muslimcalendarID' içerir.
   /// - false ise, appointment.externalIdGoogle üzerinden var olan event güncellenir ya da yenisi oluşturulur.
   Future<Event> syncAppointmentEvent({
-  required AppointmentModel appointment,
-  required DateTime startTime,
-  required DateTime endTime,
-  required bool prayerRelated,
-}) async {
-  if (prayerRelated) {
-    // Namaz vakitlerine bağlı işlemler (extended properties vs.) burada yapılır.
-    Map<String, String> extendedProps = {'muslimcalendarID': appointment.id.toString()};
-    Event? existingEvent = await getEventForAppointmentOnDate(appointment.id!, startTime);
-    if (existingEvent != null) {
-      return await updateEvent(
-        eventId: existingEvent.id!,
-        summary: appointment.subject,
-        description: appointment.notes ?? '',
-        startTime: startTime,
-        endTime: endTime,
-        extendedProperties: extendedProps,
-        location: appointment.location,
-      );
+    required AppointmentModel appointment,
+    required DateTime startTime,
+    required DateTime endTime,
+    required bool prayerRelated,
+  }) async {
+    if (prayerRelated) {
+      // Namaz vakitlerine bağlı işlemler (extended properties vs.) burada yapılır.
+      Map<String, String> extendedProps = {
+        'muslimcalendarID': appointment.id.toString()
+      };
+      Event? existingEvent =
+          await getEventForAppointmentOnDate(appointment.id!, startTime);
+      if (existingEvent != null) {
+        return await updateEvent(
+          eventId: existingEvent.id!,
+          summary: appointment.subject,
+          description: appointment.notes ?? '',
+          startTime: startTime,
+          endTime: endTime,
+          extendedProperties: extendedProps,
+          location: appointment.location,
+        );
+      } else {
+        return await createEvent(
+          summary: appointment.subject,
+          description: appointment.notes ?? '',
+          startTime: startTime,
+          endTime: endTime,
+          extendedProperties: extendedProps,
+          location: appointment.location,
+        );
+      }
     } else {
-      return await createEvent(
-        summary: appointment.subject,
-        description: appointment.notes ?? '',
-        startTime: startTime,
-        endTime: endTime,
-        extendedProperties: extendedProps,
-        location: appointment.location,
-      );
-    }
-  } else {
-    // Namaz vakitlerine bağlı olmayan appointment için:
-    // Recurrence bilgisini kontrol ediyoruz.
-    List<String>? recurrence;
-    if (appointment.recurrenceRule != null && appointment.recurrenceRule!.isNotEmpty) {
-      recurrence = [appointment.recurrenceRule!];
-      print(appointment.subject);
-      print(appointment.recurrenceRule);
-    }
-    
-    if (appointment.externalIdGoogle != null) {
-      return await updateEvent(
-        eventId: appointment.externalIdGoogle!,
-        summary: appointment.subject,
-        description: appointment.notes ?? '',
-        startTime: startTime,
-        endTime: endTime,
-        location: appointment.location,
-        recurrence: recurrence,
-      );
-    } else {
-      Event createdEvent = await createEvent(
-        summary: appointment.subject,
-        description: appointment.notes ?? '',
-        startTime: startTime,
-        endTime: endTime,
-        location: appointment.location,
-        recurrence: recurrence,
-      );
-      return createdEvent;
+      // Namaz vakitlerine bağlı olmayan appointment için:
+      // Recurrence bilgisini kontrol ediyoruz.
+      List<String>? recurrence;
+      if (appointment.recurrenceRule != null &&
+          appointment.recurrenceRule!.isNotEmpty) {
+        recurrence = [appointment.recurrenceRule!];
+      }
+
+      if (appointment.externalIdGoogle != null) {
+        return await updateEvent(
+          eventId: appointment.externalIdGoogle!,
+          summary: appointment.subject,
+          description: appointment.notes ?? '',
+          startTime: startTime,
+          endTime: endTime,
+          location: appointment.location,
+          recurrence: recurrence,
+        );
+      } else {
+        Event createdEvent = await createEvent(
+          summary: appointment.subject,
+          description: appointment.notes ?? '',
+          startTime: startTime,
+          endTime: endTime,
+          location: appointment.location,
+          recurrence: recurrence,
+        );
+        return createdEvent;
+      }
     }
   }
-}
 
-
-  /// Prayer-related appointment’a ait, geçerli tarihler dışında kalan event’leri siler.
+  /// Prayer-related appointment'a ait, geçerli tarihler dışında kalan event'leri siler.
   Future<void> deleteEventsNotInDates({
     required int appointmentId,
     required List<DateTime> validDates,
@@ -276,7 +295,8 @@ class GoogleAuthClient extends http.BaseClient {
   final Map<String, String> _headers;
   final http.Client _client = http.Client();
 
-  GoogleAuthClient(String token) : _headers = {'Authorization': 'Bearer $token'};
+  GoogleAuthClient(String token)
+      : _headers = {'Authorization': 'Bearer $token'};
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) {

@@ -1317,40 +1317,40 @@ class AppLocalizations extends ChangeNotifier {
   String get cancel {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return 'Abbrechen';
+        return "Abbrechen";
       case AppLanguage.turkish:
-        return 'İptal';
+        return "İptal";
       case AppLanguage.arabic:
-        return 'إلغاء';
+        return "إلغاء";
       case AppLanguage.bosnian:
-        return 'Otkaži';
+        return "Otkaži";
       case AppLanguage.spanish:
-        return 'Cancelar';
+        return "Cancelar";
       case AppLanguage.persian:
-        return 'لغو';
+        return "لغو";
       case AppLanguage.english:
       default:
-        return 'Cancel';
+        return "Cancel";
     }
   }
 
   String get select {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return 'Auswählen';
+        return "Auswählen";
       case AppLanguage.turkish:
-        return 'Seç';
+        return "Seç";
       case AppLanguage.arabic:
-        return 'اختر';
+        return "اختر";
       case AppLanguage.bosnian:
-        return 'Izaberi';
+        return "Izaberi";
       case AppLanguage.spanish:
-        return 'Seleccionar';
+        return "Seleccionar";
       case AppLanguage.persian:
-        return 'انتخاب';
+        return "انتخاب";
       case AppLanguage.english:
       default:
-        return 'Select';
+        return "Select";
     }
   }
 
@@ -3157,6 +3157,326 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.english:
       default:
         return "Synchronization error: $errorMessage";
+    }
+  }
+
+  String get googleSignInError {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Google Anmelde-Fehler";
+      case AppLanguage.turkish:
+        return "Google Giriş Hatası";
+      case AppLanguage.arabic:
+        return "خطأ في تسجيل الدخول إلى Google";
+      case AppLanguage.bosnian:
+        return "Greška prilikom prijave na Google";
+      case AppLanguage.spanish:
+        return "Error de inicio de sesión de Google";
+      case AppLanguage.persian:
+        return "خطای ورود به گوگل";
+      case AppLanguage.english:
+      default:
+        return "Google Sign-In Error";
+    }
+  }
+
+  String get notSignedIn {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Nicht angemeldet";
+      case AppLanguage.turkish:
+        return "Giriş yapılmadı";
+      case AppLanguage.arabic:
+        return "لم يتم تسجيل الدخول";
+      case AppLanguage.bosnian:
+        return "Niste prijavljeni";
+      case AppLanguage.spanish:
+        return "No ha iniciado sesión";
+      case AppLanguage.persian:
+        return "وارد نشده‌اید";
+      case AppLanguage.english:
+      default:
+        return "Not signed in";
+    }
+  }
+
+  String get signInRequired {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Anmeldung erforderlich";
+      case AppLanguage.turkish:
+        return "Giriş gerekli";
+      case AppLanguage.arabic:
+        return "تسجيل الدخول مطلوب";
+      case AppLanguage.bosnian:
+        return "Potrebna je prijava";
+      case AppLanguage.spanish:
+        return "Se requiere iniciar sesión";
+      case AppLanguage.persian:
+        return "ورود به سیستم لازم است";
+      case AppLanguage.english:
+      default:
+        return "Sign-in required";
+    }
+  }
+
+  String get settingsSaved {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Einstellungen gespeichert";
+      case AppLanguage.turkish:
+        return "Ayarlar kaydedildi";
+      case AppLanguage.arabic:
+        return "تم حفظ الإعدادات";
+      case AppLanguage.bosnian:
+        return "Postavke sačuvane";
+      case AppLanguage.spanish:
+        return "Configuración guardada";
+      case AppLanguage.persian:
+        return "تنظیمات ذخیره شد";
+      case AppLanguage.english:
+      default:
+        return "Settings saved";
+    }
+  }
+
+  String get saveSettings {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Einstellungen speichern";
+      case AppLanguage.turkish:
+        return "Ayarları Kaydet";
+      case AppLanguage.arabic:
+        return "حفظ الإعدادات";
+      case AppLanguage.bosnian:
+        return "Sačuvaj postavke";
+      case AppLanguage.spanish:
+        return "Guardar configuración";
+      case AppLanguage.persian:
+        return "ذخیره تنظیمات";
+      case AppLanguage.english:
+      default:
+        return "Save Settings";
+    }
+  }
+
+  String get connected {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Verbunden";
+      case AppLanguage.turkish:
+        return "Bağlı";
+      case AppLanguage.arabic:
+        return "متصل";
+      case AppLanguage.bosnian:
+        return "Povezan";
+      case AppLanguage.spanish:
+        return "Conectado";
+      case AppLanguage.persian:
+        return "متصل";
+      case AppLanguage.english:
+      default:
+        return "Connected";
+    }
+  }
+
+  String get notConnected {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Nicht verbunden";
+      case AppLanguage.turkish:
+        return "Bağlı değil";
+      case AppLanguage.arabic:
+        return "غير متصل";
+      case AppLanguage.bosnian:
+        return "Nije povezan";
+      case AppLanguage.spanish:
+        return "No conectado";
+      case AppLanguage.persian:
+        return "متصل نیست";
+      case AppLanguage.english:
+      default:
+        return "Not connected";
+    }
+  }
+
+  String get import {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Importieren";
+      case AppLanguage.turkish:
+        return "İçe Aktar";
+      case AppLanguage.arabic:
+        return "استيراد";
+      case AppLanguage.bosnian:
+        return "Uvoz";
+      case AppLanguage.spanish:
+        return "Importar";
+      case AppLanguage.persian:
+        return "وارد کردن";
+      case AppLanguage.english:
+      default:
+        return "Import";
+    }
+  }
+
+  String get export {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Exportieren";
+      case AppLanguage.turkish:
+        return "Dışa Aktar";
+      case AppLanguage.arabic:
+        return "تصدير";
+      case AppLanguage.bosnian:
+        return "Izvoz";
+      case AppLanguage.spanish:
+        return "Exportar";
+      case AppLanguage.persian:
+        return "صادر کردن";
+      case AppLanguage.english:
+      default:
+        return "Export";
+    }
+  }
+
+  String get syncFrequency {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Synchronisierungsfrequenz";
+      case AppLanguage.turkish:
+        return "Senkronizasyon Sıklığı";
+      case AppLanguage.arabic:
+        return "تواتر المزامنة";
+      case AppLanguage.bosnian:
+        return "Učestalost sinhronizacije";
+      case AppLanguage.spanish:
+        return "Frecuencia de sincronización";
+      case AppLanguage.persian:
+        return "تناوب همگام‌سازی";
+      case AppLanguage.english:
+      default:
+        return "Sync Frequency";
+    }
+  }
+
+  String get importingAppointments {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Termine werden importiert...";
+      case AppLanguage.turkish:
+        return "Randevular içe aktarılıyor...";
+      case AppLanguage.arabic:
+        return "جاري استيراد المواعيد...";
+      case AppLanguage.bosnian:
+        return "Uvoz termina u toku...";
+      case AppLanguage.spanish:
+        return "Importando citas...";
+      case AppLanguage.persian:
+        return "در حال وارد کردن قرارها...";
+      case AppLanguage.english:
+      default:
+        return "Importing appointments...";
+    }
+  }
+
+  String get exportingAppointments {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Termine werden exportiert...";
+      case AppLanguage.turkish:
+        return "Randevular dışa aktarılıyor...";
+      case AppLanguage.arabic:
+        return "جاري تصدير المواعيد...";
+      case AppLanguage.bosnian:
+        return "Izvoz termina u toku...";
+      case AppLanguage.spanish:
+        return "Exportando citas...";
+      case AppLanguage.persian:
+        return "در حال صادر کردن قرارها...";
+      case AppLanguage.english:
+      default:
+        return "Exporting appointments...";
+    }
+  }
+
+  String get appointmentsUpdated {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Termine wurden aktualisiert";
+      case AppLanguage.turkish:
+        return "Randevular güncellendi";
+      case AppLanguage.arabic:
+        return "تم تحديث المواعيد";
+      case AppLanguage.bosnian:
+        return "Sastanci su ažurirani";
+      case AppLanguage.spanish:
+        return "Citas actualizadas";
+      case AppLanguage.persian:
+        return "قرارها به‌روز شدند";
+      case AppLanguage.english:
+      default:
+        return "Appointments updated";
+    }
+  }
+
+  String get viewAppointments {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Termine anzeigen";
+      case AppLanguage.turkish:
+        return "Randevuları görüntüle";
+      case AppLanguage.arabic:
+        return "عرض المواعيد";
+      case AppLanguage.bosnian:
+        return "Pogledaj termine";
+      case AppLanguage.spanish:
+        return "Ver citas";
+      case AppLanguage.persian:
+        return "مشاهده قرارها";
+      case AppLanguage.english:
+      default:
+        return "View Appointments";
+    }
+  }
+
+  String get debugAppointments {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Debug: Termine";
+      case AppLanguage.turkish:
+        return "Hata ayıklama: Randevular";
+      case AppLanguage.arabic:
+        return "تصحيح الأخطاء: المواعيد";
+      case AppLanguage.bosnian:
+        return "Otklanjanje grešaka: Sastanci";
+      case AppLanguage.spanish:
+        return "Depuración: Citas";
+      case AppLanguage.persian:
+        return "اشکال‌زدایی: قرارها";
+      case AppLanguage.english:
+      default:
+        return "Debug: Appointments";
+    }
+  }
+
+  String get totalAppointments {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Anzahl der Termine";
+      case AppLanguage.turkish:
+        return "Toplam Randevu";
+      case AppLanguage.arabic:
+        return "إجمالي المواعيد";
+      case AppLanguage.bosnian:
+        return "Ukupno termina";
+      case AppLanguage.spanish:
+        return "Total de citas";
+      case AppLanguage.persian:
+        return "تعداد کل قرارها";
+      case AppLanguage.english:
+      default:
+        return "Total Appointments";
     }
   }
 }
