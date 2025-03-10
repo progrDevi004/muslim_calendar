@@ -187,16 +187,13 @@ class CategoryRepository {
       );
 
       // Verhindern, dass ID 1, 2 oder 3 (Privat, Islam, Geschäftlich) gelöscht werden
-      if (id == 1 ||
-          id == 2 ||
-          id == 3 ||
-          (maps.isNotEmpty && maps.first['isDefault'] == 1)) {
-        throw Exception('Standard-Kategorien können nicht gelöscht werden.');
+      if (id == 1 || (maps.isNotEmpty && maps.first['isDefault'] == 1)) {
+        throw Exception('Standard-Kategorie können nicht gelöscht werden.');
       }
     } catch (e) {
       // Falls obige Abfrage einen Fehler wirft, prüfen wir ID direkt
-      if (id == 1 || id == 2 || id == 3) {
-        throw Exception('Standard-Kategorien können nicht gelöscht werden.');
+      if (id == 1) {
+        throw Exception('Standard-Kategorie können nicht gelöscht werden.');
       }
       debugPrint("Warnung bei Kategorie-Löschprüfung: $e");
       // Fahre fort, da wir manuell auf Standard-IDs geprüft haben
