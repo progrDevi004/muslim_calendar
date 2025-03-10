@@ -100,6 +100,7 @@ class CategoryModel {
 
   @override
   String toString() {
+    // ignore: deprecated_member_use
     return 'CategoryModel(id: $id, name: $name, color: ${color.value.toRadixString(16)}, isDefault: $isDefault)';
   }
 }

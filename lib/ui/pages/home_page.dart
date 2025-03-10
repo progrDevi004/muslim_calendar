@@ -27,6 +27,10 @@ import 'package:muslim_calendar/ui/pages/settings_page.dart';
 import 'package:muslim_calendar/ui/pages/dashboard_page.dart';
 import 'package:muslim_calendar/ui/pages/appointment_details_page.dart';
 import 'package:muslim_calendar/ui/pages/qibla_compass_page.dart';
+import 'package:muslim_calendar/ui/pages/category_management_page.dart';
+
+// Dialogs
+import 'package:muslim_calendar/ui/dialogs/category_edit_dialog.dart';
 
 // Localization
 import 'package:muslim_calendar/localization/app_localizations.dart';
@@ -740,6 +744,33 @@ class HomePageState extends State<HomePage> {
                               ),
                             ),
                             Expanded(child: Text(cat.name)),
+                            IconButton(
+                              icon: const Icon(Icons.edit, size: 20),
+                              tooltip: 'Bearbeiten',
+                              onPressed: () async {
+                                Navigator.of(context).pop();
+
+                                final result = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) =>
+                                      CategoryEditDialog(category: cat),
+                                );
+
+                                if (result == true) {
+                                  await _loadAllCategories();
+                                  loadAllAppointments();
+                                  _dashboardKey.currentState?.reloadData();
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          'Kategorie "${cat.name}" wurde aktualisiert'),
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
                             if (!cat.isDefault)
                               IconButton(
                                 icon: const Icon(Icons.delete, size: 20),
@@ -975,6 +1006,107 @@ class HomePageState extends State<HomePage> {
           );
         });
       },
+    );
+  }
+
+  // Öffnet die Kategorieverwaltungsseite
+  void _openCategoryManagement() {
+    Navigator.of(context)
+        .push(
+      MaterialPageRoute(
+        builder: (context) => const CategoryManagementPage(),
+      ),
+    )
+        .then((_) {
+      // Aktualisiere den Kalender, wenn wir zurückkehren
+      setState(() {
+        // Kalender neu laden
+        if (_dataSource != null) {
+          loadAllAppointments();
+        }
+      });
+    });
+  }
+
+  // Drawer (Menü) der App
+  Widget _buildDrawer() {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Muslim Calendar',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                  ),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Kategorien-Verwaltung',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.calendar_today),
+            title: const Text('Kalender'),
+            onTap: () {
+              Navigator.pop(context);
+              // Bereits auf der Kalenderseite, nichts tun
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.category),
+            title: const Text('Kategorien verwalten'),
+            onTap: () {
+              Navigator.pop(context);
+              _openCategoryManagement();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.explore),
+            title: const Text('Qibla Kompass'),
+            onTap: () {
+              Navigator.pop(context);
+              _openQiblaCompass();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('Einstellungen'),
+            onTap: () {
+              Navigator.pop(context);
+              _openSettings();
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.info),
+            title: const Text('Über'),
+            onTap: () {
+              Navigator.pop(context);
+              showAboutDialog(
+                context: context,
+                applicationName: 'Muslim Calendar',
+                applicationVersion: '1.0.0',
+                applicationLegalese: '© 2023 Muslim Calendar',
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }
