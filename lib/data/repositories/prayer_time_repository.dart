@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/models/enums.dart';
 import '../database_helper.dart';
+import 'package:flutter/foundation.dart';
 
 class PrayerTimeRepository {
   final DatabaseHelper dbHelper = DatabaseHelper();
@@ -60,6 +61,11 @@ class PrayerTimeRepository {
     final String dateString = _formatDate(date);
     final prayerName = prayerTime.toString().split('.').last.toLowerCase();
 
+    debugPrint("Suche Gebetszeit in DB für:");
+    debugPrint("- Datum: $dateString");
+    debugPrint("- Ort: $location");
+    debugPrint("- Gebetszeit: $prayerName");
+
     final List<Map<String, dynamic>> result = await db.query(
       'prayer_times',
       columns: [prayerName],
@@ -68,8 +74,11 @@ class PrayerTimeRepository {
     );
 
     if (result.isNotEmpty && result.first.values.first != null) {
-      return int.tryParse(result.first.values.first.toString());
+      final minutes = int.tryParse(result.first.values.first.toString());
+      debugPrint("Gebetszeit gefunden: $minutes Minuten seit Mitternacht");
+      return minutes;
     } else {
+      debugPrint("Keine Gebetszeit gefunden, lade neue Daten...");
       // Daten fehlen => wir laden (falls nicht schon vorhanden) die Daten neu
       await _fetchAndSaveMonthlyPrayerTimes(date.year, date.month, location);
 
@@ -80,7 +89,13 @@ class PrayerTimeRepository {
         whereArgs: [dateString, location],
       );
       if (newResult.isNotEmpty && newResult.first.values.first != null) {
-        return int.tryParse(newResult.first.values.first.toString());
+        final minutes = int.tryParse(newResult.first.values.first.toString());
+        debugPrint(
+            "Gebetszeit nach Neuladung gefunden: $minutes Minuten seit Mitternacht");
+        return minutes;
+      } else {
+        debugPrint(
+            "Gebetszeit konnte auch nach Neuladung nicht gefunden werden!");
       }
     }
 

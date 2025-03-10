@@ -25,6 +25,9 @@ import 'data/repositories/category_repository.dart';
 import 'data/services/calendar_sync_service.dart';
 import 'data/services/google_calendar_service.dart';
 import 'data/services/recurrence_service.dart';
+import 'data/services/google_calendar_sync_service.dart';
+import 'data/repositories/google_event_mapping_repository.dart';
+import 'ui/widgets/prayer_time_appointment_adapter.dart';
 
 void main() async {
   // Widgets binding sicherstellen, da asynchrone Aufrufe vor runApp durchgeführt werden sollen.
@@ -38,6 +41,32 @@ void main() async {
     debugPrint("Fehler bei der Initialisierung des NotificationService: $e");
   }
 
+  // Repositories erstellen
+  final appointmentRepository = AppointmentRepository();
+  final prayerTimeRepository = PrayerTimeRepository();
+  final googleEventMappingRepository = GoogleEventMappingRepository();
+
+  // Services erstellen
+  final prayerTimeService = PrayerTimeService(prayerTimeRepository);
+  final recurrenceService = RecurrenceService();
+
+  // Adapter für die Terminumwandlung erstellen
+  final prayerTimeAppointmentAdapter = PrayerTimeAppointmentAdapter(
+    prayerTimeService: prayerTimeService,
+    recurrenceService: recurrenceService,
+  );
+
+  // Google Calendar Sync Service erstellen
+  final googleCalendarSyncService = GoogleCalendarSyncService(
+    appointmentRepo: appointmentRepository,
+    prayerTimeService: prayerTimeService,
+    mappingRepo: googleEventMappingRepository,
+    appointmentAdapter: prayerTimeAppointmentAdapter,
+  );
+
+  // Verbindung zwischen Repository und Sync Service herstellen
+  appointmentRepository.setGoogleSyncService(googleCalendarSyncService);
+
   runApp(
     MultiProvider(
       providers: [
@@ -49,35 +78,17 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => ThemeNotifier(),
         ),
-        Provider<GoogleCalendarService>(
-          create: (context) {
-            final service = GoogleCalendarService();
-            service.setLocalizations(context.read<AppLocalizations>());
-            return service;
-          },
+        // PrayerTimeService als Provider
+        ChangeNotifierProvider(
+          create: (_) => prayerTimeService,
         ),
-        Provider<AppointmentRepository>(
-          create: (_) => AppointmentRepository(),
+        // Google Calendar Sync Service als Provider
+        ChangeNotifierProvider(
+          create: (_) => googleCalendarSyncService,
         ),
-        Provider<RecurrenceService>(
-          create: (_) => RecurrenceService(),
-        ),
-        ChangeNotifierProvider<PrayerTimeService>(
-          create: (_) => PrayerTimeService(PrayerTimeRepository()),
-        ),
-        // CategoryRepository hinzufügen
-        Provider<CategoryRepository>(
-          create: (_) => CategoryRepository(),
-        ),
-        // Ardından, CalendarSyncService nesnelerini oluşYturuyoruz:
-        Provider<CalendarSyncService>(
-          create: (context) => CalendarSyncService(
-            calendarProvider: context.read<GoogleCalendarService>(),
-            appointmentRepository: context.read<AppointmentRepository>(),
-            categoryRepository: context.read<CategoryRepository>(),
-            recurrenceService: context.read<RecurrenceService>(),
-            prayerTimeService: context.read<PrayerTimeService>(),
-          ),
+        // Repository als Provider
+        Provider(
+          create: (_) => appointmentRepository,
         ),
       ],
       child: const MyApp(),

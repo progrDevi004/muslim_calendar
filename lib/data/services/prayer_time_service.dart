@@ -26,6 +26,8 @@ class PrayerTimeService with ChangeNotifier {
 
     // Prüfe, ob location null ist
     if (appointment.location == null) {
+      debugPrint(
+          "Warnung: Location ist null für gebetszeitabhängigen Termin: ${appointment.subject}");
       return appointment.startTime;
     }
 
@@ -35,27 +37,44 @@ class PrayerTimeService with ChangeNotifier {
       appointment.prayerTime!,
     );
 
-    if (minutes == null) return null;
+    if (minutes == null) {
+      debugPrint(
+          "Warnung: Keine Gebetszeit-Minuten gefunden für: ${appointment.prayerTime} in ${appointment.location}");
+      return null;
+    }
 
     final baseSource =
         useAppointmentDate ? appointment.startTime! : fallbackDate;
 
+    // Erstelle ein neues Datum-Objekt mit den berechneten Minuten
+    // Wir konvertieren hier explizit zu einer lokalen Zeit
     DateTime baseTime = DateTime(
       baseSource.year,
       baseSource.month,
       baseSource.day,
     ).add(Duration(minutes: minutes));
 
+    debugPrint("Gebetszeit berechnet für ${appointment.subject}:");
+    debugPrint("- Gebetszeit: ${appointment.prayerTime}");
+    debugPrint("- Basiszeit (Minuten seit Mitternacht): $minutes");
+    debugPrint("- Berechnete Uhrzeit: ${baseTime.hour}:${baseTime.minute}");
+
     // Vor-/Nachkorrektur
     if (appointment.timeRelation == TimeRelation.before &&
         appointment.minutesBeforeAfter != null) {
       baseTime =
           baseTime.subtract(Duration(minutes: appointment.minutesBeforeAfter!));
+      debugPrint(
+          "- Zeitkorrektur: ${appointment.minutesBeforeAfter} Minuten vorher");
     } else if (appointment.timeRelation == TimeRelation.after &&
         appointment.minutesBeforeAfter != null) {
       baseTime =
           baseTime.add(Duration(minutes: appointment.minutesBeforeAfter!));
+      debugPrint(
+          "- Zeitkorrektur: ${appointment.minutesBeforeAfter} Minuten nachher");
     }
+
+    debugPrint("- Finale Zeit: ${baseTime.toIso8601String()}");
     return baseTime;
   }
 
@@ -64,10 +83,21 @@ class PrayerTimeService with ChangeNotifier {
     DateTime date,
   ) async {
     final start = await getCalculatedStartTime(appointment, date);
-    if (start == null) return null;
-    if (appointment.isRelatedToPrayerTimes && appointment.duration != null) {
-      return start.add(appointment.duration!);
+    if (start == null) {
+      debugPrint(
+          "Warnung: Startzeit konnte nicht berechnet werden für: ${appointment.subject}");
+      return null;
     }
+    if (appointment.isRelatedToPrayerTimes && appointment.duration != null) {
+      final end = start.add(appointment.duration!);
+      debugPrint("Endzeit berechnet für ${appointment.subject}:");
+      debugPrint("- Startzeit: ${start.toIso8601String()}");
+      debugPrint("- Dauer: ${appointment.duration!.inMinutes} Minuten");
+      debugPrint("- Endzeit: ${end.toIso8601String()}");
+      return end;
+    }
+    debugPrint(
+        "Verwendung der direkten Endzeit für ${appointment.subject}: ${appointment.endTime?.toIso8601String()}");
     return appointment.endTime;
   }
 

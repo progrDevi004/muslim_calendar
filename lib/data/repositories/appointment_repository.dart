@@ -4,18 +4,37 @@ import 'package:sqflite/sqflite.dart';
 import '../../models/appointment_model.dart';
 import '../../models/category_model.dart';
 import '../database_helper.dart';
+import '../services/google_calendar_sync_service.dart';
 
 class AppointmentRepository {
   final DatabaseHelper dbHelper = DatabaseHelper();
+  GoogleCalendarSyncService? _googleSyncService;
+
+  // Setter für den Google Sync Service
+  void setGoogleSyncService(GoogleCalendarSyncService syncService) {
+    _googleSyncService = syncService;
+  }
 
   Future<int> insertAppointment(AppointmentModel appointment) async {
     final db = await dbHelper.database;
     print(appointment.recurrenceRule);
-    return await db.insert(
+    final id = await db.insert(
       'appointments',
       appointment.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+
+    // Wenn Google Sync aktiviert und verfügbar, den Termin synchronisieren
+    if (appointment.syncWithGoogleCalendar &&
+        _googleSyncService != null &&
+        !_googleSyncService!.isSyncing) {
+      // Termin mit ID neu laden
+      final updatedAppointment = appointment.copyWith(id: id);
+      // Asynchron ausführen, um die Hauptoperation nicht zu blockieren
+      _googleSyncService!.syncAllAppointments();
+    }
+
+    return id;
   }
 
   Future<int> updateAppointment(AppointmentModel appointment) async {
@@ -23,21 +42,45 @@ class AppointmentRepository {
     if (appointment.id == null) {
       throw ArgumentError('Appointment ID cannot be null');
     }
-    return await db.update(
+
+    final result = await db.update(
       'appointments',
       appointment.toMap(),
       where: 'id = ?',
       whereArgs: [appointment.id],
     );
+
+    // Wenn Google Sync aktiviert und verfügbar, den Termin synchronisieren
+    if (appointment.syncWithGoogleCalendar &&
+        _googleSyncService != null &&
+        !_googleSyncService!.isSyncing) {
+      // Asynchron ausführen, um die Hauptoperation nicht zu blockieren
+      _googleSyncService!.syncAllAppointments();
+    }
+
+    return result;
   }
 
   Future<void> deleteAppointment(int id) async {
     final db = await dbHelper.database;
+
+    // Vor dem Löschen prüfen, ob der Termin mit Google synchronisiert werden soll
+    final appointment = await getAppointment(id);
+    final shouldSync = appointment?.syncWithGoogleCalendar ?? false;
+
+    // Aus der lokalen Datenbank löschen
     await db.delete(
       'appointments',
       where: 'id = ?',
       whereArgs: [id],
     );
+
+    // Wenn Google Sync aktiviert und verfügbar, den Termin in Google löschen
+    if (shouldSync &&
+        _googleSyncService != null &&
+        !_googleSyncService!.isSyncing) {
+      await _googleSyncService!.deleteAppointmentFromGoogle(id);
+    }
   }
 
   Future<AppointmentModel?> getAppointment(int id) async {
@@ -222,5 +265,22 @@ class AppointmentRepository {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     }
+  }
+
+  // Setzt den Google Sync Status für einen Termin
+  Future<int> setGoogleSyncStatus(int appointmentId, bool enableSync) async {
+    final db = await dbHelper.database;
+    return await db.update(
+      'appointments',
+      {'syncWithGoogleCalendar': enableSync ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [appointmentId],
+    );
+  }
+
+  // Holt alle Termine, die mit Google synchronisiert werden sollen
+  Future<List<AppointmentModel>> getGoogleSyncAppointments() async {
+    final allAppointments = await getAllAppointments();
+    return allAppointments.where((a) => a.syncWithGoogleCalendar).toList();
   }
 }

@@ -10,7 +10,7 @@ class DatabaseHelper {
 
   static Database? _database;
 
-  // >>> Version von 3 auf 4 erhöht
+  // >>> Version von 5 auf 6 erhöht
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDatabase();
@@ -21,9 +21,9 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'appointments.db');
     return await openDatabase(
       path,
-      version: 5, // <-- NEU: DB-Version auf 5 erhöht
+      version: 6, // <-- NEU: DB-Version auf 6 erhöht
       onCreate: (db, version) async {
-        // Version 5 bedeutet, wir führen gleich alles an.
+        // Version 6 bedeutet, wir führen gleich alles an.
 
         // appointments
         await db.execute('''
@@ -45,14 +45,10 @@ class DatabaseHelper {
             endTime TEXT,
             categoryId INTEGER,
             reminderMinutesBefore INTEGER,
-
-            -- NEU ab Version 4:
             externalIdGoogle TEXT,
             externalIdOutlook TEXT,
             externalIdApple TEXT,
             lastSyncedAt TEXT,
-            
-            -- NEU ab Version 5:
             syncWithGoogleCalendar INTEGER DEFAULT 0
           )
         ''');
@@ -78,6 +74,18 @@ class DatabaseHelper {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT,
             colorValue INTEGER
+          )
+        ''');
+
+        // Google Calendar Event Mappings (NEU)
+        await db.execute('''
+          CREATE TABLE google_event_mappings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            local_appointment_id INTEGER,
+            original_date TEXT,
+            google_event_id TEXT,
+            last_synced_at TEXT,
+            UNIQUE(local_appointment_id, original_date)
           )
         ''');
 
@@ -150,6 +158,20 @@ class DatabaseHelper {
           // Neue Spalte für Google Calendar Sync Flag
           await db.execute('''
             ALTER TABLE appointments ADD COLUMN syncWithGoogleCalendar INTEGER DEFAULT 0
+          ''');
+        }
+
+        if (oldVersion < 6) {
+          // Neue Tabelle für Google Calendar Event Mappings
+          await db.execute('''
+            CREATE TABLE google_event_mappings (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              local_appointment_id INTEGER,
+              original_date TEXT,
+              google_event_id TEXT,
+              last_synced_at TEXT,
+              UNIQUE(local_appointment_id, original_date)
+            )
           ''');
         }
       },
