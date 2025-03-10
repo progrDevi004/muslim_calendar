@@ -1,5 +1,6 @@
 // lib/data/services/google_calendar_service.dart
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -8,14 +9,26 @@ import 'package:http/http.dart' as http;
 import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 
 class GoogleCalendarService {
   static final GoogleCalendarService _instance =
       GoogleCalendarService._internal();
   factory GoogleCalendarService() => _instance;
 
+  // Service zum Berechnen der Gebetszeiten
+  PrayerTimeService? _prayerTimeService;
+
   GoogleCalendarService._internal() {
     // Leerer Konstruktor für Singleton
+    _initialize();
+  }
+
+  // Factory-Methode mit PrayerTimeService
+  static GoogleCalendarService withPrayerTimeService(
+      PrayerTimeService prayerTimeService) {
+    _instance._prayerTimeService = prayerTimeService;
+    return _instance;
   }
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
@@ -39,6 +52,20 @@ class GoogleCalendarService {
   bool get isSyncing => _isSyncing;
   String? get lastError => _lastError;
   GoogleSignInAccount? get currentUser => _currentUser;
+
+  // Initialisierung
+  void _initialize() {
+    _googleSignIn.onCurrentUserChanged.listen((account) {
+      _currentUser = account;
+      if (account != null) {
+        _isSignedIn = true;
+        _initCalendarApi();
+      } else {
+        _isSignedIn = false;
+        _calendarApi = null;
+      }
+    });
+  }
 
   // Setzt die Lokalisierung
   void setLocalizations(AppLocalizations localizations) {
@@ -336,13 +363,45 @@ class GoogleCalendarService {
       }
     }
 
+    // Bei gebetszeitabhängigen Terminen zuerst die berechneten Zeiten ermitteln
+    AppointmentModel appointmentToSync = appointment;
+
+    if (_prayerTimeService != null &&
+        appointment.isRelatedToPrayerTimes &&
+        appointment.prayerTime != null) {
+      debugPrint(
+          'Berechne gebetszeitabhängige Zeiten für Google Calendar Synchronisierung');
+
+      final calculatedStart = await _prayerTimeService!.getCalculatedStartTime(
+          appointment, appointment.startTime ?? DateTime.now());
+
+      final calculatedEnd = await _prayerTimeService!.getCalculatedEndTime(
+          appointment, appointment.startTime ?? DateTime.now());
+
+      if (calculatedStart != null && calculatedEnd != null) {
+        debugPrint('Google Calendar Sync - Gebetszeitabhängiger Termin:');
+        debugPrint('- Original startTime: ${appointment.startTime}');
+        debugPrint('- Berechnet startTime: $calculatedStart');
+        debugPrint('- Berechnet endTime: $calculatedEnd');
+
+        // Erstelle eine Kopie des Appointment mit den berechneten Zeiten
+        appointmentToSync = appointment.copyWith(
+          startTime: calculatedStart,
+          endTime: calculatedEnd,
+        );
+      } else {
+        debugPrint(
+            'Warnung: Gebetszeiten konnten nicht berechnet werden für: ${appointment.subject}');
+      }
+    }
+
     // Wenn der Termin bereits eine Google-ID hat, aktualisieren
-    if (appointment.externalIdGoogle != null) {
-      bool success = await updateEventInGoogleCalendar(appointment);
-      return success ? appointment.externalIdGoogle : null;
+    if (appointmentToSync.externalIdGoogle != null) {
+      bool success = await updateEventInGoogleCalendar(appointmentToSync);
+      return success ? appointmentToSync.externalIdGoogle : null;
     } else {
       // Ansonsten neuen Termin erstellen
-      return await addEventToGoogleCalendar(appointment);
+      return await addEventToGoogleCalendar(appointmentToSync);
     }
   }
 

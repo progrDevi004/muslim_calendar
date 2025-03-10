@@ -26,6 +26,8 @@ import 'package:muslim_calendar/models/category_model.dart';
 import 'package:muslim_calendar/data/services/notification_service.dart';
 import 'package:muslim_calendar/data/services/automatic_category_service.dart';
 import 'package:muslim_calendar/data/services/google_calendar_service.dart';
+import 'package:muslim_calendar/data/services/prayer_time_service.dart';
+import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
 
 // Für das Zeitformat
 import 'package:intl/intl.dart';
@@ -118,6 +120,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
   /// Wandelt den internen AppLanguage-Wert in einen Locale-Code (String) um.
   AppLanguage? _lastLanguage;
+
+  // Repositories und Services
+  final NotificationService _notificationService = NotificationService();
+  final PrayerTimeService _prayerTimeService =
+      PrayerTimeService(PrayerTimeRepository());
 
   @override
   void initState() {
@@ -517,10 +524,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               dateTime: reminderTime,
             );
           }
-
-          setState(() {
-            _currentAppointmentId = newId;
-          });
 
           // NEU: Google Kalender Synchronisierung für neuen Termin
           if (_syncWithGoogleCalendar) {
@@ -990,91 +993,101 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             ),
 
           // Startzeit und Endzeit nur anzeigen, wenn NICHT an Gebetszeit gebunden
-          if (!_isRelatedToPrayerTimes) ...[
-            // Startzeit
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: Material(
-                    elevation: 0,
-                    color: Colors.transparent,
-                    child: ListTile(
-                      title: Center(
-                        child: Text(
-                            _startTime != null
-                                ? _formatDate(_startTime!)
-                                : '---',
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w500)),
+          Container(
+            child: Column(
+              children: [
+                if (!_isRelatedToPrayerTimes) ...[
+                  // Startzeit
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Material(
+                          elevation: 0,
+                          color: Colors.transparent,
+                          child: ListTile(
+                            title: Center(
+                              child: Text(
+                                  _startTime != null
+                                      ? _formatDate(_startTime!)
+                                      : '---',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w500)),
+                            ),
+                            onTap: () async {
+                              await _pickStartDate();
+                            },
+                          ),
+                        ),
                       ),
-                      onTap: () async {
-                        await _pickStartDate();
-                      },
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Material(
-                    elevation: 0,
-                    color: Colors.transparent,
-                    child: ListTile(
-                      title: Center(
-                        child: Text(
-                            _startTime != null
-                                ? _formatTime(_startTime!)
-                                : '---',
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w500)),
+                      Expanded(
+                        child: Material(
+                          elevation: 0,
+                          color: Colors.transparent,
+                          child: ListTile(
+                            title: Center(
+                              child: Text(
+                                  _startTime != null
+                                      ? _formatTime(_startTime!)
+                                      : '---',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w500)),
+                            ),
+                            onTap: () async {
+                              await _pickStartTime();
+                            },
+                          ),
+                        ),
                       ),
-                      onTap: () async {
-                        await _pickStartTime();
-                      },
-                    ),
+                    ],
                   ),
-                ),
-              ],
-            ),
+                ],
 
-            // Endzeit
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: Material(
-                    elevation: 0,
-                    color: Colors.transparent,
-                    child: ListTile(
-                      title: Center(
-                        child: Text(
-                            _endTime != null ? _formatDate(_endTime!) : '---',
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w500)),
+                // Endzeit
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Material(
+                        elevation: 0,
+                        color: Colors.transparent,
+                        child: ListTile(
+                          title: Center(
+                            child: Text(
+                                _endTime != null
+                                    ? _formatDate(_endTime!)
+                                    : '---',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500)),
+                          ),
+                          onTap: () async {
+                            await _pickEndDate();
+                          },
+                        ),
                       ),
-                      onTap: () async {
-                        await _pickEndDate();
-                      },
                     ),
-                  ),
-                ),
-                Expanded(
-                  child: Material(
-                    elevation: 0,
-                    color: Colors.transparent,
-                    child: ListTile(
-                      title: Center(
-                        child: Text(
-                            _endTime != null ? _formatTime(_endTime!) : '---',
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w500)),
+                    Expanded(
+                      child: Material(
+                        elevation: 0,
+                        color: Colors.transparent,
+                        child: ListTile(
+                          title: Center(
+                            child: Text(
+                                _endTime != null
+                                    ? _formatTime(_endTime!)
+                                    : '---',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500)),
+                          ),
+                          onTap: () async {
+                            await _pickEndTime();
+                          },
+                        ),
                       ),
-                      onTap: () async {
-                        await _pickEndTime();
-                      },
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
 
           // Wiederholungs-Widget
           Material(
@@ -2120,7 +2133,12 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   // NEU: Hilfsmethode zur Google Kalender Synchronisierung
   Future<void> _syncWithGoogle(AppointmentModel appointment) async {
     try {
-      final googleService = GoogleCalendarService();
+      // PrayerTimeService für die Berechnung der Gebetszeiten
+      final prayerTimeService = PrayerTimeService(PrayerTimeRepository());
+
+      // Den GoogleCalendarService mit PrayerTimeService initialisieren
+      final googleService =
+          GoogleCalendarService.withPrayerTimeService(prayerTimeService);
       final loc = Provider.of<AppLocalizations>(context, listen: false);
 
       // Lokalisierung setzen
@@ -2140,25 +2158,16 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       }
 
       // Termin synchronisieren
-      final externalId =
+      String? googleEventId =
           await googleService.syncAppointmentWithGoogleCalendar(appointment);
 
-      if (externalId != null) {
-        // Erfolgreich synchronisiert, ID in der Datenbank aktualisieren
-        final updatedAppointment = appointment.copyWith(
-          externalIdGoogle: externalId,
-          lastSyncedAt: DateTime.now(),
-        );
-        await _appointmentRepo.updateAppointment(updatedAppointment);
-
-        if (mounted) {
+      // Feedback anzeigen
+      if (mounted) {
+        if (googleEventId != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Mit Google Kalender synchronisiert')),
           );
-        }
-      } else if (googleService.lastError != null) {
-        // Fehler bei der Synchronisierung
-        if (mounted) {
+        } else if (googleService.lastError != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
                 content: Text(
@@ -2167,7 +2176,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         }
       }
     } catch (e) {
-      debugPrint('Fehler bei der Google-Synchronisierung: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Google Sync Fehler: $e')),

@@ -147,7 +147,9 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         if (_appointment!.syncWithGoogleCalendar &&
             _appointment!.externalIdGoogle != null) {
           try {
-            final googleService = GoogleCalendarService();
+            // Den GoogleCalendarService mit PrayerTimeService initialisieren
+            final googleService =
+                GoogleCalendarService.withPrayerTimeService(_prayerTimeService);
             googleService.setLocalizations(
                 Provider.of<AppLocalizations>(context, listen: false));
             await googleService
@@ -206,9 +208,11 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         );
       }
 
-      final googleService = GoogleCalendarService();
+      // Den GoogleCalendarService mit PrayerTimeService initialisieren
+      final googleService =
+          GoogleCalendarService.withPrayerTimeService(_prayerTimeService);
       googleService.setLocalizations(loc);
-      debugPrint("GoogleCalendarService initialisiert");
+      debugPrint("GoogleCalendarService mit PrayerTimeService initialisiert");
 
       // Prüfen, ob Benutzer angemeldet ist
       debugPrint("Prüfe Google-Anmeldestatus: ${googleService.isSignedIn}");
@@ -678,4 +682,112 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
       return loc.daysBefore(days);
     }
   }
+
+  // Aktualisiere den Termin mit berechneten Gebetszeiten
+  /*
+  Future<void> _updateAppointment() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // Erstelle ein aktualisiertes Appointment Objekt mit den eingegebenen Daten
+        AppointmentModel updatedAppointment = AppointmentModel(
+          id: _appointment!.id,
+          subject: _subjectController.text,
+          notes: _notesController.text,
+          isAllDay: _isAllDay,
+          isRelatedToPrayerTimes: _isRelatedToPrayerTimes,
+          prayerTime: _selectedPrayerTime,
+          timeRelation: _selectedTimeRelation,
+          minutesBeforeAfter: _minutesBeforeAfter,
+          duration: _duration,
+          location: _locationController.text,
+          recurrenceRule: _recurrenceRule,
+          recurrenceExceptionDates: _appointment!.recurrenceExceptionDates,
+          color: _selectedColor,
+          startTime: _selectedDate,
+          endTime: _selectedDate != null && _duration != null
+              ? _selectedDate!.add(_duration!)
+              : null,
+          categoryId: _selectedCategoryId,
+          reminderMinutesBefore: _reminderMinutes,
+          syncWithGoogleCalendar: _appointment!.syncWithGoogleCalendar,
+          externalIdGoogle: _appointment!.externalIdGoogle,
+          externalIdOutlook: _appointment!.externalIdOutlook,
+          externalIdApple: _appointment!.externalIdApple,
+          lastSyncedAt: _appointment!.lastSyncedAt,
+        );
+
+        // Vor dem Speichern des Appointments prüfen, ob es gebetszeitabhängig ist
+        // und wenn ja, die berechneten Zeiten abrufen und im Appointment aktualisieren
+
+        // Speichern
+        await _appointmentRepo.updateAppointment(updatedAppointment);
+
+        // Wenn der Termin gebetszeitabhängig ist, müssen wir die berechneten Zeiten abrufen
+        if (updatedAppointment.isRelatedToPrayerTimes && updatedAppointment.prayerTime != null) {
+          final baseDate = DateTime(
+            updatedAppointment.startTime!.year,
+            updatedAppointment.startTime!.month,
+            updatedAppointment.startTime!.day,
+          );
+
+          // Berechnete Start- und Endzeiten abrufen
+          final calculatedStart = await _prayerTimeService.getCalculatedStartTime(
+            updatedAppointment,
+            baseDate,
+          );
+          final calculatedEnd = await _prayerTimeService.getCalculatedEndTime(
+            updatedAppointment,
+            baseDate,
+          );
+
+          if (calculatedStart != null && calculatedEnd != null) {
+            // Neues Appointment mit berechneten Zeiten erstellen
+            final finalAppointment = updatedAppointment.copyWith(
+              startTime: calculatedStart,
+              endTime: calculatedEnd,
+            );
+
+            // In DB aktualisieren
+            await _appointmentRepo.updateAppointment(finalAppointment);
+          }
+        }
+
+        // Benachrichtigung senden, wenn gewünscht
+        if (updatedAppointment.reminderMinutesBefore != null &&
+            updatedAppointment.reminderMinutesBefore! > 0 &&
+            updatedAppointment.startTime != null) {
+          final reminderTime = updatedAppointment.startTime!
+              .subtract(Duration(minutes: updatedAppointment.reminderMinutesBefore!));
+          await NotificationService().scheduleNotification(
+            appointmentId: updatedAppointment.id!,
+            title: 'Erinnerung: ${updatedAppointment.subject}',
+            body: 'Du hast bald einen Termin',
+            dateTime: reminderTime,
+          );
+        }
+
+        setState(() {
+          _isLoading = false;
+          _showSuccess = true;
+        });
+
+        // Warte kurz und gehe dann zurück
+        Future.delayed(const Duration(seconds: 1), () {
+          Navigator.of(context).pop(true);
+        });
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = "Fehler beim Speichern: $e";
+        });
+      }
+    }
+  }
+  */
 }
