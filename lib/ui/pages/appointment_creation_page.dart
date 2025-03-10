@@ -71,6 +71,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   String? _selectedCity;
   Map<String, List<String>> _countryCityData = {};
 
+  // NEU: Google Kalender Synchronisierung
+  bool _syncWithGoogleCalendar = false;
+
   // Wiederkehrende Termine
   bool _isRecurring = false;
   RecurrenceType _recurrenceType = RecurrenceType.daily;
@@ -249,6 +252,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 _startTime!.add(const Duration(minutes: 30));
             _color = appointment.color;
             _selectedReminderMinutes = appointment.reminderMinutesBefore;
+
+            // NEU: Google Kalender Sync-Flag laden (wird später implementiert)
+            // _syncWithGoogleCalendar = appointment.syncWithGoogleCalendar ?? false;
+            // Jetzt implementiert:
+            _syncWithGoogleCalendar = appointment.syncWithGoogleCalendar;
 
             // Erinnerung in die Liste übernehmen, falls vorhanden
             if (appointment.reminderMinutesBefore != null &&
@@ -490,6 +498,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           endTime: _endTime,
           categoryId: _selectedCategory?.id,
           reminderMinutesBefore: _selectedReminderMinutes,
+          // NEU: Flag für Google Kalender Synchronisierung
+          syncWithGoogleCalendar: _syncWithGoogleCalendar,
         );
 
         if (_currentAppointmentId == null) {
@@ -810,6 +820,23 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                       _endTime = _startTime!.add(_duration!);
                     }
                   }
+                });
+              },
+            ),
+          ),
+
+          // NEU: Google Kalender Synchronisierung
+          Material(
+            elevation: 0,
+            color: Colors.transparent,
+            child: SwitchListTile.adaptive(
+              secondary: const Icon(Icons.sync),
+              title: Text("Mit Google Kalender synchronisieren"),
+              subtitle: Text("Termin automatisch mit Google Kalender teilen"),
+              value: _syncWithGoogleCalendar,
+              onChanged: (bool value) {
+                setState(() {
+                  _syncWithGoogleCalendar = value;
                 });
               },
             ),

@@ -30,6 +30,8 @@ class AppointmentModel {
   final String? externalIdOutlook; // z.B. Event-ID in Outlook
   final String? externalIdApple; // z.B. Event-Identifier in Apple-Kalender
   final DateTime? lastSyncedAt; // Zuletzt erfolgreich synchronisiert
+  final bool
+      syncWithGoogleCalendar; // Flag, ob Termin mit Google synchronisiert werden soll
 
   AppointmentModel({
     this.id,
@@ -55,6 +57,7 @@ class AppointmentModel {
     this.externalIdOutlook,
     this.externalIdApple,
     this.lastSyncedAt,
+    this.syncWithGoogleCalendar = false, // Standardmäßig deaktiviert
   });
 
   Map<String, dynamic> toMap() {
@@ -88,6 +91,7 @@ class AppointmentModel {
       'externalIdOutlook': externalIdOutlook,
       'externalIdApple': externalIdApple,
       'lastSyncedAt': lastSyncedAt?.toIso8601String(),
+      'syncWithGoogleCalendar': syncWithGoogleCalendar ? 1 : 0,
     };
   }
 
@@ -137,6 +141,7 @@ class AppointmentModel {
       lastSyncedAt: map['lastSyncedAt'] != null
           ? DateTime.parse(map['lastSyncedAt'])
           : null,
+      syncWithGoogleCalendar: map['syncWithGoogleCalendar'] == 1,
     );
   }
   @override
@@ -163,7 +168,8 @@ class AppointmentModel {
       externalIdGoogle: $externalIdGoogle,
       externalIdOutlook: $externalIdOutlook,
       externalIdApple: $externalIdApple,
-      lastSyncedAt: $lastSyncedAt
+      lastSyncedAt: $lastSyncedAt,
+      syncWithGoogleCalendar: $syncWithGoogleCalendar
     )''';
   }
 }

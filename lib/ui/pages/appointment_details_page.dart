@@ -175,6 +175,16 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
     _loadAppointment();
   }
 
+  /// NEU: Mit Google Kalender synchronisieren
+  Future<void> _syncWithGoogleCalendar() async {
+    // Diese Methode wird später implementiert
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Diese Funktion wird bald verfügbar sein")),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
@@ -374,19 +384,40 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
         const SizedBox(height: 16),
 
-        // Buttons
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        // Buttons - Neu angeordnet, um Overflow zu vermeiden
+        Column(
           children: [
-            _buildAdaptiveOutlinedButton(
-              icon: Icons.delete,
-              label: loc.delete,
-              onPressed: _deleteAppointment,
+            // Erste Zeile: Löschen und Bearbeiten
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: _buildAdaptiveOutlinedButton(
+                    icon: Icons.delete,
+                    label: loc.delete,
+                    onPressed: _deleteAppointment,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildAdaptiveFilledButton(
+                    icon: Icons.edit,
+                    label: loc.editAppointment,
+                    onPressed: _editAppointment,
+                  ),
+                ),
+              ],
             ),
-            _buildAdaptiveFilledButton(
-              icon: Icons.edit,
-              label: loc.editAppointment,
-              onPressed: _editAppointment,
+
+            // Zweite Zeile: Google Sync Button (volle Breite)
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: _buildAdaptiveOutlinedButton(
+                icon: Icons.sync,
+                label: "Mit Google synchronisieren",
+                onPressed: _syncWithGoogleCalendar,
+              ),
             ),
           ],
         ),
