@@ -195,15 +195,27 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   Future<void> _syncWithGoogleCalendar() async {
     if (_appointment == null) return;
 
+    debugPrint("🔄 _syncWithGoogleCalendar wurde aufgerufen");
     final loc = Provider.of<AppLocalizations>(context, listen: false);
 
     try {
+      // Fortschrittsanzeige zeigen
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Starte Synchronisierung mit Google...')),
+        );
+      }
+
       final googleService = GoogleCalendarService();
       googleService.setLocalizations(loc);
+      debugPrint("GoogleCalendarService initialisiert");
 
       // Prüfen, ob Benutzer angemeldet ist
+      debugPrint("Prüfe Google-Anmeldestatus: ${googleService.isSignedIn}");
       if (!googleService.isSignedIn) {
+        debugPrint("Benutzer nicht angemeldet, starte Sign-In Prozess");
         bool success = await googleService.signIn();
+        debugPrint("Sign-In Ergebnis: $success");
         if (!success) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -216,34 +228,46 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
       // SyncWithGoogleCalendar-Flag aktivieren, falls noch nicht geschehen
       AppointmentModel updatedAppointment = _appointment!;
+      debugPrint(
+          "Aktueller Sync-Status: ${_appointment!.syncWithGoogleCalendar}");
       if (!_appointment!.syncWithGoogleCalendar) {
+        debugPrint("Aktiviere syncWithGoogleCalendar Flag");
         updatedAppointment =
             _appointment!.copyWith(syncWithGoogleCalendar: true);
         await _appointmentRepo.updateAppointment(updatedAppointment);
+        debugPrint("Flag in Datenbank aktualisiert");
       }
 
       // Termin synchronisieren
+      debugPrint("Starte Synchronisierung mit Google Calendar");
       final externalId = await googleService
           .syncAppointmentWithGoogleCalendar(updatedAppointment);
+      debugPrint("Synchronisierung abgeschlossen, externe ID: $externalId");
 
       if (externalId != null) {
         // Erfolgreich synchronisiert, ID in der Datenbank aktualisieren
+        debugPrint("Aktualisiere Termin mit externer ID");
         final finalAppointment = updatedAppointment.copyWith(
           externalIdGoogle: externalId,
           lastSyncedAt: DateTime.now(),
         );
         await _appointmentRepo.updateAppointment(finalAppointment);
+        debugPrint("Termin in Datenbank aktualisiert");
 
         // Aktualisiere die Ansicht
         _loadAppointment();
+        debugPrint("UI aktualisiert");
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Mit Google Kalender synchronisiert')),
+            SnackBar(
+                content:
+                    Text('Erfolgreich mit Google Kalender synchronisiert')),
           );
         }
       } else if (googleService.lastError != null) {
         // Fehler bei der Synchronisierung
+        debugPrint("Synchronisierungsfehler: ${googleService.lastError}");
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -253,7 +277,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         }
       }
     } catch (e) {
-      debugPrint('Fehler bei der Google-Synchronisierung: $e');
+      debugPrint('❌ Fehler bei der Google-Synchronisierung: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Google Sync Fehler: $e')),
@@ -488,12 +512,53 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
             // Zweite Zeile: Google Sync Button (volle Breite)
             const SizedBox(height: 12),
+
+            // Info-Anzeige über den Google-Sync-Status
+            if (_appointment!.syncWithGoogleCalendar ||
+                _appointment!.externalIdGoogle != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  children: [
+                    Icon(
+                      _appointment!.externalIdGoogle != null
+                          ? Icons.check_circle
+                          : Icons.pending,
+                      color: _appointment!.externalIdGoogle != null
+                          ? Colors.green
+                          : Colors.orange,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _appointment!.externalIdGoogle != null
+                            ? _appointment!.lastSyncedAt != null
+                                ? "Zuletzt synchronisiert: ${DateFormat('dd.MM.yyyy, HH:mm').format(_appointment!.lastSyncedAt!)}"
+                                : "Mit Google Kalender synchronisiert"
+                            : "Synchronisierung mit Google Kalender aktiviert",
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             SizedBox(
               width: double.infinity,
               child: _buildAdaptiveOutlinedButton(
-                icon: Icons.sync,
-                label: "Mit Google synchronisieren",
-                onPressed: _syncWithGoogleCalendar,
+                icon: _appointment!.syncWithGoogleCalendar
+                    ? Icons.sync
+                    : Icons.sync_disabled,
+                label: _appointment!.syncWithGoogleCalendar &&
+                        _appointment!.externalIdGoogle != null
+                    ? "Mit Google erneut synchronisieren"
+                    : "Mit Google synchronisieren",
+                onPressed: () async {
+                  // Direkt die Synchronisierungsmethode aufrufen
+                  debugPrint("Google Sync Button wurde gedrückt");
+                  await _syncWithGoogleCalendar();
+                },
               ),
             ),
           ],
