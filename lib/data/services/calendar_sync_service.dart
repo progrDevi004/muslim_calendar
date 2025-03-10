@@ -149,9 +149,9 @@ class CalendarSyncService {
         processedEventIds.add(event.id!);
       }
 
-      // Doğum günü gibi otomatik oluşturulan eventleri filtreleyelim.
-      // Örneğin, bazı hesaplarda doğum günü event'leri organizer email'i "addressbook#contacts@group.v.calendar.google.com" olarak gelebilir.
-      // Ayrıca, summary içerisinde "birthday" veya "doğum günü" gibi ifadeler varsa, onları da atlayabiliriz.
+      // Filtern wir automatisch generierte Events wie Geburtstage.
+      // Zum Beispiel können in einigen Konten Geburtstags-Events mit der Organizer-E-Mail "addressbook#contacts@group.v.calendar.google.com" auftreten.
+      // Außerdem können wir Events überspringen, die "birthday" oder "Geburtstag" im Titel enthalten.
       if ((event.organizer != null &&
               event.organizer!.email!
                   .toLowerCase()
@@ -159,23 +159,23 @@ class CalendarSyncService {
           (event.summary != null &&
               (event.summary!.toLowerCase().contains('birthday') ||
                   event.summary!.toLowerCase().contains('doğum günü')))) {
-        // Bu event doğum günü gibi otomatik oluşturulan bir eventse, atla.
+        // Wenn dies ein automatisch generiertes Event wie ein Geburtstag ist, überspringe es.
         debugPrint(
             "🚫 Event übersprungen: Automatisch erstelltes Event (z.B. Geburtstag)");
         skippedCount++;
         continue;
       }
 
-      // İlgili extended property var mı kontrol edelim.
+      // Überprüfen wir die zugehörige extended property.
       String? muslimCalendarId =
           event.extendedProperties?.private?['muslimcalendarID'];
       AppointmentModel? existingAppointment;
       if (muslimCalendarId == null) {
-        // Normal appointment: externalIdGoogle üzerinden eşleştir.
+        // Normaler Termin: Abgleich über externalIdGoogle.
         existingAppointment = await appointmentRepository
             .getAppointmentByExternalIdGoogle(event.id!);
       } else {
-        // Namaz vakitlerine bağlı appointment: extended property içerisindeki id'yi kullan.
+        // Gebetszeiten-bezogener Termin: Verwende die ID aus den erweiterten Eigenschaften.
         int? masterId = int.tryParse(muslimCalendarId);
         if (masterId != null) {
           existingAppointment =
@@ -441,7 +441,7 @@ class CalendarSyncService {
     return '${icalParams.join(';').toUpperCase()}';
   }
 
-  /// Ortak export fonksiyonu: Yerel veritabanındaki appointment'ları sağlayıcıya (Google) aktarır.
+  /// Gemeinsame Export-Funktion: Überträgt Termine aus der lokalen Datenbank zum Provider (Google).
   Future<void> exportAppointments() async {
     debugPrint("🔄 Exportiere Termine zu Google Calendar");
     await calendarProvider.autoSignIn();
@@ -463,7 +463,7 @@ class CalendarSyncService {
 
     for (var appointment in appointments) {
       if (appointment.isRelatedToPrayerTimes) {
-        // Prayer-related appointment'lar için: RecurrenceService ile tekrarlanan tarihler hesaplanır.
+        // Für prayer-related Termine: Berechnung der wiederkehrenden Tage mit RecurrenceService.
         DateTime startRange = DateTime.now();
         DateTime endRange = startRange.add(Duration(days: 30));
         List<DateTime> recurrenceDates = recurrenceService.getRecurrenceDates(
@@ -491,7 +491,7 @@ class CalendarSyncService {
           );
           exportCount++;
         }
-        // Silinmesi gereken event'ler, geçerli tekrarlanan tarihler dışında kalmış ise silinir.
+        // Events, die außerhalb der gültigen Wiederholungstermine liegen, werden gelöscht.
         await calendarProvider.deleteEventsNotInDates(
           appointmentId: appointment.id!,
           validDates: recurrenceDates,

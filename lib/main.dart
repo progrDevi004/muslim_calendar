@@ -50,9 +50,11 @@ void main() async {
           create: (_) => ThemeNotifier(),
         ),
         Provider<GoogleCalendarService>(
-          create: (context) => GoogleCalendarService(
-            localizations: context.read<AppLocalizations>(),
-          ),
+          create: (context) {
+            final service = GoogleCalendarService();
+            service.setLocalizations(context.read<AppLocalizations>());
+            return service;
+          },
         ),
         Provider<AppointmentRepository>(
           create: (_) => AppointmentRepository(),

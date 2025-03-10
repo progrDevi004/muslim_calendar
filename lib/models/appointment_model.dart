@@ -60,6 +60,61 @@ class AppointmentModel {
     this.syncWithGoogleCalendar = false, // Standardmäßig deaktiviert
   });
 
+  // NEU: CopyWith-Methode für einfache Aktualisierungen
+  AppointmentModel copyWith({
+    int? id,
+    String? subject,
+    String? notes,
+    bool? isAllDay,
+    bool? isRelatedToPrayerTimes,
+    PrayerTime? prayerTime,
+    TimeRelation? timeRelation,
+    int? minutesBeforeAfter,
+    Duration? duration,
+    String? location,
+    String? recurrenceRule,
+    List<DateTime>? recurrenceExceptionDates,
+    Color? color,
+    DateTime? startTime,
+    DateTime? endTime,
+    int? categoryId,
+    int? reminderMinutesBefore,
+    String? externalIdGoogle,
+    String? externalIdOutlook,
+    String? externalIdApple,
+    DateTime? lastSyncedAt,
+    bool? syncWithGoogleCalendar,
+  }) {
+    return AppointmentModel(
+      id: id ?? this.id,
+      subject: subject ?? this.subject,
+      notes: notes ?? this.notes,
+      isAllDay: isAllDay ?? this.isAllDay,
+      isRelatedToPrayerTimes:
+          isRelatedToPrayerTimes ?? this.isRelatedToPrayerTimes,
+      prayerTime: prayerTime ?? this.prayerTime,
+      timeRelation: timeRelation ?? this.timeRelation,
+      minutesBeforeAfter: minutesBeforeAfter ?? this.minutesBeforeAfter,
+      duration: duration ?? this.duration,
+      location: location ?? this.location,
+      recurrenceRule: recurrenceRule ?? this.recurrenceRule,
+      recurrenceExceptionDates:
+          recurrenceExceptionDates ?? this.recurrenceExceptionDates,
+      color: color ?? this.color,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      categoryId: categoryId ?? this.categoryId,
+      reminderMinutesBefore:
+          reminderMinutesBefore ?? this.reminderMinutesBefore,
+      externalIdGoogle: externalIdGoogle ?? this.externalIdGoogle,
+      externalIdOutlook: externalIdOutlook ?? this.externalIdOutlook,
+      externalIdApple: externalIdApple ?? this.externalIdApple,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      syncWithGoogleCalendar:
+          syncWithGoogleCalendar ?? this.syncWithGoogleCalendar,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,

@@ -22,14 +22,13 @@ import 'package:muslim_calendar/data/repositories/category_repository.dart';
 // Models
 import 'package:muslim_calendar/models/category_model.dart';
 
-// Notification Service
+// Services
 import 'package:muslim_calendar/data/services/notification_service.dart';
+import 'package:muslim_calendar/data/services/automatic_category_service.dart';
+import 'package:muslim_calendar/data/services/google_calendar_service.dart';
 
 // Für das Zeitformat
 import 'package:intl/intl.dart';
-
-// AutomaticCategoryService
-import 'package:muslim_calendar/data/services/automatic_category_service.dart';
 
 class AppointmentCreationPage extends StatefulWidget {
   final int? appointmentId;
@@ -522,6 +521,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           setState(() {
             _currentAppointmentId = newId;
           });
+
+          // NEU: Google Kalender Synchronisierung für neuen Termin
+          if (_syncWithGoogleCalendar) {
+            _syncWithGoogle(appointment.copyWith(id: newId));
+          }
         } else {
           // Update Termin
           await NotificationService()
@@ -539,6 +543,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               body: loc.reminderBody,
               dateTime: reminderTime,
             );
+          }
+
+          // NEU: Google Kalender Synchronisierung für aktualisierten Termin
+          if (_syncWithGoogleCalendar) {
+            _syncWithGoogle(appointment);
           }
         }
 
@@ -2106,6 +2115,65 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         );
       },
     );
+  }
+
+  // NEU: Hilfsmethode zur Google Kalender Synchronisierung
+  Future<void> _syncWithGoogle(AppointmentModel appointment) async {
+    try {
+      final googleService = GoogleCalendarService();
+      final loc = Provider.of<AppLocalizations>(context, listen: false);
+
+      // Lokalisierung setzen
+      googleService.setLocalizations(loc);
+
+      // Prüfen, ob Benutzer angemeldet ist
+      if (!googleService.isSignedIn) {
+        bool success = await googleService.signIn();
+        if (!success) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Bitte zuerst bei Google anmelden')),
+            );
+          }
+          return;
+        }
+      }
+
+      // Termin synchronisieren
+      final externalId =
+          await googleService.syncAppointmentWithGoogleCalendar(appointment);
+
+      if (externalId != null) {
+        // Erfolgreich synchronisiert, ID in der Datenbank aktualisieren
+        final updatedAppointment = appointment.copyWith(
+          externalIdGoogle: externalId,
+          lastSyncedAt: DateTime.now(),
+        );
+        await _appointmentRepo.updateAppointment(updatedAppointment);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Mit Google Kalender synchronisiert')),
+          );
+        }
+      } else if (googleService.lastError != null) {
+        // Fehler bei der Synchronisierung
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(
+                    'Synchronisierungsfehler: ${googleService.lastError}')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Fehler bei der Google-Synchronisierung: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google Sync Fehler: $e')),
+        );
+      }
+    }
   }
 }
 

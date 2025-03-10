@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
 import 'package:muslim_calendar/data/services/notification_service.dart';
+import 'package:muslim_calendar/data/services/google_calendar_service.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
@@ -142,6 +143,21 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
               'iOS-Knackpunkt: Notification-Cancel schlug fehl: $notifErr');
         }
 
+        // 3) Google Calendar Eintrag löschen, falls vorhanden
+        if (_appointment!.syncWithGoogleCalendar &&
+            _appointment!.externalIdGoogle != null) {
+          try {
+            final googleService = GoogleCalendarService();
+            googleService.setLocalizations(
+                Provider.of<AppLocalizations>(context, listen: false));
+            await googleService
+                .deleteEventFromGoogleCalendar(_appointment!.externalIdGoogle!);
+          } catch (googleErr) {
+            debugPrint(
+                'Fehler beim Löschen des Google Kalender Eintrags: $googleErr');
+          }
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(loc.appointmentDeletedSuccessfully)),
         );
@@ -177,12 +193,73 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
   /// NEU: Mit Google Kalender synchronisieren
   Future<void> _syncWithGoogleCalendar() async {
-    // Diese Methode wird später implementiert
+    if (_appointment == null) return;
+
     final loc = Provider.of<AppLocalizations>(context, listen: false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Diese Funktion wird bald verfügbar sein")),
-    );
+    try {
+      final googleService = GoogleCalendarService();
+      googleService.setLocalizations(loc);
+
+      // Prüfen, ob Benutzer angemeldet ist
+      if (!googleService.isSignedIn) {
+        bool success = await googleService.signIn();
+        if (!success) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Bitte zuerst bei Google anmelden')),
+            );
+          }
+          return;
+        }
+      }
+
+      // SyncWithGoogleCalendar-Flag aktivieren, falls noch nicht geschehen
+      AppointmentModel updatedAppointment = _appointment!;
+      if (!_appointment!.syncWithGoogleCalendar) {
+        updatedAppointment =
+            _appointment!.copyWith(syncWithGoogleCalendar: true);
+        await _appointmentRepo.updateAppointment(updatedAppointment);
+      }
+
+      // Termin synchronisieren
+      final externalId = await googleService
+          .syncAppointmentWithGoogleCalendar(updatedAppointment);
+
+      if (externalId != null) {
+        // Erfolgreich synchronisiert, ID in der Datenbank aktualisieren
+        final finalAppointment = updatedAppointment.copyWith(
+          externalIdGoogle: externalId,
+          lastSyncedAt: DateTime.now(),
+        );
+        await _appointmentRepo.updateAppointment(finalAppointment);
+
+        // Aktualisiere die Ansicht
+        _loadAppointment();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Mit Google Kalender synchronisiert')),
+          );
+        }
+      } else if (googleService.lastError != null) {
+        // Fehler bei der Synchronisierung
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(
+                    'Synchronisierungsfehler: ${googleService.lastError}')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Fehler bei der Google-Synchronisierung: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google Sync Fehler: $e')),
+        );
+      }
+    }
   }
 
   @override

@@ -21,9 +21,9 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'appointments.db');
     return await openDatabase(
       path,
-      version: 4, // <-- NEU: DB-Version raufgesetzt
+      version: 5, // <-- NEU: DB-Version auf 5 erhöht
       onCreate: (db, version) async {
-        // Version 4 bedeutet, wir führen gleich alles an.
+        // Version 5 bedeutet, wir führen gleich alles an.
 
         // appointments
         await db.execute('''
@@ -50,7 +50,10 @@ class DatabaseHelper {
             externalIdGoogle TEXT,
             externalIdOutlook TEXT,
             externalIdApple TEXT,
-            lastSyncedAt TEXT
+            lastSyncedAt TEXT,
+            
+            -- NEU ab Version 5:
+            syncWithGoogleCalendar INTEGER DEFAULT 0
           )
         ''');
 
@@ -127,10 +130,6 @@ class DatabaseHelper {
           ''');
         }
 
-        // >>> NEU: Wenn von <3 hoch auf 4, müssen wir
-        // ebenfalls die reminderMinutesBefore-Spalte noch ergänzen (siehe oben).
-        // Dann erst die neuen Spalten:
-
         if (oldVersion < 4) {
           // Die neuen Spalten für externe Sync:
           await db.execute('''
@@ -144,6 +143,13 @@ class DatabaseHelper {
           ''');
           await db.execute('''
             ALTER TABLE appointments ADD COLUMN lastSyncedAt TEXT
+          ''');
+        }
+
+        if (oldVersion < 5) {
+          // Neue Spalte für Google Calendar Sync Flag
+          await db.execute('''
+            ALTER TABLE appointments ADD COLUMN syncWithGoogleCalendar INTEGER DEFAULT 0
           ''');
         }
       },

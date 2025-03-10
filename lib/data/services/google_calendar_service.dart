@@ -1,76 +1,112 @@
 // lib/data/services/google_calendar_service.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:googleapis/calendar/v3.dart';
+import 'package:googleapis/calendar/v3.dart' as calendar;
 import 'package:http/http.dart' as http;
 import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class GoogleCalendarService {
+  static final GoogleCalendarService _instance =
+      GoogleCalendarService._internal();
+  factory GoogleCalendarService() => _instance;
+
+  GoogleCalendarService._internal() {
+    // Leerer Konstruktor für Singleton
+  }
+
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: [
+      'email',
       'https://www.googleapis.com/auth/calendar',
-      'https://www.googleapis.com/auth/calendar.events',
     ],
   );
 
-  CalendarApi? _calendarApi;
-  final AppLocalizations _localizations;
+  GoogleSignInAccount? _currentUser;
+  calendar.CalendarApi? _calendarApi;
+  AppLocalizations? _localizations;
 
-  GoogleCalendarService({required AppLocalizations localizations})
-      : _localizations = localizations;
+  // Status für UI-Feedback
+  bool _isSignedIn = false;
+  bool _isSyncing = false;
+  String? _lastError;
 
-  /// Prüft, ob der Nutzer eingeloggt ist
-  bool get isSignedIn => _googleSignIn.currentUser != null;
+  // Getter
+  bool get isSignedIn => _isSignedIn;
+  bool get isSyncing => _isSyncing;
+  String? get lastError => _lastError;
+  GoogleSignInAccount? get currentUser => _currentUser;
 
-  /// Temel sign-in işlemleri
-  Future<void> signIn() async {
-    try {
-      await _googleSignIn.signIn();
-      if (_googleSignIn.currentUser != null) {
-        var auth = await _googleSignIn.currentUser!.authentication;
-        var client = GoogleAuthClient(auth.accessToken!);
-        _calendarApi = CalendarApi(client);
-      } else {
-        throw Exception(_localizations.signInRequired);
-      }
-    } catch (error) {
-      debugPrint('${_localizations.googleSignInError}: $error');
-      throw Exception('${_localizations.googleSignInError}: $error');
-    }
+  // Setzt die Lokalisierung
+  void setLocalizations(AppLocalizations localizations) {
+    _localizations = localizations;
   }
 
+  // Brücken-Methode für die Kompatibilität mit CalendarSyncService
   Future<void> autoSignIn() async {
     try {
-      if (_googleSignIn.currentUser != null) {
-        var auth = await _googleSignIn.currentUser!.authentication;
-        var client = GoogleAuthClient(auth.accessToken!);
-        _calendarApi = CalendarApi(client);
+      if (_currentUser != null) {
+        // CalendarApi initialisieren, wenn bereits angemeldet
+        await _initCalendarApi();
       } else {
+        // Ansonsten neu anmelden
         await signIn();
       }
     } catch (error) {
-      debugPrint('${_localizations.googleSignInError}: $error');
-      throw Exception('${_localizations.syncError(error.toString())}');
+      debugPrint('Fehler beim automatischen Login: $error');
+      _lastError = error.toString();
+      throw Exception('Fehler beim automatischen Login: $error');
     }
   }
 
-  Future<void> signOut() async {
-    await _googleSignIn.signOut();
-    _calendarApi = null;
+  // Prüft den aktuellen Login-Status beim App-Start
+  Future<bool> checkSignInStatus() async {
+    try {
+      // Versuche, den zuletzt angemeldeten Benutzer zu erhalten
+      _currentUser = await _googleSignIn.signInSilently();
+      _isSignedIn = _currentUser != null;
+
+      if (_isSignedIn) {
+        // CalendarApi initialisieren
+        await _initCalendarApi();
+      }
+
+      return _isSignedIn;
+    } catch (e) {
+      debugPrint('Fehler beim Prüfen des Login-Status: $e');
+      _lastError = e.toString();
+      _isSignedIn = false;
+      return false;
+    }
   }
 
-  /// Liste aller verfügbaren Kalender abrufen
-  Future<List<CalendarListEntry>> fetchCalendarList() async {
-    if (_calendarApi == null) throw Exception(_localizations.notSignedIn);
-    var calendarList = await _calendarApi!.calendarList.list();
-    return calendarList.items ?? [];
+  // Liste aller verfügbaren Kalender abrufen
+  Future<List<calendar.CalendarListEntry>> fetchCalendarList() async {
+    if (_calendarApi == null) {
+      _lastError = 'Nicht bei Google angemeldet';
+      throw Exception(_lastError);
+    }
+
+    try {
+      var calendarList = await _calendarApi!.calendarList.list();
+      return calendarList.items ?? [];
+    } catch (e) {
+      _lastError = 'Fehler beim Abrufen der Kalenderliste: $e';
+      debugPrint(_lastError);
+      throw Exception(_lastError);
+    }
   }
 
-  /// Temel: Tüm event'leri getirir.
-  Future<List<Event>> fetchEvents({String calendarId = 'primary'}) async {
-    if (_calendarApi == null) throw Exception(_localizations.notSignedIn);
+  // Ruft alle Events aus einem Kalender ab
+  Future<List<calendar.Event>> fetchEvents(
+      {String calendarId = 'primary'}) async {
+    if (_calendarApi == null) {
+      _lastError = 'Nicht bei Google angemeldet';
+      throw Exception(_lastError);
+    }
 
     try {
       var events = await _calendarApi!.events.list(calendarId);
@@ -88,126 +124,38 @@ class GoogleCalendarService {
               .toList() ??
           [];
 
-      debugPrint(
-          "🔍 ${events.items?.length ?? 0} Events gefunden, ${validEvents.length} valide Events");
       return validEvents;
     } catch (e) {
-      debugPrint("⚠️ Fehler beim Abrufen der Events: $e");
+      _lastError = 'Fehler beim Abrufen der Events: $e';
+      debugPrint(_lastError);
       return [];
     }
   }
 
-  /// Temel: Extended property filtresiyle event'leri getirir.
-  Future<List<Event>> fetchEventsByExtendedProperty(String extendedProperty,
+  // Ruft Events mit einem bestimmten Extended Property ab
+  Future<List<calendar.Event>> fetchEventsByExtendedProperty(
+      String extendedProperty,
       {String calendarId = 'primary'}) async {
-    if (_calendarApi == null) throw Exception(_localizations.notSignedIn);
-    var events = await _calendarApi!.events.list(
-      calendarId,
-      // Google API'da filtreleme "key=value" formatında yapılır.
-      privateExtendedProperty: [extendedProperty],
-    );
-    return events.items ?? [];
-  }
+    if (_calendarApi == null) {
+      _lastError = 'Nicht bei Google angemeldet';
+      throw Exception(_lastError);
+    }
 
-  Future<String> _getLocalTimeZone() async {
     try {
-      return await FlutterTimezone.getLocalTimezone();
+      var events = await _calendarApi!.events.list(
+        calendarId,
+        privateExtendedProperty: [extendedProperty],
+      );
+      return events.items ?? [];
     } catch (e) {
-      return 'UTC';
+      _lastError = 'Fehler beim Abrufen der Events mit Properties: $e';
+      debugPrint(_lastError);
+      return [];
     }
   }
 
-  Future<Event> createEvent({
-    required String summary,
-    required String description,
-    required DateTime startTime,
-    required DateTime endTime,
-    List<String>? recurrence,
-    Map<String, String>? extendedProperties,
-    String? location,
-    String calendarId = 'primary',
-  }) async {
-    if (_calendarApi == null) throw Exception(_localizations.notSignedIn);
-
-    // Cihazın saat dilimini alıyoruz.
-    final timeZone = await _getLocalTimeZone();
-
-    var event = Event()
-      ..summary = summary
-      ..description = description
-      ..start = EventDateTime(
-        dateTime: startTime,
-        timeZone: timeZone,
-      )
-      ..end = EventDateTime(
-        dateTime: endTime,
-        timeZone: timeZone,
-      )
-      ..recurrence = recurrence
-      ..location = location;
-
-    if (extendedProperties != null) {
-      event.extendedProperties =
-          EventExtendedProperties(private: extendedProperties);
-    }
-
-    var createdEvent = await _calendarApi!.events.insert(event, calendarId);
-    return createdEvent;
-  }
-
-  /// Temel: Var olan event'i günceller.
-  Future<Event> updateEvent({
-    required String eventId,
-    required String summary,
-    required String description,
-    required DateTime startTime,
-    required DateTime endTime,
-    List<String>? recurrence,
-    Map<String, String>? extendedProperties,
-    String? location,
-    String calendarId = 'primary',
-  }) async {
-    if (_calendarApi == null) throw Exception(_localizations.notSignedIn);
-
-    // Cihazın saat dilimini alıyoruz.
-    final timeZone = await _getLocalTimeZone();
-
-    var event = await _calendarApi!.events.get(calendarId, eventId);
-    event
-      ..summary = summary
-      ..description = description
-      ..start = EventDateTime(
-        dateTime: startTime,
-        timeZone: timeZone,
-      )
-      ..end = EventDateTime(
-        dateTime: endTime,
-        timeZone: timeZone,
-      )
-      ..recurrence = recurrence
-      ..location = location;
-
-    if (extendedProperties != null) {
-      event.extendedProperties =
-          EventExtendedProperties(private: extendedProperties);
-    }
-
-    var updatedEvent =
-        await _calendarApi!.events.update(event, calendarId, eventId);
-    return updatedEvent;
-  }
-
-  /// Temel: Event'i siler.
-  Future<void> deleteEvent(String eventId,
-      {String calendarId = 'primary'}) async {
-    if (_calendarApi == null) throw Exception(_localizations.notSignedIn);
-    await _calendarApi!.events.delete(calendarId, eventId);
-  }
-
-  // ––––––– Ortak Kullanıma Uygun Fonksiyonlar –––––––
-
-  /// Opsiyonel: Extended property filtresi parametresine göre event'leri getirir.
-  Future<List<Event>> fetchCalendarEvents({
+  // Methode zum Abrufen von Events mit oder ohne Extended Property Filter
+  Future<List<calendar.Event>> fetchCalendarEvents({
     String? extendedProperty,
     String calendarId = 'primary',
   }) async {
@@ -219,12 +167,286 @@ class GoogleCalendarService {
     }
   }
 
-  /// Belirli bir tarih için (prayer-related) appointment event'ini getirir.
-  Future<Event?> getEventForAppointmentOnDate(int appointmentId, DateTime date,
-      {String calendarId = 'primary'}) async {
+  // Google Sign-In Prozess
+  Future<bool> signIn() async {
+    try {
+      _lastError = null;
+      final user = await _googleSignIn.signIn();
+
+      if (user == null) {
+        _isSignedIn = false;
+        _lastError = 'Sign-In abgebrochen';
+        return false;
+      }
+
+      _currentUser = user;
+      _isSignedIn = true;
+
+      // CalendarApi initialisieren
+      await _initCalendarApi();
+
+      // Login-Status speichern
+      final prefs = await SharedPreferences.getInstance();
+      prefs.setBool('google_signed_in', true);
+
+      return true;
+    } catch (e) {
+      debugPrint('Fehler beim Google Sign-In: $e');
+      _lastError = e.toString();
+      _isSignedIn = false;
+      return false;
+    }
+  }
+
+  // Google Sign-Out
+  Future<bool> signOut() async {
+    try {
+      await _googleSignIn.signOut();
+      _currentUser = null;
+      _calendarApi = null;
+      _isSignedIn = false;
+
+      // Login-Status aktualisieren
+      final prefs = await SharedPreferences.getInstance();
+      prefs.setBool('google_signed_in', false);
+
+      return true;
+    } catch (e) {
+      debugPrint('Fehler beim Abmelden: $e');
+      _lastError = e.toString();
+      return false;
+    }
+  }
+
+  // Initialisiert die Google Calendar API
+  Future<void> _initCalendarApi() async {
+    if (_currentUser == null) return;
+
+    final authHeaders = await _currentUser!.authHeaders;
+    final client = http.Client();
+    final httpClient = GoogleHttpClient(authHeaders, client);
+    _calendarApi = calendar.CalendarApi(httpClient);
+  }
+
+  // Holt die lokale Zeitzone
+  Future<String> _getLocalTimeZone() async {
+    try {
+      return await FlutterTimezone.getLocalTimezone();
+    } catch (e) {
+      return 'UTC';
+    }
+  }
+
+  // Termin zu Google Calendar hinzufügen
+  Future<String?> addEventToGoogleCalendar(AppointmentModel appointment) async {
+    if (!_isSignedIn || _calendarApi == null) {
+      _lastError = 'Nicht bei Google angemeldet';
+      return null;
+    }
+
+    try {
+      _isSyncing = true;
+      _lastError = null;
+
+      // Google Calendar Event erstellen
+      final event = await _createGoogleEvent(appointment);
+
+      // Event in Google Calendar einfügen
+      final createdEvent = await _calendarApi!.events.insert(event, 'primary');
+
+      _isSyncing = false;
+      return createdEvent.id; // ID des erstellten Events zurückgeben
+    } catch (e) {
+      _isSyncing = false;
+      _lastError = 'Fehler beim Hinzufügen des Termins: $e';
+      debugPrint(_lastError);
+      return null;
+    }
+  }
+
+  // Termin in Google Calendar aktualisieren
+  Future<bool> updateEventInGoogleCalendar(AppointmentModel appointment) async {
+    if (!_isSignedIn || _calendarApi == null) {
+      _lastError = 'Nicht bei Google angemeldet';
+      return false;
+    }
+
+    if (appointment.externalIdGoogle == null) {
+      _lastError = 'Termin existiert nicht in Google Calendar';
+      return false;
+    }
+
+    try {
+      _isSyncing = true;
+      _lastError = null;
+
+      // Google Calendar Event erstellen
+      final event = await _createGoogleEvent(appointment);
+
+      // Event in Google Calendar aktualisieren
+      await _calendarApi!.events
+          .update(event, 'primary', appointment.externalIdGoogle!);
+
+      _isSyncing = false;
+      return true;
+    } catch (e) {
+      _isSyncing = false;
+      _lastError = 'Fehler beim Aktualisieren des Termins: $e';
+      debugPrint(_lastError);
+      return false;
+    }
+  }
+
+  // Termin aus Google Calendar löschen
+  Future<bool> deleteEventFromGoogleCalendar(String googleEventId) async {
+    if (!_isSignedIn || _calendarApi == null) {
+      _lastError = 'Nicht bei Google angemeldet';
+      return false;
+    }
+
+    try {
+      _isSyncing = true;
+      _lastError = null;
+
+      await _calendarApi!.events.delete('primary', googleEventId);
+
+      _isSyncing = false;
+      return true;
+    } catch (e) {
+      _isSyncing = false;
+      _lastError = 'Fehler beim Löschen des Termins: $e';
+      debugPrint(_lastError);
+      return false;
+    }
+  }
+
+  // Termin mit Google Calendar synchronisieren
+  // (fügt hinzu oder aktualisiert, je nach Bedarf)
+  Future<String?> syncAppointmentWithGoogleCalendar(
+      AppointmentModel appointment) async {
+    // Prüfen, ob dieser Termin synchronisiert werden soll
+    if (!appointment.syncWithGoogleCalendar) {
+      return null;
+    }
+
+    if (!_isSignedIn) {
+      bool signedIn = await signIn();
+      if (!signedIn) {
+        return null;
+      }
+    }
+
+    // Wenn der Termin bereits eine Google-ID hat, aktualisieren
+    if (appointment.externalIdGoogle != null) {
+      bool success = await updateEventInGoogleCalendar(appointment);
+      return success ? appointment.externalIdGoogle : null;
+    } else {
+      // Ansonsten neuen Termin erstellen
+      return await addEventToGoogleCalendar(appointment);
+    }
+  }
+
+  // API-Schnittstelle für CalendarSyncService
+  Future<calendar.Event> syncAppointmentEvent({
+    required AppointmentModel appointment,
+    required DateTime startTime,
+    required DateTime endTime,
+    required bool prayerRelated,
+    String calendarId = 'primary',
+  }) async {
+    await autoSignIn();
+
+    if (prayerRelated) {
+      // Für gebetszeitbezogene Termine
+      Map<String, String> extendedProps = {
+        'muslimcalendarID': appointment.id.toString()
+      };
+
+      // Prüfen, ob bereits ein Event für diesen Termin und dieses Datum existiert
+      calendar.Event? existingEvent = await getEventForAppointmentOnDate(
+        appointment.id!,
+        startTime,
+        calendarId: calendarId,
+      );
+
+      calendar.Event result;
+
+      if (existingEvent != null) {
+        // Aktualisiere existierendes Event
+        existingEvent.summary = appointment.subject;
+        existingEvent.description = appointment.notes;
+        existingEvent.location = appointment.location;
+
+        // Neu setzen von Start- und Endzeit
+        final timeZone = await _getLocalTimeZone();
+        existingEvent.start = calendar.EventDateTime(
+          dateTime: startTime,
+          timeZone: timeZone,
+        );
+        existingEvent.end = calendar.EventDateTime(
+          dateTime: endTime,
+          timeZone: timeZone,
+        );
+
+        result = await _calendarApi!.events.update(
+          existingEvent,
+          calendarId,
+          existingEvent.id!,
+        );
+      } else {
+        // Erstelle neues Event
+        final timeZone = await _getLocalTimeZone();
+        final event = calendar.Event(
+          summary: appointment.subject,
+          description: appointment.notes,
+          location: appointment.location,
+          start: calendar.EventDateTime(
+            dateTime: startTime,
+            timeZone: timeZone,
+          ),
+          end: calendar.EventDateTime(
+            dateTime: endTime,
+            timeZone: timeZone,
+          ),
+          extendedProperties: calendar.EventExtendedProperties(
+            private: extendedProps,
+          ),
+        );
+
+        result = await _calendarApi!.events.insert(event, calendarId);
+      }
+
+      return result;
+    } else {
+      // Für reguläre Termine
+      if (appointment.externalIdGoogle != null) {
+        // Aktualisiere existierendes Event
+        calendar.Event event = await _createGoogleEvent(appointment);
+        return await _calendarApi!.events.update(
+          event,
+          calendarId,
+          appointment.externalIdGoogle!,
+        );
+      } else {
+        // Erstelle neues Event
+        calendar.Event event = await _createGoogleEvent(appointment);
+        return await _calendarApi!.events.insert(event, calendarId);
+      }
+    }
+  }
+
+  // Findet ein Event für einen Termin an einem bestimmten Datum
+  Future<calendar.Event?> getEventForAppointmentOnDate(
+    int appointmentId,
+    DateTime date, {
+    String calendarId = 'primary',
+  }) async {
     String filter = 'muslimcalendarID=$appointmentId';
-    List<Event> events =
-        await fetchEventsByExtendedProperty(filter, calendarId: calendarId);
+    List<calendar.Event> events = await fetchEventsByExtendedProperty(
+      filter,
+      calendarId: calendarId,
+    );
+
     for (var event in events) {
       DateTime? eventStart = event.start?.dateTime?.toLocal();
       if (eventStart != null &&
@@ -237,158 +459,114 @@ class GoogleCalendarService {
     return null;
   }
 
-  /// Verilen appointment için (normal veya prayer-related) event'i oluşturup/günceller.
-  ///
-  /// - [prayerRelated] true ise, event extended property olarak 'muslimcalendarID' içerir.
-  /// - false ise, appointment.externalIdGoogle üzerinden var olan event güncellenir ya da yenisi oluşturulur.
-  Future<Event> syncAppointmentEvent({
-    required AppointmentModel appointment,
-    required DateTime startTime,
-    required DateTime endTime,
-    required bool prayerRelated,
-    String calendarId = 'primary',
-  }) async {
-    if (prayerRelated) {
-      // Namaz vakitlerine bağlı işlemler (extended properties vs.) burada yapılır.
-      Map<String, String> extendedProps = {
-        'muslimcalendarID': appointment.id.toString()
-      };
-      Event? existingEvent = await getEventForAppointmentOnDate(
-          appointment.id!, startTime,
-          calendarId: calendarId);
-      if (existingEvent != null) {
-        return await updateEvent(
-          eventId: existingEvent.id!,
-          summary: appointment.subject,
-          description: appointment.notes ?? '',
-          startTime: startTime,
-          endTime: endTime,
-          extendedProperties: extendedProps,
-          location: appointment.location,
-          calendarId: calendarId,
-        );
-      } else {
-        return await createEvent(
-          summary: appointment.subject,
-          description: appointment.notes ?? '',
-          startTime: startTime,
-          endTime: endTime,
-          extendedProperties: extendedProps,
-          location: appointment.location,
-          calendarId: calendarId,
-        );
-      }
-    } else {
-      // Namaz vakitlerine bağlı olmayan appointment için:
-      // Recurrence bilgisini kontrol ediyoruz.
-      List<String>? recurrence;
-      if (appointment.recurrenceRule != null &&
-          appointment.recurrenceRule!.isNotEmpty) {
-        // Prüfen und korrigieren der Wiederholungsregel vor dem Export
-        String correctedRule = appointment.recurrenceRule!;
-
-        // Bei wöchentlichen Terminen muss BYDAY vorhanden sein
-        if (correctedRule.contains('FREQ=WEEKLY') &&
-            !correctedRule.contains('BYDAY=')) {
-          // Wochentag aus dem Startdatum ermitteln
-          String weekday;
-          switch (startTime.weekday) {
-            case DateTime.monday:
-              weekday = 'MO';
-              break;
-            case DateTime.tuesday:
-              weekday = 'TU';
-              break;
-            case DateTime.wednesday:
-              weekday = 'WE';
-              break;
-            case DateTime.thursday:
-              weekday = 'TH';
-              break;
-            case DateTime.friday:
-              weekday = 'FR';
-              break;
-            case DateTime.saturday:
-              weekday = 'SA';
-              break;
-            case DateTime.sunday:
-              weekday = 'SU';
-              break;
-            default:
-              weekday = 'MO'; // Standardwert
-          }
-
-          debugPrint(
-              '📅 Korrigiere wöchentliche Wiederholung: Füge BYDAY=$weekday hinzu');
-          // Vor dem UNTIL-Parameter oder am Ende einfügen
-          if (correctedRule.contains('UNTIL=')) {
-            correctedRule =
-                correctedRule.replaceFirst('UNTIL=', 'BYDAY=$weekday;UNTIL=');
-          } else {
-            correctedRule = '$correctedRule;BYDAY=$weekday';
-          }
-        }
-
-        recurrence = [correctedRule];
-        debugPrint(
-            '📅 Exportiere Termin mit Wiederholungsregel: $correctedRule');
-      }
-
-      if (appointment.externalIdGoogle != null) {
-        return await updateEvent(
-          eventId: appointment.externalIdGoogle!,
-          summary: appointment.subject,
-          description: appointment.notes ?? '',
-          startTime: startTime,
-          endTime: endTime,
-          location: appointment.location,
-          recurrence: recurrence,
-          calendarId: calendarId,
-        );
-      } else {
-        Event createdEvent = await createEvent(
-          summary: appointment.subject,
-          description: appointment.notes ?? '',
-          startTime: startTime,
-          endTime: endTime,
-          location: appointment.location,
-          recurrence: recurrence,
-          calendarId: calendarId,
-        );
-        return createdEvent;
-      }
-    }
-  }
-
-  /// Prayer-related appointment'a ait, geçerli tarihler dışında kalan event'leri siler.
+  // Löscht Events, die nicht zu den angegebenen Daten gehören
   Future<void> deleteEventsNotInDates({
     required int appointmentId,
     required List<DateTime> validDates,
     String calendarId = 'primary',
   }) async {
     String filter = 'muslimcalendarID=$appointmentId';
-    List<Event> events =
-        await fetchEventsByExtendedProperty(filter, calendarId: calendarId);
+    List<calendar.Event> events = await fetchEventsByExtendedProperty(
+      filter,
+      calendarId: calendarId,
+    );
+
     for (var event in events) {
       DateTime? eventStart = event.start?.dateTime?.toLocal();
       if (eventStart == null) continue;
+
       bool exists = validDates.any((date) =>
           date.year == eventStart.year &&
           date.month == eventStart.month &&
           date.day == eventStart.day);
-      if (!exists) {
-        await deleteEvent(event.id!, calendarId: calendarId);
+
+      if (!exists && event.id != null) {
+        await _calendarApi!.events.delete(calendarId, event.id!);
       }
     }
   }
+
+  // Wandelt einen Muslim Calendar Termin in ein Google Calendar Event um
+  Future<calendar.Event> _createGoogleEvent(
+      AppointmentModel appointment) async {
+    // Zeitformatierung
+    final start = appointment.startTime;
+    final end = appointment.endTime;
+    final timeZone = await _getLocalTimeZone();
+
+    calendar.EventDateTime? startEventDateTime;
+    calendar.EventDateTime? endEventDateTime;
+
+    if (appointment.isAllDay) {
+      // Ganztägige Termine
+      startEventDateTime = calendar.EventDateTime(
+        date: DateTime(start!.year, start.month, start.day),
+      );
+
+      // Bei ganztägigen Terminen muss das Enddatum +1 Tag sein in Google Calendar
+      final endDate = end?.add(const Duration(days: 1)) ??
+          start.add(const Duration(days: 1));
+
+      endEventDateTime = calendar.EventDateTime(
+        date: DateTime(endDate.year, endDate.month, endDate.day),
+      );
+    } else {
+      // Termine mit Zeitangabe
+      startEventDateTime = calendar.EventDateTime(
+        dateTime: start,
+        timeZone: timeZone,
+      );
+
+      endEventDateTime = calendar.EventDateTime(
+        dateTime: end ?? start?.add(const Duration(minutes: 30)),
+        timeZone: timeZone,
+      );
+    }
+
+    // Wiederholungsregel verarbeiten
+    List<String>? recurrence;
+    if (appointment.recurrenceRule != null &&
+        appointment.recurrenceRule!.isNotEmpty) {
+      recurrence = [appointment.recurrenceRule!];
+    }
+
+    // Erstellen des Google Calendar Events
+    return calendar.Event(
+      summary: appointment.subject,
+      description: appointment.notes,
+      location: appointment.location,
+      start: startEventDateTime,
+      end: endEventDateTime,
+      recurrence: recurrence,
+      // Optional: Farbe des Termins (wenn unterstützt)
+      colorId: _getGoogleCalendarColorId(appointment.color),
+      // Speichere die Muslim Calendar Termin-ID als benutzerdefinierte Eigenschaft
+      extendedProperties: calendar.EventExtendedProperties(
+        private: {'muslimcalendarID': appointment.id?.toString() ?? 'new'},
+      ),
+    );
+  }
+
+  // Wandelt Flutter-Farben in Google Calendar Farb-IDs um
+  String? _getGoogleCalendarColorId(Color color) {
+    // Google Calendar hat begrenzte Farboptionen (1-11)
+    // Hier eine vereinfachte Zuordnung
+    if (color.value == Colors.red.value) return "4"; // Rot
+    if (color.value == Colors.blue.value) return "1"; // Blau
+    if (color.value == Colors.green.value) return "2"; // Grün
+    if (color.value == Colors.orange.value) return "6"; // Orange
+    if (color.value == Colors.purple.value) return "3"; // Lila
+    // Standardwert
+    return "1"; // Blau
+  }
 }
 
-class GoogleAuthClient extends http.BaseClient {
+// Hilfsklasse für die Authentifizierung
+class GoogleHttpClient extends http.BaseClient {
   final Map<String, String> _headers;
-  final http.Client _client = http.Client();
+  final http.Client _client;
 
-  GoogleAuthClient(String token)
-      : _headers = {'Authorization': 'Bearer $token'};
+  GoogleHttpClient(this._headers, this._client);
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) {
