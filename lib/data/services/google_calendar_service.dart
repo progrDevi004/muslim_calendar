@@ -61,19 +61,48 @@ class GoogleCalendarService {
     _calendarApi = null;
   }
 
-  /// Temel: Tüm event'leri getirir.
-  Future<List<Event>> fetchEvents() async {
+  /// Liste aller verfügbaren Kalender abrufen
+  Future<List<CalendarListEntry>> fetchCalendarList() async {
     if (_calendarApi == null) throw Exception(_localizations.notSignedIn);
-    var events = await _calendarApi!.events.list('primary');
-    return events.items ?? [];
+    var calendarList = await _calendarApi!.calendarList.list();
+    return calendarList.items ?? [];
+  }
+
+  /// Temel: Tüm event'leri getirir.
+  Future<List<Event>> fetchEvents({String calendarId = 'primary'}) async {
+    if (_calendarApi == null) throw Exception(_localizations.notSignedIn);
+
+    try {
+      var events = await _calendarApi!.events.list(calendarId);
+
+      // Filtern von ungültigen Events
+      final validEvents = events.items
+              ?.where((event) =>
+                  event != null &&
+                  event.id != null &&
+                  event.summary != null &&
+                  event.summary!.trim().isNotEmpty &&
+                  (event.start?.dateTime != null ||
+                      event.start?.date != null) &&
+                  (event.end?.dateTime != null || event.end?.date != null))
+              .toList() ??
+          [];
+
+      debugPrint(
+          "🔍 ${events.items?.length ?? 0} Events gefunden, ${validEvents.length} valide Events");
+      return validEvents;
+    } catch (e) {
+      debugPrint("⚠️ Fehler beim Abrufen der Events: $e");
+      return [];
+    }
   }
 
   /// Temel: Extended property filtresiyle event'leri getirir.
-  Future<List<Event>> fetchEventsByExtendedProperty(
-      String extendedProperty) async {
+  Future<List<Event>> fetchEventsByExtendedProperty(String extendedProperty,
+      {String calendarId = 'primary'}) async {
     if (_calendarApi == null) throw Exception(_localizations.notSignedIn);
     var events = await _calendarApi!.events.list(
-      'primary',
+      calendarId,
       // Google API'da filtreleme "key=value" formatında yapılır.
       privateExtendedProperty: [extendedProperty],
     );
@@ -96,6 +125,7 @@ class GoogleCalendarService {
     List<String>? recurrence,
     Map<String, String>? extendedProperties,
     String? location,
+    String calendarId = 'primary',
   }) async {
     if (_calendarApi == null) throw Exception(_localizations.notSignedIn);
 
@@ -121,7 +151,7 @@ class GoogleCalendarService {
           EventExtendedProperties(private: extendedProperties);
     }
 
-    var createdEvent = await _calendarApi!.events.insert(event, 'primary');
+    var createdEvent = await _calendarApi!.events.insert(event, calendarId);
     return createdEvent;
   }
 
@@ -135,13 +165,14 @@ class GoogleCalendarService {
     List<String>? recurrence,
     Map<String, String>? extendedProperties,
     String? location,
+    String calendarId = 'primary',
   }) async {
     if (_calendarApi == null) throw Exception(_localizations.notSignedIn);
 
     // Cihazın saat dilimini alıyoruz.
     final timeZone = await _getLocalTimeZone();
 
-    var event = await _calendarApi!.events.get('primary', eventId);
+    var event = await _calendarApi!.events.get(calendarId, eventId);
     event
       ..summary = summary
       ..description = description
@@ -162,32 +193,38 @@ class GoogleCalendarService {
     }
 
     var updatedEvent =
-        await _calendarApi!.events.update(event, 'primary', eventId);
+        await _calendarApi!.events.update(event, calendarId, eventId);
     return updatedEvent;
   }
 
   /// Temel: Event'i siler.
-  Future<void> deleteEvent(String eventId) async {
+  Future<void> deleteEvent(String eventId,
+      {String calendarId = 'primary'}) async {
     if (_calendarApi == null) throw Exception(_localizations.notSignedIn);
-    await _calendarApi!.events.delete('primary', eventId);
+    await _calendarApi!.events.delete(calendarId, eventId);
   }
 
   // ––––––– Ortak Kullanıma Uygun Fonksiyonlar –––––––
 
   /// Opsiyonel: Extended property filtresi parametresine göre event'leri getirir.
-  Future<List<Event>> fetchCalendarEvents({String? extendedProperty}) async {
+  Future<List<Event>> fetchCalendarEvents({
+    String? extendedProperty,
+    String calendarId = 'primary',
+  }) async {
     if (extendedProperty != null) {
-      return fetchEventsByExtendedProperty(extendedProperty);
+      return fetchEventsByExtendedProperty(extendedProperty,
+          calendarId: calendarId);
     } else {
-      return fetchEvents();
+      return fetchEvents(calendarId: calendarId);
     }
   }
 
   /// Belirli bir tarih için (prayer-related) appointment event'ini getirir.
-  Future<Event?> getEventForAppointmentOnDate(
-      int appointmentId, DateTime date) async {
+  Future<Event?> getEventForAppointmentOnDate(int appointmentId, DateTime date,
+      {String calendarId = 'primary'}) async {
     String filter = 'muslimcalendarID=$appointmentId';
-    List<Event> events = await fetchEventsByExtendedProperty(filter);
+    List<Event> events =
+        await fetchEventsByExtendedProperty(filter, calendarId: calendarId);
     for (var event in events) {
       DateTime? eventStart = event.start?.dateTime?.toLocal();
       if (eventStart != null &&
@@ -209,14 +246,16 @@ class GoogleCalendarService {
     required DateTime startTime,
     required DateTime endTime,
     required bool prayerRelated,
+    String calendarId = 'primary',
   }) async {
     if (prayerRelated) {
       // Namaz vakitlerine bağlı işlemler (extended properties vs.) burada yapılır.
       Map<String, String> extendedProps = {
         'muslimcalendarID': appointment.id.toString()
       };
-      Event? existingEvent =
-          await getEventForAppointmentOnDate(appointment.id!, startTime);
+      Event? existingEvent = await getEventForAppointmentOnDate(
+          appointment.id!, startTime,
+          calendarId: calendarId);
       if (existingEvent != null) {
         return await updateEvent(
           eventId: existingEvent.id!,
@@ -226,6 +265,7 @@ class GoogleCalendarService {
           endTime: endTime,
           extendedProperties: extendedProps,
           location: appointment.location,
+          calendarId: calendarId,
         );
       } else {
         return await createEvent(
@@ -235,6 +275,7 @@ class GoogleCalendarService {
           endTime: endTime,
           extendedProperties: extendedProps,
           location: appointment.location,
+          calendarId: calendarId,
         );
       }
     } else {
@@ -243,7 +284,54 @@ class GoogleCalendarService {
       List<String>? recurrence;
       if (appointment.recurrenceRule != null &&
           appointment.recurrenceRule!.isNotEmpty) {
-        recurrence = [appointment.recurrenceRule!];
+        // Prüfen und korrigieren der Wiederholungsregel vor dem Export
+        String correctedRule = appointment.recurrenceRule!;
+
+        // Bei wöchentlichen Terminen muss BYDAY vorhanden sein
+        if (correctedRule.contains('FREQ=WEEKLY') &&
+            !correctedRule.contains('BYDAY=')) {
+          // Wochentag aus dem Startdatum ermitteln
+          String weekday;
+          switch (startTime.weekday) {
+            case DateTime.monday:
+              weekday = 'MO';
+              break;
+            case DateTime.tuesday:
+              weekday = 'TU';
+              break;
+            case DateTime.wednesday:
+              weekday = 'WE';
+              break;
+            case DateTime.thursday:
+              weekday = 'TH';
+              break;
+            case DateTime.friday:
+              weekday = 'FR';
+              break;
+            case DateTime.saturday:
+              weekday = 'SA';
+              break;
+            case DateTime.sunday:
+              weekday = 'SU';
+              break;
+            default:
+              weekday = 'MO'; // Standardwert
+          }
+
+          debugPrint(
+              '📅 Korrigiere wöchentliche Wiederholung: Füge BYDAY=$weekday hinzu');
+          // Vor dem UNTIL-Parameter oder am Ende einfügen
+          if (correctedRule.contains('UNTIL=')) {
+            correctedRule =
+                correctedRule.replaceFirst('UNTIL=', 'BYDAY=$weekday;UNTIL=');
+          } else {
+            correctedRule = '$correctedRule;BYDAY=$weekday';
+          }
+        }
+
+        recurrence = [correctedRule];
+        debugPrint(
+            '📅 Exportiere Termin mit Wiederholungsregel: $correctedRule');
       }
 
       if (appointment.externalIdGoogle != null) {
@@ -255,6 +343,7 @@ class GoogleCalendarService {
           endTime: endTime,
           location: appointment.location,
           recurrence: recurrence,
+          calendarId: calendarId,
         );
       } else {
         Event createdEvent = await createEvent(
@@ -264,6 +353,7 @@ class GoogleCalendarService {
           endTime: endTime,
           location: appointment.location,
           recurrence: recurrence,
+          calendarId: calendarId,
         );
         return createdEvent;
       }
@@ -274,9 +364,11 @@ class GoogleCalendarService {
   Future<void> deleteEventsNotInDates({
     required int appointmentId,
     required List<DateTime> validDates,
+    String calendarId = 'primary',
   }) async {
     String filter = 'muslimcalendarID=$appointmentId';
-    List<Event> events = await fetchEventsByExtendedProperty(filter);
+    List<Event> events =
+        await fetchEventsByExtendedProperty(filter, calendarId: calendarId);
     for (var event in events) {
       DateTime? eventStart = event.start?.dateTime?.toLocal();
       if (eventStart == null) continue;
@@ -285,7 +377,7 @@ class GoogleCalendarService {
           date.month == eventStart.month &&
           date.day == eventStart.day);
       if (!exists) {
-        await deleteEvent(event.id!);
+        await deleteEvent(event.id!, calendarId: calendarId);
       }
     }
   }

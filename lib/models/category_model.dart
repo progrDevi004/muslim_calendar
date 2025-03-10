@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 
 class CategoryModel {
-  final int id;
+  final int? id;
   final String name;
   final Color color;
   final bool isDefault;
@@ -33,12 +33,13 @@ class CategoryModel {
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{
       'name': name,
+      // ignore: deprecated_member_use
       'color': color.value,
       'isDefault': isDefault ? 1 : 0,
     };
 
     // Füge ID nur hinzu, wenn nicht 0 (für neue Einträge)
-    if (id != 0) {
+    if (id != null && id != 0) {
       map['id'] = id;
     }
 
@@ -46,16 +47,59 @@ class CategoryModel {
   }
 
   factory CategoryModel.fromMap(Map<String, dynamic> map) {
+    // Stelle sicher, dass wir einen gültigen Farbwert haben
+    int colorValue = 0xFF2196F3; // Standardfarbe (blau)
+
+    if (map['color'] != null) {
+      try {
+        // Für den Fall, dass der Wert als String gespeichert ist
+        if (map['color'] is String) {
+          colorValue = int.parse(map['color']);
+        } else {
+          colorValue = map['color'] as int;
+        }
+
+        // Stelle sicher, dass der Alpha-Kanal gesetzt ist
+        if ((colorValue & 0xFF000000) == 0) {
+          colorValue |= 0xFF000000;
+        }
+
+        // Debug-Ausgabe für Kategorie und Farbwert
+        print(
+            "Kategorie '${map['name']}' hat Farbwert: 0x${colorValue.toRadixString(16).toUpperCase()}");
+      } catch (e) {
+        print("Fehler beim Parsen der Farbe für '${map['name']}': $e");
+
+        // Spezifische Standardfarben je nach Kategoriename
+        if (map['name'] == 'Privat') {
+          colorValue = Colors.blue.value;
+        } else if (map['name'] == 'Islam') {
+          colorValue = Colors.red.value;
+        } else if (map['name'] == 'Geschäftlich') {
+          colorValue = Colors.green.value;
+        }
+      }
+    } else {
+      // Spezifische Standardfarben je nach Kategoriename wenn keine Farbe gesetzt ist
+      if (map['name'] == 'Privat') {
+        colorValue = Colors.blue.value;
+      } else if (map['name'] == 'Islam') {
+        colorValue = Colors.red.value;
+      } else if (map['name'] == 'Geschäftlich') {
+        colorValue = Colors.green.value;
+      }
+    }
+
     return CategoryModel(
-      id: map['id'] ?? 0,
+      id: map['id'],
       name: map['name'] ?? 'Unbenannt',
-      color: Color(map['color'] ?? Colors.grey.value),
+      color: Color(colorValue),
       isDefault: map['isDefault'] == 1,
     );
   }
 
   @override
   String toString() {
-    return 'CategoryModel(id: $id, name: $name, color: ${color.value}, isDefault: $isDefault)';
+    return 'CategoryModel(id: $id, name: $name, color: ${color.value.toRadixString(16)}, isDefault: $isDefault)';
   }
 }

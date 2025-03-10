@@ -56,7 +56,72 @@ class AppointmentRepository {
   Future<List<AppointmentModel>> getAllAppointments() async {
     final db = await dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query('appointments');
-    return maps.map((m) => AppointmentModel.fromMap(m)).toList();
+
+    debugPrint("Geladene Termine: ${maps.length}");
+
+    // Alle Kategorien laden
+    List<CategoryModel> allCategories = [];
+    try {
+      final List<Map<String, dynamic>> categoryMaps =
+          await db.query('categories');
+      allCategories =
+          categoryMaps.map((m) => CategoryModel.fromMap(m)).toList();
+
+      debugPrint("Geladene Kategorien für Termine: ${allCategories.length}");
+    } catch (e) {
+      debugPrint("Fehler beim Laden der Kategorien: $e");
+      // Standard-Kategorie als Fallback
+      allCategories = [
+        CategoryModel(
+          id: 1,
+          name: 'Privat',
+          color: const Color(0xFF2196F3),
+          isDefault: true,
+        ),
+      ];
+    }
+
+    // Standardkategorie definieren (für Termine ohne Kategorie)
+    final standardCategory = allCategories.firstWhere((cat) => cat.isDefault,
+        orElse: () => CategoryModel(
+              id: 1,
+              name: 'Privat',
+              color: const Color(0xFF2196F3),
+              isDefault: true,
+            ));
+
+    // Termine konvertieren und dabei Kategorien richtig zuordnen
+    final appointments = <AppointmentModel>[];
+
+    for (var map in maps) {
+      // Kategorie-ID aus dem Termin-Map extrahieren
+      final categoryId = map['categoryId'] as int?;
+
+      // Wenn keine Kategorie zugewiesen ist, Standard-Kategorie verwenden
+      if (categoryId == null) {
+        final appointment = AppointmentModel.fromMap({
+          ...map,
+          'categoryId': standardCategory.id,
+        });
+        appointments.add(appointment);
+        continue;
+      }
+
+      // Prüfen, ob die Kategorie existiert
+      final category = allCategories.firstWhere(
+        (cat) => cat.id == categoryId,
+        orElse: () => standardCategory,
+      );
+
+      // Termin mit korrekter Kategorie erstellen
+      final appointment = AppointmentModel.fromMap({
+        ...map,
+        'categoryId': category.id,
+      });
+      appointments.add(appointment);
+    }
+
+    return appointments;
   }
 
   Future<AppointmentModel?> getAppointmentByExternalIdGoogle(
@@ -119,7 +184,7 @@ class AppointmentRepository {
       // Wenn keine Kategorie gefunden wurde, Standard-Kategorie zurückgeben
       return CategoryModel(
         id: 1,
-        name: 'Standard',
+        name: 'Privat',
         color: const Color(0xFF2196F3),
         isDefault: true,
       );
@@ -127,7 +192,7 @@ class AppointmentRepository {
       // Falls ein Fehler auftritt, Standard-Kategorie zurückgeben
       return CategoryModel(
         id: 1,
-        name: 'Standard',
+        name: 'Privat',
         color: const Color(0xFF2196F3),
         isDefault: true,
       );

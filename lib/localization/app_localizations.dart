@@ -3180,26 +3180,6 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
-  String get notSignedIn {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return "Nicht angemeldet";
-      case AppLanguage.turkish:
-        return "Giriş yapılmadı";
-      case AppLanguage.arabic:
-        return "لم يتم تسجيل الدخول";
-      case AppLanguage.bosnian:
-        return "Niste prijavljeni";
-      case AppLanguage.spanish:
-        return "No ha iniciado sesión";
-      case AppLanguage.persian:
-        return "وارد نشده‌اید";
-      case AppLanguage.english:
-      default:
-        return "Not signed in";
-    }
-  }
-
   String get signInRequired {
     switch (_currentLanguage) {
       case AppLanguage.german:
@@ -3377,26 +3357,6 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.english:
       default:
         return "Importing appointments...";
-    }
-  }
-
-  String get exportingAppointments {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return "Termine werden exportiert...";
-      case AppLanguage.turkish:
-        return "Randevular dışa aktarılıyor...";
-      case AppLanguage.arabic:
-        return "جاري تصدير المواعيد...";
-      case AppLanguage.bosnian:
-        return "Izvoz termina u toku...";
-      case AppLanguage.spanish:
-        return "Exportando citas...";
-      case AppLanguage.persian:
-        return "در حال صادر کردن قرارها...";
-      case AppLanguage.english:
-      default:
-        return "Exporting appointments...";
     }
   }
 
@@ -3658,6 +3618,870 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.english:
       default:
         return "Available Categories:";
+    }
+  }
+
+  // ------------------------------
+  // Google Calendar Integration
+  // ------------------------------
+  String get selectCalendars {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Kalender auswählen';
+      case AppLanguage.turkish:
+        return 'Takvimleri Seç';
+      case AppLanguage.arabic:
+        return 'اختر التقويمات';
+      case AppLanguage.bosnian:
+        return 'Izaberi kalendare';
+      case AppLanguage.spanish:
+        return 'Seleccionar calendarios';
+      case AppLanguage.persian:
+        return 'تقویم‌ها را انتخاب کنید';
+      case AppLanguage.english:
+      default:
+        return 'Select Calendars';
+    }
+  }
+
+  String get noCalendarsFound {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Keine Kalender gefunden';
+      case AppLanguage.turkish:
+        return 'Takvim Bulunamadı';
+      case AppLanguage.arabic:
+        return 'لم يتم العثور على تقويمات';
+      case AppLanguage.bosnian:
+        return 'Nije pronađen nijedan kalendar';
+      case AppLanguage.spanish:
+        return 'No se encontraron calendarios';
+      case AppLanguage.persian:
+        return 'هیچ تقویمی پیدا نشد';
+      case AppLanguage.english:
+      default:
+        return 'No calendars found';
+    }
+  }
+
+  String get selectAtLeastOneCalendar {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Bitte wähle mindestens einen Kalender aus';
+      case AppLanguage.turkish:
+        return 'Lütfen en az bir takvim seçin';
+      case AppLanguage.arabic:
+        return 'الرجاء تحديد تقويم واحد على الأقل';
+      case AppLanguage.bosnian:
+        return 'Molimo odaberite barem jedan kalendar';
+      case AppLanguage.spanish:
+        return 'Por favor, seleccione al menos un calendario';
+      case AppLanguage.persian:
+        return 'لطفا حداقل یک تقویم را انتخاب کنید';
+      case AppLanguage.english:
+      default:
+        return 'Please select at least one calendar';
+    }
+  }
+
+  String get manageCalendars {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Kalender verwalten';
+      case AppLanguage.turkish:
+        return 'Takvimleri Yönet';
+      case AppLanguage.arabic:
+        return 'إدارة التقويمات';
+      case AppLanguage.bosnian:
+        return 'Upravljanje kalendarima';
+      case AppLanguage.spanish:
+        return 'Administrar calendarios';
+      case AppLanguage.persian:
+        return 'مدیریت تقویم‌ها';
+      case AppLanguage.english:
+      default:
+        return 'Manage Calendars';
+    }
+  }
+
+  String get loading {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Wird geladen...';
+      case AppLanguage.turkish:
+        return 'Yükleniyor...';
+      case AppLanguage.arabic:
+        return 'جاري التحميل...';
+      case AppLanguage.bosnian:
+        return 'Učitavanje...';
+      case AppLanguage.spanish:
+        return 'Cargando...';
+      case AppLanguage.persian:
+        return 'در حال بارگذاری...';
+      case AppLanguage.english:
+      default:
+        return 'Loading...';
+    }
+  }
+
+  String errorLoadingCalendars(String error) {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Fehler beim Laden der Kalender: $error';
+      case AppLanguage.turkish:
+        return 'Takvimler yüklenirken hata oluştu: $error';
+      case AppLanguage.arabic:
+        return 'خطأ في تحميل التقويمات: $error';
+      case AppLanguage.bosnian:
+        return 'Greška pri učitavanju kalendara: $error';
+      case AppLanguage.spanish:
+        return 'Error al cargar calendarios: $error';
+      case AppLanguage.persian:
+        return 'خطا در بارگیری تقویم‌ها: $error';
+      case AppLanguage.english:
+      default:
+        return 'Error loading calendars: $error';
+    }
+  }
+
+  String get connectWithGoogleCalendar {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Mit Google Kalender verbinden';
+      case AppLanguage.turkish:
+        return 'Google Takvim ile bağlan';
+      case AppLanguage.arabic:
+        return 'الاتصال بتقويم Google';
+      case AppLanguage.bosnian:
+        return 'Povežite se s Google kalendarom';
+      case AppLanguage.spanish:
+        return 'Conectar con Google Calendar';
+      case AppLanguage.persian:
+        return 'اتصال به تقویم گوگل';
+      case AppLanguage.english:
+      default:
+        return 'Connect with Google Calendar';
+    }
+  }
+
+  String get googleCalendarConnected {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Mit Google Kalender verbunden';
+      case AppLanguage.turkish:
+        return 'Google Takvim bağlı';
+      case AppLanguage.arabic:
+        return 'متصل بتقويم Google';
+      case AppLanguage.bosnian:
+        return 'Povezan s Google kalendarom';
+      case AppLanguage.spanish:
+        return 'Conectado a Google Calendar';
+      case AppLanguage.persian:
+        return 'به تقویم گوگل متصل شده است';
+      case AppLanguage.english:
+      default:
+        return 'Connected to Google Calendar';
+    }
+  }
+
+  String get googleCalendarDisconnected {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Nicht mit Google Kalender verbunden';
+      case AppLanguage.turkish:
+        return 'Google Takvim bağlı değil';
+      case AppLanguage.arabic:
+        return 'غير متصل بتقويم Google';
+      case AppLanguage.bosnian:
+        return 'Nije povezan s Google kalendarom';
+      case AppLanguage.spanish:
+        return 'No conectado a Google Calendar';
+      case AppLanguage.persian:
+        return 'به تقویم گوگل متصل نیست';
+      case AppLanguage.english:
+      default:
+        return 'Not connected to Google Calendar';
+    }
+  }
+
+  String get selectWhichCalendarsToSync {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Wählen Sie, welche Kalender synchronisiert werden sollen';
+      case AppLanguage.turkish:
+        return 'Hangi takvimlerin senkronize edileceğini seçin';
+      case AppLanguage.arabic:
+        return 'حدد التقويمات التي تريد مزامنتها';
+      case AppLanguage.bosnian:
+        return 'Odaberite koje kalendare želite sinkronizirati';
+      case AppLanguage.spanish:
+        return 'Seleccione qué calendarios sincronizar';
+      case AppLanguage.persian:
+        return 'انتخاب کنید کدام تقویم‌ها همگام‌سازی شوند';
+      case AppLanguage.english:
+      default:
+        return 'Select which calendars to sync';
+    }
+  }
+
+  String get syncNow {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Jetzt synchronisieren';
+      case AppLanguage.turkish:
+        return 'Şimdi senkronize et';
+      case AppLanguage.arabic:
+        return 'مزامنة الآن';
+      case AppLanguage.bosnian:
+        return 'Sinkroniziraj sada';
+      case AppLanguage.spanish:
+        return 'Sincronizar ahora';
+      case AppLanguage.persian:
+        return 'همگام‌سازی اکنون';
+      case AppLanguage.english:
+      default:
+        return 'Sync now';
+    }
+  }
+
+  String get syncGoogleCalendarNow {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Google Kalender jetzt synchronisieren';
+      case AppLanguage.turkish:
+        return 'Google Takvim\'i şimdi senkronize et';
+      case AppLanguage.arabic:
+        return 'مزامنة تقويم Google الآن';
+      case AppLanguage.bosnian:
+        return 'Sinkroniziraj Google kalendar sada';
+      case AppLanguage.spanish:
+        return 'Sincronizar Google Calendar ahora';
+      case AppLanguage.persian:
+        return 'همگام‌سازی تقویم گوگل اکنون';
+      case AppLanguage.english:
+      default:
+        return 'Sync Google Calendar now';
+    }
+  }
+
+  String get manageGoogleCalendarConnection {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Google Kalender-Verbindung verwalten';
+      case AppLanguage.turkish:
+        return 'Google Takvim bağlantısını yönet';
+      case AppLanguage.arabic:
+        return 'إدارة اتصال تقويم Google';
+      case AppLanguage.bosnian:
+        return 'Upravljanje vezom s Google kalendarom';
+      case AppLanguage.spanish:
+        return 'Gestionar conexión de Google Calendar';
+      case AppLanguage.persian:
+        return 'مدیریت اتصال تقویم گوگل';
+      case AppLanguage.english:
+      default:
+        return 'Manage Google Calendar connection';
+    }
+  }
+
+  String get connectWithOutlookCalendar {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Mit Outlook Kalender verbinden';
+      case AppLanguage.turkish:
+        return 'Outlook Takvim ile bağlan';
+      case AppLanguage.arabic:
+        return 'الاتصال بتقويم Outlook';
+      case AppLanguage.bosnian:
+        return 'Povežite se s Outlook kalendarom';
+      case AppLanguage.spanish:
+        return 'Conectar con Outlook Calendar';
+      case AppLanguage.persian:
+        return 'اتصال به تقویم اوت‌لوک';
+      case AppLanguage.english:
+      default:
+        return 'Connect with Outlook Calendar';
+    }
+  }
+
+  String get outlookCalendarDisconnected {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Nicht mit Outlook Kalender verbunden';
+      case AppLanguage.turkish:
+        return 'Outlook Takvim bağlı değil';
+      case AppLanguage.arabic:
+        return 'غير متصل بتقويم Outlook';
+      case AppLanguage.bosnian:
+        return 'Nije povezan s Outlook kalendarom';
+      case AppLanguage.spanish:
+        return 'No conectado a Outlook Calendar';
+      case AppLanguage.persian:
+        return 'به تقویم اوت‌لوک متصل نیست';
+      case AppLanguage.english:
+      default:
+        return 'Not connected to Outlook Calendar';
+    }
+  }
+
+  String get manageOutlookCalendarConnection {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Outlook Kalender-Verbindung verwalten';
+      case AppLanguage.turkish:
+        return 'Outlook Takvim bağlantısını yönet';
+      case AppLanguage.arabic:
+        return 'إدارة اتصال تقويم Outlook';
+      case AppLanguage.bosnian:
+        return 'Upravljanje vezom s Outlook kalendarom';
+      case AppLanguage.spanish:
+        return 'Gestionar conexión de Outlook Calendar';
+      case AppLanguage.persian:
+        return 'مدیریت اتصال تقویم اوت‌لوک';
+      case AppLanguage.english:
+      default:
+        return 'Manage Outlook Calendar connection';
+    }
+  }
+
+  String get syncFrequencyDescription {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Wie oft soll die Synchronisierung automatisch durchgeführt werden?';
+      case AppLanguage.turkish:
+        return 'Senkronizasyon ne sıklıkla otomatik olarak yapılmalıdır?';
+      case AppLanguage.arabic:
+        return 'كم مرة يجب أن تتم المزامنة تلقائيًا؟';
+      case AppLanguage.bosnian:
+        return 'Koliko često treba automatski provesti sinkronizaciju?';
+      case AppLanguage.spanish:
+        return '¿Con qué frecuencia debe realizarse la sincronización automáticamente?';
+      case AppLanguage.persian:
+        return 'همگام‌سازی چند وقت یکبار باید به صورت خودکار انجام شود؟';
+      case AppLanguage.english:
+      default:
+        return 'How often should synchronization be performed automatically?';
+    }
+  }
+
+  // Import Optionen
+  String get importCalendarTitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Importoptionen";
+      case AppLanguage.turkish:
+        return "İçe aktarma seçenekleri";
+      case AppLanguage.arabic:
+        return "خيارات الاستيراد";
+      case AppLanguage.bosnian:
+        return "Opcije uvoza";
+      case AppLanguage.spanish:
+        return "Opciones de importación";
+      case AppLanguage.persian:
+        return "گزینه های وارد کردن";
+      case AppLanguage.english:
+      default:
+        return "Import Options";
+    }
+  }
+
+  String get importCalendarDescription {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Wählen Sie, wie Termine aus Google Kalender importiert werden sollen:";
+      case AppLanguage.turkish:
+        return "Google Takvim'den etkinliklerin nasıl içe aktarılacağını seçin:";
+      case AppLanguage.arabic:
+        return "اختر كيفية استيراد الأحداث من تقويم Google:";
+      case AppLanguage.bosnian:
+        return "Odaberite kako uvoziti događaje iz Google kalendara:";
+      case AppLanguage.spanish:
+        return "Elija cómo importar eventos desde Google Calendar:";
+      case AppLanguage.persian:
+        return "نحوه وارد کردن رویدادها از تقویم Google را انتخاب کنید:";
+      case AppLanguage.english:
+      default:
+        return "Choose how to import events from Google Calendar:";
+    }
+  }
+
+  String get importOptionDefault {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Standard-Kategorie";
+      case AppLanguage.turkish:
+        return "Varsayılan kategori";
+      case AppLanguage.arabic:
+        return "الفئة الافتراضية";
+      case AppLanguage.bosnian:
+        return "Zadana kategorija";
+      case AppLanguage.spanish:
+        return "Categoría predeterminada";
+      case AppLanguage.persian:
+        return "دسته پیش فرض";
+      case AppLanguage.english:
+      default:
+        return "Default Category";
+    }
+  }
+
+  String get importOptionDefaultSubtitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Alle Termine werden einer Standard-Kategorie zugeordnet";
+      case AppLanguage.turkish:
+        return "Tüm etkinlikler varsayılan bir kategoriye atanacaktır";
+      case AppLanguage.arabic:
+        return "سيتم تعيين جميع الأحداث إلى فئة افتراضية";
+      case AppLanguage.bosnian:
+        return "Svi događaji bit će dodijeljeni zadanoj kategoriji";
+      case AppLanguage.spanish:
+        return "Todos los eventos se asignarán a una categoría predeterminada";
+      case AppLanguage.persian:
+        return "همه رویدادها به یک دسته پیش‌فرض اختصاص داده می‌شوند";
+      case AppLanguage.english:
+      default:
+        return "All events will be assigned to a default category";
+    }
+  }
+
+  String get importOptionColorCategories {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Google Farben als Kategorien";
+      case AppLanguage.turkish:
+        return "Google Renklerini kategori olarak kullan";
+      case AppLanguage.arabic:
+        return "استخدام ألوان Google كفئات";
+      case AppLanguage.bosnian:
+        return "Koristite Google boje kao kategorije";
+      case AppLanguage.spanish:
+        return "Usar colores de Google como categorías";
+      case AppLanguage.persian:
+        return "از رنگ‌های Google به عنوان دسته‌بندی استفاده کنید";
+      case AppLanguage.english:
+      default:
+        return "Use Google Colors as Categories";
+    }
+  }
+
+  String get importOptionColorCategoriesSubtitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Termine werden basierend auf ihrer Google Kalender-Farbe kategorisiert";
+      case AppLanguage.turkish:
+        return "Etkinlikler, Google Takvim renklerine göre kategorilere ayrılacaktır";
+      case AppLanguage.arabic:
+        return "سيتم تصنيف الأحداث بناءً على لون تقويم Google الخاص بها";
+      case AppLanguage.bosnian:
+        return "Događaji će biti kategorizirani na osnovu boje Google kalendara";
+      case AppLanguage.spanish:
+        return "Los eventos se categorizarán según el color de su Google Calendar";
+      case AppLanguage.persian:
+        return "رویدادها بر اساس رنگ تقویم Google خود دسته‌بندی می‌شوند";
+      case AppLanguage.english:
+      default:
+        return "Events will be categorized based on their Google Calendar color";
+    }
+  }
+
+  String get importOptionNamedCategories {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Kategorien nach Titeln";
+      case AppLanguage.turkish:
+        return "Başlığa göre kategoriler";
+      case AppLanguage.arabic:
+        return "فئات حسب العنوان";
+      case AppLanguage.bosnian:
+        return "Kategorije po naslovu";
+      case AppLanguage.spanish:
+        return "Categorías por título";
+      case AppLanguage.persian:
+        return "دسته‌بندی بر اساس عنوان";
+      case AppLanguage.english:
+      default:
+        return "Categories by Title";
+    }
+  }
+
+  String get importOptionNamedCategoriesSubtitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Erstellt automatisch Kategorien basierend auf dem Titel der Termine";
+      case AppLanguage.turkish:
+        return "Etkinlik başlıklarına göre otomatik olarak kategoriler oluşturur";
+      case AppLanguage.arabic:
+        return "ينشئ تلقائيًا فئات بناءً على عناوين الأحداث";
+      case AppLanguage.bosnian:
+        return "Automatski stvara kategorije na osnovu naslova događaja";
+      case AppLanguage.spanish:
+        return "Crea automáticamente categorías basadas en los títulos de los eventos";
+      case AppLanguage.persian:
+        return "به طور خودکار بر اساس عناوین رویدادها دسته‌بندی ایجاد می‌کند";
+      case AppLanguage.english:
+      default:
+        return "Automatically creates categories based on event titles";
+    }
+  }
+
+  String get importButtonLabel {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Importieren";
+      case AppLanguage.turkish:
+        return "İçe Aktar";
+      case AppLanguage.arabic:
+        return "استيراد";
+      case AppLanguage.bosnian:
+        return "Uvoz";
+      case AppLanguage.spanish:
+        return "Importar";
+      case AppLanguage.persian:
+        return "وارد کردن";
+      case AppLanguage.english:
+      default:
+        return "Import";
+    }
+  }
+
+  String get importCalendarConfirmation {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Diese Funktion importiert nur Termine von Google Calendar, ohne die lokalen Termine zu Google zu exportieren. Möchten Sie fortfahren?";
+      case AppLanguage.turkish:
+        return "Bu işlev, yalnızca yerel etkinlikleri Google'a dışa aktarmadan Google Takvim'den etkinlikleri içe aktarır. Devam etmek istiyor musunuz?";
+      case AppLanguage.arabic:
+        return "تقوم هذه الوظيفة باستيراد الأحداث من Google Calendar فقط، دون تصدير الأحداث المحلية إلى Google. هل تريد المتابعة؟";
+      case AppLanguage.bosnian:
+        return "Ova funkcija uvozi samo događaje iz Google kalendara, bez izvoza lokalnih događaja u Google. Želite li nastaviti?";
+      case AppLanguage.spanish:
+        return "Esta función solo importa eventos desde Google Calendar, sin exportar eventos locales a Google. ¿Desea continuar?";
+      case AppLanguage.persian:
+        return "این عملکرد فقط رویدادها را از تقویم Google وارد می‌کند، بدون اینکه رویدادهای محلی را به Google صادر کند. آیا می‌خواهید ادامه دهید؟";
+      case AppLanguage.english:
+      default:
+        return "This function only imports events from Google Calendar, without exporting local events to Google. Do you want to continue?";
+    }
+  }
+
+  String get importInProgress {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Import wird durchgeführt...";
+      case AppLanguage.turkish:
+        return "İçe aktarma devam ediyor...";
+      case AppLanguage.arabic:
+        return "جاري الاستيراد...";
+      case AppLanguage.bosnian:
+        return "Uvoz u toku...";
+      case AppLanguage.spanish:
+        return "Importación en progreso...";
+      case AppLanguage.persian:
+        return "وارد کردن در حال انجام...";
+      case AppLanguage.english:
+      default:
+        return "Import in progress...";
+    }
+  }
+
+  String get exportingAppointments {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Termine werden exportiert...";
+      case AppLanguage.turkish:
+        return "Randevular dışa aktarılıyor...";
+      case AppLanguage.arabic:
+        return "جاري تصدير المواعيد...";
+      case AppLanguage.bosnian:
+        return "Izvoz termina u toku...";
+      case AppLanguage.spanish:
+        return "Exportando citas...";
+      case AppLanguage.persian:
+        return "در حال صادر کردن قرارها...";
+      case AppLanguage.english:
+      default:
+        return "Exporting appointments...";
+    }
+  }
+
+  String get importCompleted {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Import abgeschlossen";
+      case AppLanguage.turkish:
+        return "İçe aktarma tamamlandı";
+      case AppLanguage.arabic:
+        return "اكتمل الاستيراد";
+      case AppLanguage.bosnian:
+        return "Uvoz završen";
+      case AppLanguage.spanish:
+        return "Importación completada";
+      case AppLanguage.persian:
+        return "وارد کردن کامل شد";
+      case AppLanguage.english:
+      default:
+        return "Import completed";
+    }
+  }
+
+  String get resetInProgress {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Zurücksetzen wird durchgeführt...";
+      case AppLanguage.turkish:
+        return "Sıfırlama devam ediyor...";
+      case AppLanguage.arabic:
+        return "جاري إعادة التعيين...";
+      case AppLanguage.bosnian:
+        return "Resetovanje u toku...";
+      case AppLanguage.spanish:
+        return "Restablecimiento en progreso...";
+      case AppLanguage.persian:
+        return "بازنشانی در حال انجام...";
+      case AppLanguage.english:
+      default:
+        return "Reset in progress...";
+    }
+  }
+
+  String get resetCompleted {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Zurücksetzen abgeschlossen";
+      case AppLanguage.turkish:
+        return "Sıfırlama tamamlandı";
+      case AppLanguage.arabic:
+        return "اكتملت إعادة التعيين";
+      case AppLanguage.bosnian:
+        return "Resetovanje završeno";
+      case AppLanguage.spanish:
+        return "Restablecimiento completado";
+      case AppLanguage.persian:
+        return "بازنشانی کامل شد";
+      case AppLanguage.english:
+      default:
+        return "Reset completed";
+    }
+  }
+
+  String get exportCalendarTitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Termine exportieren";
+      case AppLanguage.turkish:
+        return "Etkinlikleri dışa aktar";
+      case AppLanguage.arabic:
+        return "تصدير الأحداث";
+      case AppLanguage.bosnian:
+        return "Izvoz događaja";
+      case AppLanguage.spanish:
+        return "Exportar eventos";
+      case AppLanguage.persian:
+        return "صدور رویدادها";
+      case AppLanguage.english:
+      default:
+        return "Export Events";
+    }
+  }
+
+  String get exportCalendarConfirmation {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Diese Funktion exportiert nur Termine zu Google Calendar, ohne neue Termine von Google zu importieren. Möchten Sie fortfahren?";
+      case AppLanguage.turkish:
+        return "Bu işlev, Google'dan yeni etkinlikler içe aktarmadan yalnızca etkinlikleri Google Takvim'e aktarır. Devam etmek istiyor musunuz?";
+      case AppLanguage.arabic:
+        return "تقوم هذه الوظيفة بتصدير الأحداث إلى تقويم Google فقط، دون استيراد أحداث جديدة من Google. هل تريد المتابعة؟";
+      case AppLanguage.bosnian:
+        return "Ova funkcija samo izvozi događaje u Google kalendar, bez uvoza novih događaja iz Google-a. Želite li nastaviti?";
+      case AppLanguage.spanish:
+        return "Esta función solo exporta eventos a Google Calendar, sin importar nuevos eventos de Google. ¿Desea continuar?";
+      case AppLanguage.persian:
+        return "این عملکرد فقط رویدادها را به تقویم Google صادر می‌کند، بدون وارد کردن رویدادهای جدید از Google. آیا می‌خواهید ادامه دهید؟";
+      case AppLanguage.english:
+      default:
+        return "This function only exports events to Google Calendar, without importing new events from Google. Do you want to continue?";
+    }
+  }
+
+  String get exportButtonLabel {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Exportieren";
+      case AppLanguage.turkish:
+        return "Dışa Aktar";
+      case AppLanguage.arabic:
+        return "تصدير";
+      case AppLanguage.bosnian:
+        return "Izvoz";
+      case AppLanguage.spanish:
+        return "Exportar";
+      case AppLanguage.persian:
+        return "صادر کردن";
+      case AppLanguage.english:
+      default:
+        return "Export";
+    }
+  }
+
+  String get exportInProgress {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Export wird durchgeführt...";
+      case AppLanguage.turkish:
+        return "Dışa aktarma devam ediyor...";
+      case AppLanguage.arabic:
+        return "جاري التصدير...";
+      case AppLanguage.bosnian:
+        return "Izvoz u toku...";
+      case AppLanguage.spanish:
+        return "Exportación en progreso...";
+      case AppLanguage.persian:
+        return "صادر کردن در حال انجام...";
+      case AppLanguage.english:
+      default:
+        return "Export in progress...";
+    }
+  }
+
+  String get exportCompleted {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Export abgeschlossen";
+      case AppLanguage.turkish:
+        return "Dışa aktarma tamamlandı";
+      case AppLanguage.arabic:
+        return "اكتمل التصدير";
+      case AppLanguage.bosnian:
+        return "Izvoz završen";
+      case AppLanguage.spanish:
+        return "Exportación completada";
+      case AppLanguage.persian:
+        return "صادر کردن کامل شد";
+      case AppLanguage.english:
+      default:
+        return "Export completed";
+    }
+  }
+
+  String get notSignedIn {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Nicht angemeldet";
+      case AppLanguage.turkish:
+        return "Giriş yapılmadı";
+      case AppLanguage.arabic:
+        return "لم يتم تسجيل الدخول";
+      case AppLanguage.bosnian:
+        return "Niste prijavljeni";
+      case AppLanguage.spanish:
+        return "No ha iniciado sesión";
+      case AppLanguage.persian:
+        return "وارد نشده‌اید";
+      case AppLanguage.english:
+      default:
+        return "Not signed in";
+    }
+  }
+
+  String get fixInvalidRecurrencesTitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Fehlerhafte Termine bereinigen";
+      case AppLanguage.turkish:
+        return "Hatalı etkinlikleri düzelt";
+      case AppLanguage.arabic:
+        return "إصلاح الأحداث غير الصالحة";
+      case AppLanguage.bosnian:
+        return "Popravite nevažeće događaje";
+      case AppLanguage.spanish:
+        return "Corregir eventos inválidos";
+      case AppLanguage.persian:
+        return "رویدادهای نامعتبر را اصلاح کنید";
+      case AppLanguage.english:
+      default:
+        return "Fix invalid events";
+    }
+  }
+
+  String get fixInvalidRecurrencesConfirmation {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Diese Funktion korrigiert ungültige Wiederholungsregeln in Ihren Terminen. Dies kann helfen, wenn Termine nicht korrekt angezeigt werden. Möchten Sie fortfahren?";
+      case AppLanguage.turkish:
+        return "Bu işlev, etkinliklerinizdeki geçersiz yineleme kurallarını düzeltir. Etkinlikler doğru görüntülenmiyorsa yardımcı olabilir. Devam etmek istiyor musunuz?";
+      case AppLanguage.arabic:
+        return "تقوم هذه الوظيفة بتصحيح قواعد التكرار غير الصالحة في أحداثك. يمكن أن يساعد ذلك إذا لم يتم عرض الأحداث بشكل صحيح. هل تريد المتابعة؟";
+      case AppLanguage.bosnian:
+        return "Ova funkcija ispravlja nevažeća pravila ponavljanja u vašim događajima. To može pomoći ako se događaji ne prikazuju ispravno. Želite li nastaviti?";
+      case AppLanguage.spanish:
+        return "Esta función corrige las reglas de repetición no válidas en sus eventos. Esto puede ayudar si los eventos no se muestran correctamente. ¿Desea continuar?";
+      case AppLanguage.persian:
+        return "این عملکرد قوانین تکرار نامعتبر در رویدادهای شما را اصلاح می‌کند. اگر رویدادها به درستی نمایش داده نمی‌شوند، این می‌تواند کمک کند. آیا می‌خواهید ادامه دهید؟";
+      case AppLanguage.english:
+      default:
+        return "This function corrects invalid recurrence rules in your events. This can help if events are not displaying correctly. Do you want to continue?";
+    }
+  }
+
+  String get fixButtonLabel {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Bereinigen";
+      case AppLanguage.turkish:
+        return "Düzelt";
+      case AppLanguage.arabic:
+        return "إصلاح";
+      case AppLanguage.bosnian:
+        return "Popravi";
+      case AppLanguage.spanish:
+        return "Corregir";
+      case AppLanguage.persian:
+        return "اصلاح";
+      case AppLanguage.english:
+      default:
+        return "Fix";
+    }
+  }
+
+  String get fixInProgress {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Bereinigung wird durchgeführt...";
+      case AppLanguage.turkish:
+        return "Düzeltme devam ediyor...";
+      case AppLanguage.arabic:
+        return "جاري الإصلاح...";
+      case AppLanguage.bosnian:
+        return "Popravak u toku...";
+      case AppLanguage.spanish:
+        return "Corrección en progreso...";
+      case AppLanguage.persian:
+        return "اصلاح در حال انجام...";
+      case AppLanguage.english:
+      default:
+        return "Fixing in progress...";
+    }
+  }
+
+  String get fixCompleted {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Bereinigung abgeschlossen";
+      case AppLanguage.turkish:
+        return "Düzeltme tamamlandı";
+      case AppLanguage.arabic:
+        return "اكتمل الإصلاح";
+      case AppLanguage.bosnian:
+        return "Popravak završen";
+      case AppLanguage.spanish:
+        return "Corrección completada";
+      case AppLanguage.persian:
+        return "اصلاح کامل شد";
+      case AppLanguage.english:
+      default:
+        return "Fixing completed";
     }
   }
 }

@@ -31,6 +31,60 @@ import 'package:muslim_calendar/ui/pages/qibla_compass_page.dart';
 // Localization
 import 'package:muslim_calendar/localization/app_localizations.dart';
 
+// Erweiterung für AppointmentModel - copyWith Methode hinzufügen
+extension AppointmentModelExtension on AppointmentModel {
+  AppointmentModel copyWith({
+    int? id,
+    String? subject,
+    String? notes,
+    bool? isAllDay,
+    bool? isRelatedToPrayerTimes,
+    PrayerTime? prayerTime,
+    TimeRelation? timeRelation,
+    int? minutesBeforeAfter,
+    Duration? duration,
+    String? location,
+    String? recurrenceRule,
+    List<DateTime>? recurrenceExceptionDates,
+    Color? color,
+    DateTime? startTime,
+    DateTime? endTime,
+    int? categoryId,
+    int? reminderMinutesBefore,
+    String? externalIdGoogle,
+    String? externalIdOutlook,
+    String? externalIdApple,
+    DateTime? lastSyncedAt,
+  }) {
+    return AppointmentModel(
+      id: id ?? this.id,
+      subject: subject ?? this.subject,
+      notes: notes ?? this.notes,
+      isAllDay: isAllDay ?? this.isAllDay,
+      isRelatedToPrayerTimes:
+          isRelatedToPrayerTimes ?? this.isRelatedToPrayerTimes,
+      prayerTime: prayerTime ?? this.prayerTime,
+      timeRelation: timeRelation ?? this.timeRelation,
+      minutesBeforeAfter: minutesBeforeAfter ?? this.minutesBeforeAfter,
+      duration: duration ?? this.duration,
+      location: location ?? this.location,
+      recurrenceRule: recurrenceRule ?? this.recurrenceRule,
+      recurrenceExceptionDates:
+          recurrenceExceptionDates ?? this.recurrenceExceptionDates,
+      color: color ?? this.color,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      categoryId: categoryId ?? this.categoryId,
+      reminderMinutesBefore:
+          reminderMinutesBefore ?? this.reminderMinutesBefore,
+      externalIdGoogle: externalIdGoogle ?? this.externalIdGoogle,
+      externalIdOutlook: externalIdOutlook ?? this.externalIdOutlook,
+      externalIdApple: externalIdApple ?? this.externalIdApple,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+    );
+  }
+}
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -93,6 +147,14 @@ class HomePageState extends State<HomePage> {
     _fetchYearlyPrayerTimesIfNeeded().then((_) {
       loadAllAppointments();
     });
+  }
+
+  /// Hilfsmethode zum korrekten Addieren/Subtrahieren von Monaten mit Jahresübergang
+  DateTime addMonths(DateTime date, int months) {
+    var newMonth = date.month + months;
+    var newYear = date.year + (newMonth - 1) ~/ 12;
+    newMonth = ((newMonth - 1) % 12) + 1;
+    return DateTime(newYear, newMonth, date.day);
   }
 
   /// Lädt Zeitformat- und Gebetszeiteinstellungen aus SharedPreferences
@@ -166,18 +228,145 @@ class HomePageState extends State<HomePage> {
     try {
       final models = await _appointmentRepo.getAllAppointments();
       final now = DateTime.now();
-      // Standard: 2 Monate zurück, 3 Monate nach vorn
-      final startRange = DateTime(now.year, now.month - 2, 1);
-      final endRange = DateTime(now.year, now.month + 3, 1);
+
+      // Korrigierte Datumsberechnung mit addMonths
+      final startRange = addMonths(DateTime(now.year, now.month, 1), -2);
+      final endRange = addMonths(DateTime(now.year, now.month, 1), 3);
+
+      // Debug-Ausgabe für den Datumsbereich
+      debugPrint("📅 Lade Termine im Bereich: $startRange bis $endRange");
+
       final List<Appointment> allAppointments = [];
 
-      // 1) Normale Appointments
+      // Debug-Ausgabe für verfügbare Kategorien und Termine
+      debugPrint("🏷️ Verfügbare Kategorien: $_selectedCategoryIds");
       for (var m in models) {
-        if (m.categoryId == null ||
-            _selectedCategoryIds.contains(m.categoryId)) {
-          final apps =
-              await _adapter.getAppointmentsForRange(m, startRange, endRange);
-          allAppointments.addAll(apps);
+        debugPrint(
+            "📄 Termin ${m.id}: ${m.subject}, Kategorie: ${m.categoryId}, Datum: ${m.startTime}");
+      }
+
+      // 1) Normale Appointments
+      try {
+        for (var m in models) {
+          if (m.categoryId == null ||
+              _selectedCategoryIds.contains(m.categoryId)) {
+            debugPrint("✅ Termin wird angezeigt: ${m.id} - ${m.subject}");
+            try {
+              final apps = await _adapter.getAppointmentsForRange(
+                  m, startRange, endRange);
+              allAppointments.addAll(apps);
+            } catch (e) {
+              debugPrint(
+                  "⚠️ Fehler beim Laden des Termins ${m.subject} (ID: ${m.id}): $e");
+
+              // Wenn der Fehler den String "Invalid weekly recurrence rule" enthält
+              if (e.toString().contains("Invalid weekly recurrence rule") &&
+                  m.recurrenceRule != null) {
+                debugPrint(
+                    "🔍 Gefunden: Ungültige wöchentliche Wiederholungsregel in Termin ${m.id}: ${m.recurrenceRule}");
+
+                // Überprüfen, ob die Regel BYDAY enthält
+                if (!m.recurrenceRule!.contains("BYDAY=")) {
+                  // Automatisch BYDAY-Parameter hinzufügen basierend auf dem Startdatum
+                  String weekday = 'MO'; // Standardwert
+                  if (m.startTime != null) {
+                    switch (m.startTime!.weekday) {
+                      case DateTime.monday:
+                        weekday = 'MO';
+                        break;
+                      case DateTime.tuesday:
+                        weekday = 'TU';
+                        break;
+                      case DateTime.wednesday:
+                        weekday = 'WE';
+                        break;
+                      case DateTime.thursday:
+                        weekday = 'TH';
+                        break;
+                      case DateTime.friday:
+                        weekday = 'FR';
+                        break;
+                      case DateTime.saturday:
+                        weekday = 'SA';
+                        break;
+                      case DateTime.sunday:
+                        weekday = 'SU';
+                        break;
+                    }
+                  }
+
+                  String correctedRule = m.recurrenceRule!;
+                  if (correctedRule.contains('UNTIL=')) {
+                    correctedRule = correctedRule.replaceFirst(
+                        'UNTIL=', 'BYDAY=$weekday;UNTIL=');
+                  } else {
+                    correctedRule = '$correctedRule;BYDAY=$weekday';
+                  }
+
+                  debugPrint(
+                      "🛠️ Korrigiere Termin ${m.id} mit neuer Regel: $correctedRule");
+
+                  // Korrigierte Regel speichern
+                  AppointmentModel updatedAppointment =
+                      m.copyWith(recurrenceRule: correctedRule);
+
+                  await _appointmentRepo.updateAppointment(updatedAppointment);
+                }
+              }
+            }
+          } else {
+            debugPrint(
+                "⛔ Termin wird GEFILTERT: ${m.id} - ${m.subject} - (Kat: ${m.categoryId})");
+          }
+        }
+      } catch (error) {
+        debugPrint("⚠️ Fehler beim Laden der Termine: $error");
+
+        // Zeige Dialog mit Optionen zur Fehlerbehebung an
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              title: const Text("Fehler beim Laden der Termine"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Es gab ein Problem beim Laden Ihrer Termine. Dies kann durch ungültige Wiederholungsregeln verursacht werden.",
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "Fehlermeldung:",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    error.toString(),
+                    style:
+                        const TextStyle(fontFamily: "monospace", fontSize: 12),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text("Schließen"),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsPage(),
+                      ),
+                    );
+                  },
+                  child: const Text("Zu den Einstellungen"),
+                ),
+              ],
+            ),
+          );
         }
       }
 
@@ -542,15 +731,75 @@ class HomePageState extends State<HomePage> {
                         title: Row(
                           children: [
                             Container(
-                              width: 12,
-                              height: 12,
+                              width: 16,
+                              height: 16,
                               margin: const EdgeInsets.only(right: 8),
                               decoration: BoxDecoration(
                                 color: cat.color,
                                 shape: BoxShape.circle,
                               ),
                             ),
-                            Text(cat.name),
+                            Expanded(child: Text(cat.name)),
+                            if (!cat.isDefault)
+                              IconButton(
+                                icon: const Icon(Icons.delete, size: 20),
+                                onPressed: () async {
+                                  // Bestätigungsdialog anzeigen
+                                  final confirmDelete = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: Text('Kategorie löschen'),
+                                      content: Text(
+                                          'Möchten Sie die Kategorie "${cat.name}" wirklich löschen?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(false),
+                                          child: Text('Abbrechen'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(true),
+                                          child: Text('Löschen',
+                                              style:
+                                                  TextStyle(color: Colors.red)),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (confirmDelete == true) {
+                                    try {
+                                      await _categoryRepo
+                                          .deleteCategory(cat.id!);
+
+                                      // UI aktualisieren
+                                      await _loadAllCategories();
+                                      setStateDialog(
+                                          () {}); // Dialog aktualisieren
+
+                                      // Snackbar anzeigen
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                              'Kategorie "${cat.name}" gelöscht'),
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content:
+                                              Text('Fehler: ${e.toString()}'),
+                                          duration: const Duration(seconds: 3),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
                           ],
                         ),
                         value: _selectedCategoryIds.contains(cat.id),
@@ -601,52 +850,130 @@ class HomePageState extends State<HomePage> {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
     final TextEditingController nameController = TextEditingController();
     Color selectedColor = Colors.blue;
+
+    // Vorschlag verschiedener Farben zur Auswahl
+    final List<Color> colorOptions = [
+      Colors.red,
+      Colors.pink,
+      Colors.purple,
+      Colors.deepPurple,
+      Colors.indigo,
+      Colors.blue,
+      Colors.lightBlue,
+      Colors.cyan,
+      Colors.teal,
+      Colors.green,
+      Colors.lightGreen,
+      Colors.lime,
+      Colors.yellow,
+      Colors.amber,
+      Colors.orange,
+      Colors.deepOrange,
+      Colors.brown,
+      Colors.grey,
+      Colors.blueGrey,
+    ];
+
     showDialog(
       context: context,
       builder: (ctx) {
-        return AlertDialog(
-          title: Text(loc.addNewCategory),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: loc.titleLabel,
+        return StatefulBuilder(builder: (context, setState) {
+          return AlertDialog(
+            title: Text(loc.addNewCategory),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: loc.titleLabel,
+                  ),
                 ),
+                const SizedBox(height: 20),
+                Text('Farbe auswählen:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                Container(
+                  height: 200,
+                  width: double.maxFinite,
+                  child: GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 5,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                    ),
+                    itemCount: colorOptions.length,
+                    itemBuilder: (context, index) {
+                      final color = colorOptions[index];
+                      final isSelected = color.value == selectedColor.value;
+
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedColor = color;
+                          });
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.transparent,
+                              width: 3,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                        color: Colors.black.withOpacity(0.3),
+                                        blurRadius: 4)
+                                  ]
+                                : null,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text(loc.cancel),
               ),
-              const SizedBox(height: 12),
-              BlockPicker(
-                pickerColor: selectedColor,
-                onColorChanged: (color) {
-                  selectedColor = color;
+              FilledButton(
+                onPressed: () async {
+                  final name = nameController.text.trim();
+                  if (name.isNotEmpty) {
+                    debugPrint(
+                        "Erstelle Kategorie: $name mit Farbe: $selectedColor");
+
+                    final newCategory = CategoryModel.newCategory(
+                      name: name,
+                      color: selectedColor,
+                    );
+                    await _categoryRepo.insertCategory(newCategory);
+                    await _loadAllCategories();
+                    Navigator.of(ctx).pop();
+                    loadAllAppointments();
+
+                    // Zeige Bestätigung an
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Kategorie "$name" erstellt'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
                 },
+                child: Text(loc.save),
               ),
             ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(loc.cancel),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final name = nameController.text.trim();
-                if (name.isNotEmpty) {
-                  final newCategory = CategoryModel.newCategory(
-                    name: name,
-                    color: selectedColor,
-                  );
-                  await _categoryRepo.insertCategory(newCategory);
-                  await _loadAllCategories();
-                  Navigator.of(ctx).pop();
-                  loadAllAppointments();
-                }
-              },
-              child: Text(loc.save),
-            ),
-          ],
-        );
+          );
+        });
       },
     );
   }

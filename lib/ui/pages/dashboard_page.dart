@@ -96,7 +96,7 @@ class DashboardPageState extends State<DashboardPage> {
     // 2) Gebetszeiten
     await _fetchPrayerTimesForToday(locationString);
     // 3) Nur heutige Termine
-    await _loadTodaysAppointments();
+    await _loadTodayAppointments();
 
     setState(() {});
   }
@@ -193,10 +193,17 @@ class DashboardPageState extends State<DashboardPage> {
   }
 
   /// **Nur** die Termine des heutigen Tages laden
-  Future<void> _loadTodaysAppointments() async {
-    final now = DateTime.now();
-    final loc = Provider.of<AppLocalizations>(context, listen: false);
+  Future<void> _loadTodayAppointments() async {
+    setState(() {
+      _isAppointmentsLoading = true;
+    });
 
+    // Locale für Datumsformatierung
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    await initializeDateFormatting(
+        _mapAppLanguageToCode(loc.currentLanguage), null);
+
+    final now = DateTime.now();
     // Start und Ende des heutigen Tages (bis 23:59)
     final startOfDay = DateTime(now.year, now.month, now.day, 0, 0);
     final endOfDay = DateTime(now.year, now.month, now.day, 23, 59);
@@ -204,8 +211,21 @@ class DashboardPageState extends State<DashboardPage> {
     final all = await _appointmentRepo.getAllAppointments();
     final tasks = <_DashboardTask>[];
 
+    // Set zum Nachverfolgen bereits hinzugefügter Termine, um Duplikate zu vermeiden
+    final Set<int?> addedAppointmentIds = {};
+
     // 1) Normale Termine
     for (var ap in all) {
+      // Überspringe Termine ohne ID oder mit leeren Titeln
+      if (ap.id == null || ap.subject.trim().isEmpty) {
+        continue;
+      }
+
+      // Überspringe Termine, die bereits hinzugefügt wurden
+      if (addedAppointmentIds.contains(ap.id)) {
+        continue;
+      }
+
       // Berechnete Start-/Endzeit (für Gebetszeitabhängige Termine)
       final calculatedStart = await _prayerTimeService
           .getCalculatedStartTime(ap, DateTime.now(), useAppointmentDate: true);
@@ -237,6 +257,9 @@ class DashboardPageState extends State<DashboardPage> {
             isAllDay: ap.isAllDay, // WICHTIG
           ),
         );
+
+        // Termin als hinzugefügt markieren
+        addedAppointmentIds.add(ap.id);
       }
     }
 

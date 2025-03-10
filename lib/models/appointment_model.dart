@@ -26,7 +26,7 @@ class AppointmentModel {
   final int? reminderMinutesBefore;
 
   // >>> NEU: Für Synchronisierung
-  String? externalIdGoogle; // z.B. Event-ID in Google Calendar
+  final String? externalIdGoogle; // z.B. Event-ID in Google Calendar
   final String? externalIdOutlook; // z.B. Event-ID in Outlook
   final String? externalIdApple; // z.B. Event-Identifier in Apple-Kalender
   final DateTime? lastSyncedAt; // Zuletzt erfolgreich synchronisiert
@@ -139,7 +139,7 @@ class AppointmentModel {
           : null,
     );
   }
-    @override
+  @override
   String toString() {
     return '''
     AppointmentModel(
