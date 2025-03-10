@@ -527,7 +527,12 @@ class GoogleCalendarService {
     List<String>? recurrence;
     if (appointment.recurrenceRule != null &&
         appointment.recurrenceRule!.isNotEmpty) {
-      recurrence = [appointment.recurrenceRule!];
+      String formattedRule = _formatRecurrenceRuleForGoogle(
+        appointment.recurrenceRule!,
+        start,
+      );
+      recurrence = [formattedRule];
+      debugPrint("🔄 Formatierte Wiederholungsregel: $formattedRule");
     }
 
     // Erstellen des Google Calendar Events
@@ -545,6 +550,69 @@ class GoogleCalendarService {
         private: {'muslimcalendarID': appointment.id?.toString() ?? 'new'},
       ),
     );
+  }
+
+  // Formatiert die Wiederholungsregel für Google Calendar
+  String _formatRecurrenceRuleForGoogle(
+      String recurrenceRule, DateTime? startDate) {
+    debugPrint("🔄 Originale Wiederholungsregel: $recurrenceRule");
+
+    // Stellen Sie sicher, dass die Regel mit 'RRULE:' beginnt
+    if (!recurrenceRule.startsWith('RRULE:')) {
+      recurrenceRule = 'RRULE:$recurrenceRule';
+    }
+
+    // Entferne Leerzeichen und doppelte Semikolons
+    recurrenceRule =
+        recurrenceRule.replaceAll(' ', '').replaceAll(';;', ';').toUpperCase();
+
+    // Prüfe, ob die Regel 'FREQ=WEEKLY' enthält, aber kein 'BYDAY'
+    if (recurrenceRule.contains('FREQ=WEEKLY') &&
+        !recurrenceRule.contains('BYDAY')) {
+      // Wenn ein Startdatum vorhanden ist, fügen wir den entsprechenden Wochentag hinzu
+      if (startDate != null) {
+        String weekday = _getWeekdayFromDate(startDate);
+        recurrenceRule = '${recurrenceRule};BYDAY=$weekday';
+      }
+    }
+
+    // Stelle sicher, dass bei 'FREQ=WEEKLY' ein 'INTERVAL' vorhanden ist
+    if (recurrenceRule.contains('FREQ=WEEKLY') &&
+        !recurrenceRule.contains('INTERVAL')) {
+      recurrenceRule = '${recurrenceRule};INTERVAL=1';
+    }
+
+    // Bei monatlichen Wiederholungen mit BYDAY, aber ohne BYSETPOS
+    if (recurrenceRule.contains('FREQ=MONTHLY') &&
+        recurrenceRule.contains('BYDAY=') &&
+        !recurrenceRule.contains('BYSETPOS=')) {
+      // Standardmäßig das erste Vorkommen im Monat verwenden
+      recurrenceRule = '${recurrenceRule};BYSETPOS=1';
+    }
+
+    return recurrenceRule;
+  }
+
+  // Hilfsmethode: Gibt den Wochentag als String im iCalendar-Format zurück
+  String _getWeekdayFromDate(DateTime date) {
+    switch (date.weekday) {
+      case DateTime.monday:
+        return 'MO';
+      case DateTime.tuesday:
+        return 'TU';
+      case DateTime.wednesday:
+        return 'WE';
+      case DateTime.thursday:
+        return 'TH';
+      case DateTime.friday:
+        return 'FR';
+      case DateTime.saturday:
+        return 'SA';
+      case DateTime.sunday:
+        return 'SU';
+      default:
+        return 'MO'; // Fallback
+    }
   }
 
   // Wandelt Flutter-Farben in Google Calendar Farb-IDs um
