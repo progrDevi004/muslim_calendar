@@ -268,6 +268,8 @@ class CategoryRepository {
     // Stellen Sie sicher, dass die Tabelle existiert
     await _ensureCategoryTableExists(db);
 
+    debugPrint("Suche/Erstelle Kategorie mit Namen: '$name'");
+
     try {
       // Suche nach Kategorie mit dem angegebenen Namen (case-insensitive)
       final List<Map<String, dynamic>> maps = await db.query(
@@ -278,12 +280,18 @@ class CategoryRepository {
 
       if (maps.isNotEmpty) {
         // Kategorie existiert, gebe sie zurück
-        return CategoryModel.fromMap(maps.first);
+        final category = CategoryModel.fromMap(maps.first);
+        debugPrint(
+            "Existierende Kategorie gefunden: ${category.name} (ID: ${category.id})");
+        return category;
       } else {
         // Zufällige Farbe, wenn keine angegeben wurde
         final randomColor = color ??
             Color(0xFF000000 |
                 (DateTime.now().millisecondsSinceEpoch & 0xFFFFFF));
+
+        debugPrint(
+            "Erstelle neue Kategorie: '$name' mit Farbe: ${randomColor.value.toRadixString(16)}");
 
         // Kategorie existiert nicht, erstelle sie
         final newCategory = CategoryModel.newCategory(
@@ -291,38 +299,73 @@ class CategoryRepository {
           color: randomColor,
         );
 
-        final id = await insertCategory(newCategory);
+        // Direkte Einfügung mit INSERT
+        final id = await db.insert(
+          'categories',
+          newCategory.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
 
-        // Returne die neue Kategorie mit der generierten ID
+        debugPrint("Neue Kategorie in DB eingefügt mit ID: $id");
+
+        // Zur Sicherheit: Direkt aus der Datenbank abrufen, um sicherzustellen, dass alle Felder korrekt sind
+        final insertedCategory = await getCategory(id);
+        if (insertedCategory != null) {
+          debugPrint(
+              "Kategorie nach Einfügung erfolgreich abgerufen: ${insertedCategory.name} (ID: ${insertedCategory.id})");
+          return insertedCategory;
+        }
+
+        // Fallback, falls die Kategorie nicht direkt abgerufen werden konnte
+        return CategoryModel(
+          id: id,
+          name: name,
+          color: randomColor,
+          isDefault: false,
+        );
+      }
+    } catch (e) {
+      debugPrint("Fehler beim Suchen/Erstellen der Kategorie: $e");
+
+      try {
+        // Versuchen, die Kategorie über die normale insertCategory-Methode zu erstellen
+        // Zufällige Farbe, wenn keine angegeben wurde
+        final randomColor = color ??
+            Color(0xFF000000 |
+                (DateTime.now().millisecondsSinceEpoch & 0xFFFFFF));
+
+        debugPrint("Erstelle neue Kategorie (im Fehlerfall): '$name'");
+
+        // Erstelle die Kategorie
+        final newCategory = CategoryModel.newCategory(
+          name: name,
+          color: randomColor,
+        );
+
+        final id = await insertCategory(newCategory);
+        debugPrint(
+            "Neue Kategorie mit ID: $id erstellt (nach Fehlerbehandlung)");
+
         return CategoryModel(
           id: id,
           name: newCategory.name,
           color: newCategory.color,
           isDefault: newCategory.isDefault,
         );
+      } catch (secondError) {
+        // Wenn alles fehlschlägt, gib die Standard-Kategorie zurück
+        debugPrint(
+            "Kritischer Fehler beim Erstellen der Kategorie: $secondError");
+        debugPrint("Verwende Standard-Kategorie (ID: 1)");
+        final defaultCategory = await getCategory(1);
+        return defaultCategory ??
+            CategoryModel(
+              id: 1,
+              name: "Standard",
+              color: Colors.blue,
+              isDefault: true,
+            );
       }
-    } catch (e) {
-      debugPrint("Fehler beim Suchen/Erstellen der Kategorie: $e");
-
-      // Zufällige Farbe, wenn keine angegeben wurde
-      final randomColor = color ??
-          Color(
-              0xFF000000 | (DateTime.now().millisecondsSinceEpoch & 0xFFFFFF));
-
-      // Erstelle die Kategorie
-      final newCategory = CategoryModel.newCategory(
-        name: name,
-        color: randomColor,
-      );
-
-      final id = await insertCategory(newCategory);
-
-      return CategoryModel(
-        id: id,
-        name: newCategory.name,
-        color: newCategory.color,
-        isDefault: newCategory.isDefault,
-      );
     }
   }
 }

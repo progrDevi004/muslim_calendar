@@ -85,7 +85,8 @@ class CalendarSyncService {
   /// Ortak import fonksiyonu: Sağlayıcı (örneğin Google) üzerinden event'leri çekip yerel veritabanına ekler.
   Future<void> importAppointments({int categoryOption = 0}) async {
     // Debug-Ausgabe für den Beginn des Imports
-    //debugPrint("🔄 Importiere Termine aus Google Calendar (Kategorie-Option: $categoryOption)");
+    debugPrint(
+        "🔄 Importiere Termine aus Google Calendar (Kategorie-Option: $categoryOption)");
 
     await calendarProvider.autoSignIn();
 
@@ -94,35 +95,58 @@ class CalendarSyncService {
     final selectedCalendarIds =
         prefs.getStringList('selectedCalendarIds') ?? ['primary'];
 
+    // Lade Kalender-Informationen für Kategorie-Mapping
+    final calendarList = await calendarProvider.fetchCalendarList();
+    final calendarNamesById = {
+      for (var calendar in calendarList)
+        calendar.id ?? 'primary': calendar.summary ?? 'Kalender'
+    };
+
+    // Log für Debugging
+    debugPrint("📅 Verfügbare Kalender für Mapping:");
+    calendarNamesById.forEach((id, name) {
+      debugPrint("   - $id: $name");
+    });
+
     List<Event> allEvents = [];
 
     // Events aus allen ausgewählten Kalendern abrufen
     for (String calendarId in selectedCalendarIds) {
-      //debugPrint("📅 Lade Termine aus Kalender: $calendarId");
+      debugPrint(
+          "📅 Lade Termine aus Kalender: $calendarId (${calendarNamesById[calendarId] ?? 'Unbekannt'})");
       final events =
           await calendarProvider.fetchCalendarEvents(calendarId: calendarId);
+
+      // Jedem Event den Kalender-ID als Property hinzufügen
+      for (var event in events) {
+        // Speichere den tatsächlichen Kalender-ID als zusätzliche Information zum Event
+        // Wir verwenden source.title für die Kalenderzuordnung
+        event.source = EventSource(title: calendarId);
+      }
+
       allEvents.addAll(events);
-      //debugPrint("📊 ${events.length} Termine aus Kalender $calendarId abgerufen");
+      debugPrint(
+          "📊 ${events.length} Termine aus Kalender $calendarId abgerufen");
     }
 
     // Debug: Anzahl der abgerufenen Events
-    //debugPrint("📊 Insgesamt ${allEvents.length} Termine aus Google Calendar abgerufen");
+    debugPrint(
+        "📊 Insgesamt ${allEvents.length} Termine aus Google Calendar abgerufen");
 
     // Zähler für die Erfolgsstatistik
     int importCount = 0;
     int updateCount = 0;
     int skippedCount = 0;
+    int newCategoryCount = 0;
 
     // Kategorie-Option 0: Standard-Kategorie (1)
     // Kategorie-Option 1: Google-Farben als Kategorien
-    // Kategorie-Option 2: Automatisches Matching nach Namen
+    // Kategorie-Option 2: Automatisches Mapping nach Kalendername (neu)
 
-    // Lade verfügbare Kategorien für Option 1 und 2
+    // Lade verfügbare Kategorien für jede Option
     List<CategoryModel> categories = [];
-    if (categoryOption > 0) {
-      categories = await appointmentRepository.getAllCategories();
-      //debugPrint("📂 ${categories.length} Kategorien geladen");
-    }
+    categories = await categoryRepository.getAllCategories();
+    debugPrint("📂 ${categories.length} Kategorien in der App geladen");
 
     // Standard-Import-Kategorie (für Option 0)
     const int defaultCategoryId = 1;
@@ -132,31 +156,32 @@ class CalendarSyncService {
 
     for (var event in allEvents) {
       // Debug: Event-Details
-      //debugPrint("📅 Verarbeite Event: ${event.summary} (ID: ${event.id})");
+      debugPrint("📅 Verarbeite Event: ${event.summary} (ID: ${event.id})");
 
       // Prüfe, ob dieses Event bereits verarbeitet wurde
       if (event.id != null && processedEventIds.contains(event.id)) {
-        //debugPrint("🔄 Event überschlagen: Bereits verarbeitet (ID: ${event.id})");
+        debugPrint(
+            "🔄 Event überschlagen: Bereits verarbeitet (ID: ${event.id})");
         skippedCount++;
         continue;
       }
 
       // Leere Events überspringen
       if (event.summary == null || event.summary!.trim().isEmpty) {
-        //debugPrint("🚫 Event übersprungen: Leerer Titel");
+        debugPrint("🚫 Event übersprungen: Leerer Titel");
         skippedCount++;
         continue;
       }
 
       // Fehlende Start- oder Endzeit
       if (event.start?.dateTime == null && event.start?.date == null) {
-        //debugPrint("🚫 Event übersprungen: Keine Startzeit");
+        debugPrint("🚫 Event übersprungen: Keine Startzeit");
         skippedCount++;
         continue;
       }
 
       if (event.end?.dateTime == null && event.end?.date == null) {
-        //debugPrint("🚫 Event übersprungen: Keine Endzeit");
+        debugPrint("🚫 Event übersprungen: Keine Endzeit");
         skippedCount++;
         continue;
       }
@@ -167,8 +192,6 @@ class CalendarSyncService {
       }
 
       // Filtern wir automatisch generierte Events wie Geburtstage.
-      // Zum Beispiel können in einigen Konten Geburtstags-Events mit der Organizer-E-Mail "addressbook#contacts@group.v.calendar.google.com" auftreten.
-      // Außerdem können wir Events überspringen, die "birthday" oder "Geburtstag" im Titel enthalten.
       if ((event.organizer != null &&
               event.organizer!.email!
                   .toLowerCase()
@@ -176,8 +199,8 @@ class CalendarSyncService {
           (event.summary != null &&
               (event.summary!.toLowerCase().contains('birthday') ||
                   event.summary!.toLowerCase().contains('doğum günü')))) {
-        // Wenn dies ein automatisch generiertes Event wie ein Geburtstag ist, überspringe es.
-        //debugPrint("🚫 Event übersprungen: Automatisch erstelltes Event (z.B. Geburtstag)");
+        debugPrint(
+            "🚫 Event übersprungen: Automatisch erstelltes Event (z.B. Geburtstag)");
         skippedCount++;
         continue;
       }
@@ -186,6 +209,7 @@ class CalendarSyncService {
       String? muslimCalendarId =
           event.extendedProperties?.private?['muslimcalendarID'];
       AppointmentModel? existingAppointment;
+
       if (muslimCalendarId == null) {
         // Normaler Termin: Abgleich über externalIdGoogle.
         existingAppointment = await appointmentRepository
@@ -198,6 +222,7 @@ class CalendarSyncService {
               await appointmentRepository.getAppointment(masterId);
         }
       }
+
       if (event.recurrence != null) {
         if (event.recurrence!.first == 'RRULE:FREQ=WEEKLY;WKST=TU') {
           event.recurrence?.first = recurrenceService.modifyRecurrenceRule(
@@ -220,66 +245,89 @@ class CalendarSyncService {
               colorIndex > 0 &&
               colorIndex <= categories.length) {
             appointmentCategoryId = colorIndex;
-            //debugPrint("🎨 Verwende Google-Farbe als Kategorie: $colorIndex");
+            debugPrint("🎨 Verwende Google-Farbe als Kategorie: $colorIndex");
           }
         }
       } else if (categoryOption == 2) {
-        // Option 2: Erstelle oder finde Kategorien basierend auf dem Titel des Termins
-        final eventTitle = event.summary ?? '';
+        // Option 2: Verwende den Kalendernamen als Kategorie
+        // Source-Kalender-ID des Events ermitteln
+        String calendarId = event.source?.title ?? 'primary';
+        String calendarName = calendarNamesById[calendarId] ?? 'Unbekannt';
 
-        if (eventTitle.isNotEmpty) {
-          // Einfache Version: Verwende den kompletten Titel als Kategorienamen
-          // oder alternativ den ersten Teil des Titels bis zum Doppelpunkt als Kategorie
-          String categoryName = eventTitle;
+        debugPrint("🔍 Event stammt aus Kalender: $calendarId ($calendarName)");
 
-          // Wenn der Titel einen Doppelpunkt enthält, nimm den ersten Teil als Kategorie
-          if (eventTitle.contains(':')) {
-            categoryName = eventTitle.split(':').first.trim();
-          }
-
-          // Länge der Kategorie begrenzen
-          if (categoryName.length > 30) {
-            categoryName = categoryName.substring(0, 30);
-          }
-
-          // Wenn Google eine Farbe für den Termin definiert hat, nutze diese
-          Color? eventColor;
-          if (event.colorId != null) {
-            final colorIndex = int.tryParse(event.colorId!);
-            if (colorIndex != null) {
-              // Hier könnten wir ein Mapping der Google Calendar Farben haben
-              // Einfache Version: Erzeuge eine Farbe basierend auf der colorId
-              final colors = [
-                Color(0xFF5484ED), // Blau
-                Color(0xFFA4BDFC), // Hellblau
-                Color(0xFF7AE7BF), // Türkis
-                Color(0xFF51B749), // Grün
-                Color(0xFFFBD75B), // Gelb
-                Color(0xFFFFB878), // Orange
-                Color(0xFFFF887C), // Rot
-                Color(0xFFDC2127), // Dunkelrot
-                Color(0xFFDBDBDB), // Grau
-                Color(0xFFE1E1E1), // Hellgrau
-              ];
-
-              final index = colorIndex % colors.length;
-              eventColor = colors[index];
+        try {
+          // Suche nach einer Kategorie mit dem Kalendernamen
+          CategoryModel? matchingCategory;
+          for (var category in categories) {
+            if (category.name.toLowerCase() == calendarName.toLowerCase()) {
+              matchingCategory = category;
+              debugPrint(
+                  "✓ Kategorie mit Name '${category.name}' gefunden - ID: ${category.id}");
+              break;
             }
           }
 
-          // Finde oder erstelle die Kategorie und nutze ihre ID
-          try {
+          if (matchingCategory != null) {
+            // Verwende existierende Kategorie
+            appointmentCategoryId = matchingCategory.id ?? defaultCategoryId;
+            debugPrint(
+                "✅ Existierende Kategorie gefunden: ${matchingCategory.name} (ID: ${matchingCategory.id})");
+          } else {
+            // Erstelle neue Kategorie mit dem Kalendernamen
+            Color? calendarColor;
+
+            // Wenn das Event eine Farbe hat, verwende diese
+            if (event.colorId != null) {
+              final colorIndex = int.tryParse(event.colorId!);
+              if (colorIndex != null) {
+                final colors = [
+                  Color(0xFF5484ED), // Blau
+                  Color(0xFFA4BDFC), // Hellblau
+                  Color(0xFF7AE7BF), // Türkis
+                  Color(0xFF51B749), // Grün
+                  Color(0xFFFBD75B), // Gelb
+                  Color(0xFFFFB878), // Orange
+                  Color(0xFFFF887C), // Rot
+                  Color(0xFFDC2127), // Dunkelrot
+                  Color(0xFFDBDBDB), // Grau
+                  Color(0xFFE1E1E1), // Hellgrau
+                ];
+
+                final index = colorIndex % colors.length;
+                calendarColor = colors[index];
+              }
+            }
+
+            debugPrint("🆕 Erstelle neue Kategorie mit Namen: '$calendarName'");
             final category = await categoryRepository.getCategoryByNameOrCreate(
-              categoryName,
-              color: eventColor,
+              calendarName,
+              color: calendarColor,
             );
-            appointmentCategoryId = category.id ?? defaultCategoryId;
-            //debugPrint("✅ Neue oder bestehende Kategorie verwendet: ${category.name} (ID: ${category.id})");
-          } catch (e) {
-            //debugPrint("⚠️ Fehler beim Erstellen der Kategorie: $e");
-            // Fallback auf Standard-Kategorie
-            appointmentCategoryId = defaultCategoryId;
+
+            // Überprüfen, ob die Kategorie korrekt erstellt wurde
+            if (category.id != null && category.id! > 0) {
+              appointmentCategoryId = category.id!;
+              debugPrint(
+                  "✅ Neue Kategorie erstellt: ${category.name} (ID: ${category.id})");
+            } else {
+              // Fallback auf Standard-Kategorie, falls die ID ungültig ist
+              appointmentCategoryId = defaultCategoryId;
+              debugPrint(
+                  "⚠️ Fehler bei Kategorieerstellung, verwende Standard-Kategorie");
+            }
+
+            newCategoryCount++;
+
+            // Aktualisiere die lokale Kategorie-Liste
+            categories = await categoryRepository.getAllCategories();
+            debugPrint(
+                "📂 Kategorieliste aktualisiert: ${categories.length} Kategorien");
           }
+        } catch (e) {
+          debugPrint("⚠️ Fehler beim Erstellen der Kategorie: $e");
+          // Fallback auf Standard-Kategorie
+          appointmentCategoryId = defaultCategoryId;
         }
       }
 
@@ -341,34 +389,59 @@ class CalendarSyncService {
         appointment = appointment.copyWith(externalIdGoogle: event.id);
       }
 
+      // Überprüfe, ob die Kategorie-ID korrekt gesetzt wurde
+      if (appointment.categoryId != appointmentCategoryId) {
+        debugPrint(
+            "⚠️ WARNUNG: Kategorie-ID ($appointmentCategoryId) wurde nicht korrekt im Appointment-Modell gesetzt (${appointment.categoryId})");
+        // Korrigiere die Kategorie-ID explizit
+        appointment = appointment.copyWith(categoryId: appointmentCategoryId);
+      }
+
+      // Debug-Info: Zeige die genauen Daten des zu speichernden Termins
+      debugPrint("📝 Termin-Details vor Speicherung:");
+      debugPrint("   - Titel: ${appointment.subject}");
+      debugPrint("   - Kategorie-ID: ${appointment.categoryId}");
+      debugPrint("   - Start: ${appointment.startTime}");
+      debugPrint("   - Ende: ${appointment.endTime}");
+
       if (existingAppointment == null) {
-        //debugPrint("➕ Neuer Termin hinzugefügt: ${appointment.subject} (Kategorie: $appointmentCategoryId)");
+        debugPrint(
+            "➕ Neuer Termin hinzugefügt: ${appointment.subject} (Kategorie: ${appointment.categoryId})");
         await appointmentRepository.insertAppointment(appointment);
         importCount++;
       } else {
-        //debugPrint("🔄 Termin aktualisiert: ${appointment.subject} (Kategorie: $appointmentCategoryId)");
+        debugPrint(
+            "🔄 Termin aktualisiert: ${appointment.subject} (Kategorie: ${appointment.categoryId})");
         await appointmentRepository.updateAppointment(appointment);
         updateCount++;
       }
     }
 
     // Alte Termine löschen, die nicht mehr existieren
+    // Diese Funktion überprüft, welche Termine in der lokalen Datenbank vorhanden sind,
+    // aber nicht mehr im Google Kalender existieren, und löscht diese.
     List<AppointmentModel> existingAppointments =
         await appointmentRepository.getAllAppointments();
     int deleteCount = 0;
 
+    // Durchlaufe alle lokalen Termine
     for (var existingAppointment in existingAppointments) {
       bool foundMatchingEvent = false;
+      // Überprüfe nur Termine, die eine Google-ID haben (also aus Google importiert wurden)
       if (existingAppointment.externalIdGoogle != null) {
+        // Suche in allen abgerufenen Google-Events nach einem passenden Event
         for (var event in allEvents) {
+          // Wenn die Google-ID übereinstimmt, existiert der Termin noch in Google
           if (event.id == existingAppointment.externalIdGoogle.toString()) {
             foundMatchingEvent = true;
             break;
           }
         }
+        // Wenn kein passendes Event gefunden wurde, wurde der Termin in Google gelöscht
+        // und sollte daher auch lokal gelöscht werden
         if (!foundMatchingEvent) {
-          // Eğer eşleşen ein event yoksa, diesen appointment'ı sil.
-          //debugPrint("🗑️ Termin gelöscht: ${existingAppointment.subject} (ID: ${existingAppointment.id})");
+          debugPrint(
+              "🗑️ Termin gelöscht: ${existingAppointment.subject} (ID: ${existingAppointment.id})");
           await appointmentRepository
               .deleteAppointment(existingAppointment.id!);
           deleteCount++;
@@ -376,16 +449,8 @@ class CalendarSyncService {
       }
     }
 
-    // Debug-Ausgabe für die Importstatistik
-    //debugPrint("✅ Import abgeschlossen: $importCount neue Termine, $updateCount aktualisiert, $deleteCount gelöscht, $skippedCount übersprungen");
-
-    // Liste aller Termine in der Datenbank ausgeben
-    List<AppointmentModel> allAppointments =
-        await appointmentRepository.getAllAppointments();
-    //debugPrint("📋 Aktuelle Termine in der Datenbank: ${allAppointments.length}");
-    for (var app in allAppointments) {
-      //debugPrint("  - ${app.subject} (ID: ${app.id}, Kategorie: ${app.categoryId}, Start: ${app.startTime})");
-    }
+    debugPrint(
+        "✅ Import abgeschlossen: $importCount neue Termine, $updateCount aktualisiert, $deleteCount gelöscht, $skippedCount übersprungen, $newCategoryCount neue Kategorien erstellt");
   }
 
   /// Gemeinsame Export-Funktion: Überträgt Termine aus der lokalen Datenbank zum Provider (Google).

@@ -4088,40 +4088,40 @@ class AppLocalizations extends ChangeNotifier {
   String get importOptionNamedCategories {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return "Kategorien nach Titeln";
+        return "Kategorien nach Kalender";
       case AppLanguage.turkish:
-        return "Başlığa göre kategoriler";
+        return "Takvime göre kategoriler";
       case AppLanguage.arabic:
-        return "فئات حسب العنوان";
+        return "فئات حسب التقويم";
       case AppLanguage.bosnian:
-        return "Kategorije po naslovu";
+        return "Kategorije po kalendaru";
       case AppLanguage.spanish:
-        return "Categorías por título";
+        return "Categorías por calendario";
       case AppLanguage.persian:
-        return "دسته‌بندی بر اساس عنوان";
+        return "دسته‌بندی بر اساس تقویم";
       case AppLanguage.english:
       default:
-        return "Categories by Title";
+        return "Categories by Calendar";
     }
   }
 
   String get importOptionNamedCategoriesSubtitle {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return "Erstellt automatisch Kategorien basierend auf dem Titel der Termine";
+        return "Verwendet den Google-Kalendernamen als Kategorie für zugehörige Termine";
       case AppLanguage.turkish:
-        return "Etkinlik başlıklarına göre otomatik olarak kategoriler oluşturur";
+        return "Google Takvim adını ilgili etkinlikler için kategori olarak kullanır";
       case AppLanguage.arabic:
-        return "ينشئ تلقائيًا فئات بناءً على عناوين الأحداث";
+        return "يستخدم اسم تقويم Google كفئة للأحداث المرتبطة";
       case AppLanguage.bosnian:
-        return "Automatski stvara kategorije na osnovu naslova događaja";
+        return "Koristi ime Google kalendara kao kategoriju za povezane događaje";
       case AppLanguage.spanish:
-        return "Crea automáticamente categorías basadas en los títulos de los eventos";
+        return "Utiliza el nombre del calendario de Google como categoría para eventos relacionados";
       case AppLanguage.persian:
-        return "به طور خودکار بر اساس عناوین رویدادها دسته‌بندی ایجاد می‌کند";
+        return "از نام تقویم Google به عنوان دسته‌بندی برای رویدادهای مربوطه استفاده می‌کند";
       case AppLanguage.english:
       default:
-        return "Automatically creates categories based on event titles";
+        return "Uses the Google Calendar name as category for associated events";
     }
   }
 

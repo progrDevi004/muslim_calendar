@@ -134,9 +134,16 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
     _loadUserPrefs();
     _loadCountryCityData();
-    _loadCategories();
-    _initDefaultValues();
-    _loadAppointmentData();
+
+    // Zuerst Kategorien laden, dann Termindaten, um sicherzustellen, dass die Kategorien verfügbar sind
+    _loadCategories().then((_) {
+      debugPrint("📂 Kategorien geladen: ${_allCategories.length}");
+      if (widget.appointmentId != null) {
+        debugPrint("🔍 Lade Termin mit ID: ${widget.appointmentId}");
+      }
+      _initDefaultValues();
+      _loadAppointmentData();
+    });
 
     // Listener zur automatischen Kategorisierung
     _titleController.addListener(_autoCategorizeIfNeeded);
@@ -244,56 +251,51 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             await _appointmentRepo.getAppointment(widget.appointmentId!);
         if (appointment != null) {
           setState(() {
-            // Felder füllen
+            // Debug-Info
+            debugPrint(
+                "🔄 Lade Termin ID: ${appointment.id}, Kategorie-ID: ${appointment.categoryId}");
+
+            // Titel & Beschreibung
             _titleController.text = appointment.subject;
             _descriptionController.text = appointment.notes ?? '';
+
+            // Zeit & Dauer
+            _startTime = appointment.startTime;
+            _endTime = appointment.endTime;
             _isAllDay = appointment.isAllDay;
-            _isRelatedToPrayerTimes = appointment.isRelatedToPrayerTimes;
-            _selectedPrayerTime = appointment.prayerTime;
-            _selectedTimeRelation = appointment.timeRelation;
-            _minutesBeforeAfter = appointment.minutesBeforeAfter;
-            _duration = appointment.duration ?? const Duration(minutes: 30);
-            _startTime = appointment.startTime ?? DateTime.now();
-            _endTime = appointment.endTime ??
-                _startTime!.add(const Duration(minutes: 30));
+
+            // Wiederholung & Ausnahmetage
+            _isRecurring = appointment.recurrenceRule != null;
+            _recurrenceType = _isRecurring
+                ? _parseRecurrenceType(appointment.recurrenceRule)
+                : RecurrenceType.none;
+            _recurrenceRange = RecurrenceRange.noEndDate;
+
             _color = appointment.color;
+
+            // Gebetszeitverknüpfung
+            _isRelatedToPrayerTimes = appointment.isRelatedToPrayerTimes;
+            _selectedTimeRelation = appointment.timeRelation;
+            _minutesBeforeAfter = appointment.minutesBeforeAfter ?? 0;
+
+            // Setze den Reminder-Wert
             _selectedReminderMinutes = appointment.reminderMinutesBefore;
 
-            // NEU: Google Kalender Sync-Flag laden (wird später implementiert)
-            // _syncWithGoogleCalendar = appointment.syncWithGoogleCalendar ?? false;
-            // Jetzt implementiert:
-            _syncWithGoogleCalendar = appointment.syncWithGoogleCalendar;
+            _location = appointment.location ?? '';
 
-            // Erinnerung in die Liste übernehmen, falls vorhanden
-            if (appointment.reminderMinutesBefore != null &&
-                appointment.reminderMinutesBefore! > 0) {
-              _remindersList = [appointment.reminderMinutesBefore!];
-            }
+            // Setze Google Calendar Sync Flag
+            _syncWithGoogleCalendar = appointment.externalIdGoogle != null;
 
-            if (appointment.location != null) {
-              final parts = appointment.location!.split(',');
-              if (parts.length == 2) {
-                _selectedCity = parts[0].trim();
-                _selectedCountry = parts[1].trim();
-              }
-            }
-
-            // Wiederkehrend
-            if (appointment.recurrenceRule != null) {
-              final recurrenceProperties = SfCalendar.parseRRule(
-                appointment.recurrenceRule!,
-                appointment.startTime ?? DateTime.now(),
-              );
-              _isRecurring = true;
-              _recurrenceType = recurrenceProperties.recurrenceType;
-              _recurrenceInterval = recurrenceProperties.interval;
-              _recurrenceRange = recurrenceProperties.recurrenceRange;
-              _recurrenceCount = recurrenceProperties.recurrenceCount;
-              _recurrenceEndDate = recurrenceProperties.endDate;
-
-              if (_recurrenceType == RecurrenceType.weekly) {
-                _selectedWeekDays = List.filled(7, false);
-                for (var wd in recurrenceProperties.weekDays) {
+            // Extraktion der Wochentage für wöchentliche Wiederholung
+            if (_recurrenceType == RecurrenceType.weekly &&
+                appointment.recurrenceRule != null) {
+              final rule = appointment.recurrenceRule!;
+              final weekDaysMatch = RegExp(r'BYDAY=([^;]+)').firstMatch(rule);
+              if (weekDaysMatch != null) {
+                final weekDaysStr = weekDaysMatch.group(1)!;
+                final weekDays = weekDaysStr.split(',');
+                for (var dayStr in weekDays) {
+                  final wd = RecurrenceHelper.stringToWeekDay(dayStr);
                   if (wd == WeekDays.monday) _selectedWeekDays[0] = true;
                   if (wd == WeekDays.tuesday) _selectedWeekDays[1] = true;
                   if (wd == WeekDays.wednesday) _selectedWeekDays[2] = true;
@@ -308,10 +310,36 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
             // Kategorie
             if (appointment.categoryId != null) {
+              // Debug-Ausgabe zur Fehlersuche
+              debugPrint(
+                  "🔍 Suche Kategorie für Termin: ID=${appointment.categoryId}");
+              debugPrint(
+                  "📋 Verfügbare Kategorien: ${_allCategories.map((c) => '${c.id}:${c.name}').join(', ')}");
+
               final catIndex = _allCategories.indexWhere(
                   (element) => element.id == appointment.categoryId);
+
               if (catIndex != -1) {
                 _selectedCategory = _allCategories[catIndex];
+                debugPrint(
+                    "✅ Kategorie gefunden und ausgewählt: ${_selectedCategory!.name} (ID: ${_selectedCategory!.id})");
+                // Setze auch die Farbe der Kategorie
+                _color = _selectedCategory!.color;
+              } else {
+                debugPrint(
+                    "⚠️ Keine passende Kategorie gefunden für ID=${appointment.categoryId}");
+                // Fallback: Verwende die erste Kategorie
+                if (_allCategories.isNotEmpty) {
+                  _selectedCategory = _allCategories.first;
+                  debugPrint(
+                      "🔄 Fallback auf erste Kategorie: ${_selectedCategory!.name}");
+                }
+              }
+            } else {
+              debugPrint("ℹ️ Termin hat keine Kategorie-ID, verwende Standard");
+              // Fallback: Verwende die erste Kategorie
+              if (_allCategories.isNotEmpty) {
+                _selectedCategory = _allCategories.first;
               }
             }
 
@@ -320,10 +348,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           });
         }
       } catch (e) {
-        final loc = Provider.of<AppLocalizations>(context, listen: false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${loc.errorLoadingAppointment}: $e')),
-        );
+        debugPrint("Fehler beim Laden des Termins: $e");
       }
     }
   }
