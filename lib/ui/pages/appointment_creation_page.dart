@@ -126,6 +126,51 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   final PrayerTimeService _prayerTimeService =
       PrayerTimeService(PrayerTimeRepository());
 
+  // Füge die _location Variable hinzu (nach den anderen Deklarationen)
+  String? _location;
+
+  // Füge die Hilfsmethode für die Konvertierung von Wochentagen ein (vor der _loadAppointmentData Methode)
+  // Hilfsmethode für die Umwandlung von String-Tagesbezeichnungen in WeekDays Enum
+  WeekDays _stringToWeekDay(String dayStr) {
+    switch (dayStr) {
+      case "MO":
+        return WeekDays.monday;
+      case "TU":
+        return WeekDays.tuesday;
+      case "WE":
+        return WeekDays.wednesday;
+      case "TH":
+        return WeekDays.thursday;
+      case "FR":
+        return WeekDays.friday;
+      case "SA":
+        return WeekDays.saturday;
+      case "SU":
+        return WeekDays.sunday;
+      default:
+        return WeekDays.monday; // Fallback
+    }
+  }
+
+  // Füge die Methode zur Analyse des Wiederholungstyps hinzu
+  RecurrenceType _parseRecurrenceType(String? recurrenceRule) {
+    if (recurrenceRule == null) {
+      return RecurrenceType.daily; // Verwende daily als Ersatz für 'none'
+    }
+
+    if (recurrenceRule.contains("FREQ=DAILY")) {
+      return RecurrenceType.daily;
+    } else if (recurrenceRule.contains("FREQ=WEEKLY")) {
+      return RecurrenceType.weekly;
+    } else if (recurrenceRule.contains("FREQ=MONTHLY")) {
+      return RecurrenceType.monthly;
+    } else if (recurrenceRule.contains("FREQ=YEARLY")) {
+      return RecurrenceType.yearly;
+    }
+
+    return RecurrenceType.daily; // Fallback
+  }
+
   @override
   void initState() {
     super.initState();
@@ -134,6 +179,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
     _loadUserPrefs();
     _loadCountryCityData();
+
+    // Immer die Kategorien neu laden, um sicherzustellen, dass auch neu importierte Kategorien angezeigt werden
+    _loadCategories();
 
     // Zuerst Kategorien laden, dann Termindaten, um sicherzustellen, dass die Kategorien verfügbar sind
     _loadCategories().then((_) {
@@ -266,9 +314,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
             // Wiederholung & Ausnahmetage
             _isRecurring = appointment.recurrenceRule != null;
-            _recurrenceType = _isRecurring
-                ? _parseRecurrenceType(appointment.recurrenceRule)
-                : RecurrenceType.none;
+            _recurrenceType = _parseRecurrenceType(appointment.recurrenceRule);
             _recurrenceRange = RecurrenceRange.noEndDate;
 
             _color = appointment.color;
@@ -281,7 +327,15 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             // Setze den Reminder-Wert
             _selectedReminderMinutes = appointment.reminderMinutesBefore;
 
+            // Standort
             _location = appointment.location ?? '';
+            if (appointment.location != null) {
+              final parts = appointment.location!.split(',');
+              if (parts.length == 2) {
+                _selectedCity = parts[0].trim();
+                _selectedCountry = parts[1].trim();
+              }
+            }
 
             // Setze Google Calendar Sync Flag
             _syncWithGoogleCalendar = appointment.externalIdGoogle != null;
@@ -295,7 +349,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 final weekDaysStr = weekDaysMatch.group(1)!;
                 final weekDays = weekDaysStr.split(',');
                 for (var dayStr in weekDays) {
-                  final wd = RecurrenceHelper.stringToWeekDay(dayStr);
+                  final wd = _stringToWeekDay(dayStr);
                   if (wd == WeekDays.monday) _selectedWeekDays[0] = true;
                   if (wd == WeekDays.tuesday) _selectedWeekDays[1] = true;
                   if (wd == WeekDays.wednesday) _selectedWeekDays[2] = true;

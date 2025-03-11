@@ -102,7 +102,7 @@ void main() async {
           create: (_) => googleCalendarService,
         ),
         // Calendar Sync Service als Provider
-        Provider(
+        ChangeNotifierProvider(
           create: (_) => calendarSyncService,
         ),
         // Google Calendar Sync Service als Provider

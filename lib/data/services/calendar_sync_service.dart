@@ -16,6 +16,7 @@ import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 import 'package:muslim_calendar/utils/recurrence_rule_converter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/data/services/google_calendar_sync_service.dart';
+import 'package:flutter/foundation.dart';
 
 /// CalendarSyncService - Fassade (Facade) für alle Kalendersynchronisierungsdienste
 ///
@@ -34,7 +35,7 @@ import 'package:muslim_calendar/data/services/google_calendar_sync_service.dart'
 ///
 /// Alle UI-Komponenten sollten diesen Service verwenden, statt direkt mit den
 /// spezialisierten Services zu interagieren.
-class CalendarSyncService {
+class CalendarSyncService extends ChangeNotifier {
   /// Takvim sağlayıcısı; ileride Outlook, Apple gibi sağlayıcılar için de ortak interface tanımlanabilir.
   final GoogleCalendarService calendarProvider;
   final AppointmentRepository appointmentRepository;
@@ -43,6 +44,9 @@ class CalendarSyncService {
   final PrayerTimeService prayerTimeService;
   final GoogleCalendarSyncService? googleCalendarSyncService;
 
+  // Callback-Funktion für Kategorieänderungen
+  final Function? onCategoriesChanged;
+
   CalendarSyncService({
     required this.calendarProvider,
     required this.appointmentRepository,
@@ -50,7 +54,16 @@ class CalendarSyncService {
     required this.recurrenceService,
     required this.prayerTimeService,
     this.googleCalendarSyncService,
+    this.onCategoriesChanged,
   });
+
+  /// Benachrichtigt Listener über Änderungen an Kategorien
+  void notifyCategoryChanges() {
+    if (onCategoriesChanged != null) {
+      onCategoriesChanged!();
+    }
+    notifyListeners(); // Benachrichtigt alle Provider-Listener
+  }
 
   /// Holt die Liste aller verfügbaren Kalender
   Future<List<SelectedCalendar>> getAvailableCalendars() async {
@@ -323,6 +336,9 @@ class CalendarSyncService {
             categories = await categoryRepository.getAllCategories();
             debugPrint(
                 "📂 Kategorieliste aktualisiert: ${categories.length} Kategorien");
+
+            // Benachrichtige über Änderungen an den Kategorien
+            notifyCategoryChanges();
           }
         } catch (e) {
           debugPrint("⚠️ Fehler beim Erstellen der Kategorie: $e");

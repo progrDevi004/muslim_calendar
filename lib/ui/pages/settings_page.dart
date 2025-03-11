@@ -73,6 +73,30 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadCountryCityData();
     _initCalcMethodMap();
     _checkCalendarConnections();
+
+    // Listener für Kategorieänderungen hinzufügen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final calendarSyncService =
+          Provider.of<CalendarSyncService>(context, listen: false);
+      calendarSyncService.addListener(_onCategoriesChanged);
+    });
+  }
+
+  @override
+  void dispose() {
+    // Listener entfernen
+    final calendarSyncService =
+        Provider.of<CalendarSyncService>(context, listen: false);
+    calendarSyncService.removeListener(_onCategoriesChanged);
+    super.dispose();
+  }
+
+  // Wird aufgerufen, wenn sich Kategorien ändern
+  void _onCategoriesChanged() {
+    setState(() {
+      // UI aktualisieren
+      debugPrint("🔄 Kategorien wurden geändert, UI wird aktualisiert");
+    });
   }
 
   void _initCalcMethodMap() {
