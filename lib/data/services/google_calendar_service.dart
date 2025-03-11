@@ -274,9 +274,20 @@ class GoogleCalendarService {
   // Holt die lokale Zeitzone
   Future<String> _getLocalTimeZone() async {
     try {
-      return await FlutterTimezone.getLocalTimezone();
+      final String timeZone = await FlutterTimezone.getLocalTimezone();
+
+      // Prüfen, ob wir einen gültigen IANA-Namen haben
+      if (timeZone == 'GMT' || timeZone.isEmpty) {
+        // Deutschland ist standardmäßig in Europe/Berlin
+        return 'Europe/Berlin';
+      }
+
+      debugPrint('Verwendete IANA-Zeitzone: $timeZone');
+      return timeZone;
     } catch (e) {
-      return 'UTC';
+      debugPrint('Fehler beim Ermitteln der Zeitzone: $e');
+      // Deutschland ist standardmäßig in Europe/Berlin
+      return 'Europe/Berlin';
     }
   }
 
@@ -677,6 +688,10 @@ class GoogleCalendarService {
   }) async {
     await autoSignIn();
 
+    // Korrektur: Stunde subtrahieren, um die Zeitverschiebung zu kompensieren
+    final adjustedStartTime = startTime.subtract(const Duration(hours: 1));
+    final adjustedEndTime = endTime.subtract(const Duration(hours: 1));
+
     if (prayerRelated) {
       // Für gebetszeitbezogene Termine
       Map<String, String> extendedProps = {
@@ -686,7 +701,7 @@ class GoogleCalendarService {
       // Prüfen, ob bereits ein Event für diesen Termin und dieses Datum existiert
       calendar.Event? existingEvent = await getEventForAppointmentOnDate(
         appointment.id!,
-        startTime,
+        startTime, // Hier Original-Startzeit für die Suche verwenden
         calendarId: calendarId,
       );
 
@@ -698,14 +713,14 @@ class GoogleCalendarService {
         existingEvent.description = appointment.notes;
         existingEvent.location = appointment.location;
 
-        // Neu setzen von Start- und Endzeit
+        // Neu setzen von Start- und Endzeit mit korrekter Zeitzone und angepasster Zeit
         final timeZone = await _getLocalTimeZone();
         existingEvent.start = calendar.EventDateTime(
-          dateTime: startTime,
+          dateTime: adjustedStartTime,
           timeZone: timeZone,
         );
         existingEvent.end = calendar.EventDateTime(
-          dateTime: endTime,
+          dateTime: adjustedEndTime,
           timeZone: timeZone,
         );
 
@@ -715,18 +730,18 @@ class GoogleCalendarService {
           existingEvent.id!,
         );
       } else {
-        // Erstelle neues Event
+        // Erstelle neues Event mit korrekter Zeitzone und angepasster Zeit
         final timeZone = await _getLocalTimeZone();
         final event = calendar.Event(
           summary: appointment.subject,
           description: appointment.notes,
           location: appointment.location,
           start: calendar.EventDateTime(
-            dateTime: startTime,
+            dateTime: adjustedStartTime,
             timeZone: timeZone,
           ),
           end: calendar.EventDateTime(
-            dateTime: endTime,
+            dateTime: adjustedEndTime,
             timeZone: timeZone,
           ),
           extendedProperties: calendar.EventExtendedProperties(
@@ -833,15 +848,26 @@ class GoogleCalendarService {
       );
     } else {
       // Termine mit Zeitangabe
+      // Korrektur: Stunde subtrahieren, um die Zeitverschiebung zu kompensieren
+      final adjustedStart = start?.subtract(const Duration(hours: 1));
+      final adjustedEnd = end?.subtract(const Duration(hours: 1));
+
       startEventDateTime = calendar.EventDateTime(
-        dateTime: start,
+        dateTime: adjustedStart,
         timeZone: timeZone,
       );
 
       endEventDateTime = calendar.EventDateTime(
-        dateTime: end ?? start?.add(const Duration(minutes: 30)),
+        dateTime:
+            adjustedEnd ?? adjustedStart?.add(const Duration(minutes: 30)),
         timeZone: timeZone,
       );
+
+      // Debug-Ausgabe für Zeitzonenprobleme
+      debugPrint('Event Zeitzone für ${appointment.subject}:');
+      debugPrint('- Originale Startzeit: ${start.toString()}');
+      debugPrint('- Angepasste Startzeit: ${adjustedStart.toString()} (-1h)');
+      debugPrint('- Verwendete Zeitzone: ${timeZone}');
     }
 
     // Wiederholungsregel verarbeiten

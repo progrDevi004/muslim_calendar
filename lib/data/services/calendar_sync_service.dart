@@ -98,7 +98,7 @@ class CalendarSyncService {
 
     // Events aus allen ausgewählten Kalendern abrufen
     for (String calendarId in selectedCalendarIds) {
-      ////debugPrint("📅 Lade Termine aus Kalender: $calendarId");
+      //debugPrint("📅 Lade Termine aus Kalender: $calendarId");
       final events =
           await calendarProvider.fetchCalendarEvents(calendarId: calendarId);
       allEvents.addAll(events);
@@ -283,6 +283,36 @@ class CalendarSyncService {
         }
       }
 
+      // Zeitanpassung: Bei Ereignissen mit Zeitangabe eine Stunde hinzufügen,
+      // um die Zeitverschiebung zu kompensieren
+      DateTime? adjustedStartTime;
+      DateTime? adjustedEndTime;
+
+      if (event.start?.dateTime != null) {
+        // Für Termine mit Zeitangabe: Eine Stunde hinzufügen
+        adjustedStartTime =
+            event.start!.dateTime!.toLocal().add(const Duration(hours: 1));
+        debugPrint(
+            'Google Import - Original Startzeit: ${event.start!.dateTime!.toLocal()}');
+        debugPrint(
+            'Google Import - Angepasste Startzeit: $adjustedStartTime (+1h)');
+      } else {
+        // Für ganztägige Termine: Keine Änderung
+        adjustedStartTime =
+            event.start?.date != null ? event.start!.date! : null;
+      }
+
+      if (event.end?.dateTime != null) {
+        // Für Termine mit Zeitangabe: Eine Stunde hinzufügen
+        adjustedEndTime =
+            event.end!.dateTime!.toLocal().add(const Duration(hours: 1));
+      } else {
+        // Für ganztägige Termine: Keine Änderung oder +1 Minute für die App
+        adjustedEndTime = event.end?.date != null
+            ? event.start!.date!.add(const Duration(minutes: 1))
+            : null;
+      }
+
       AppointmentModel appointment = AppointmentModel(
         id: existingAppointment?.id,
         subject: event.summary ?? '',
@@ -300,14 +330,8 @@ class CalendarSyncService {
             event.recurrence != null ? event.recurrence!.join(',') : null,
         recurrenceExceptionDates: null,
         color: const Color(0xFF2196F3),
-        startTime: event.start?.dateTime != null
-            ? event.start!.dateTime!.toLocal()
-            : (event.start?.date != null ? event.start!.date! : null),
-        endTime: event.end?.dateTime != null
-            ? event.end!.dateTime!.toLocal()
-            : (event.end?.date != null
-                ? event.start!.date!.add(const Duration(minutes: 1))
-                : null),
+        startTime: adjustedStartTime,
+        endTime: adjustedEndTime,
         categoryId: appointmentCategoryId,
         reminderMinutesBefore: null,
         lastSyncedAt: DateTime.now(),

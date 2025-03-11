@@ -11,6 +11,7 @@ import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 import 'package:muslim_calendar/ui/widgets/prayer_time_appointment_adapter.dart';
 import 'package:muslim_calendar/data/repositories/google_event_mapping_repository.dart';
 import 'package:muslim_calendar/data/services/google_calendar_service.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 // Wir verwenden die GoogleHttpClient-Klasse direkt aus GoogleCalendarService
 
@@ -323,7 +324,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
       );
 
       // Google Event erstellen oder aktualisieren
-      final event = _createGoogleEvent(
+      final event = await _createGoogleEvent(
         appointment.subject,
         startTime,
         endTime,
@@ -424,7 +425,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
       }
 
       // Google Event mit Wiederholungsregel erstellen
-      final event = _createGoogleEvent(
+      final event = await _createGoogleEvent(
         appointment.subject,
         appointment.startTime!,
         appointment.endTime!,
@@ -529,7 +530,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
 
         if (existing != null) {
           // Event aktualisieren
-          final event = _createGoogleEvent(
+          final event = await _createGoogleEvent(
             instance.subject,
             instance.startTime,
             instance.endTime,
@@ -564,7 +565,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
           batchOperations.add(operation);
         } else {
           // Neues Event erstellen
-          final event = _createGoogleEvent(
+          final event = await _createGoogleEvent(
             instance.subject,
             instance.startTime,
             instance.endTime,
@@ -671,7 +672,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
   }
 
   // Erstellt ein Google Event aus den übergebenen Parametern
-  gCal.Event _createGoogleEvent(
+  Future<gCal.Event> _createGoogleEvent(
     String subject,
     DateTime startTime,
     DateTime endTime, {
@@ -680,12 +681,15 @@ class GoogleCalendarSyncService with ChangeNotifier {
     bool isAllDay = false,
     int? reminderMinutes,
     String? recurrenceRule,
-  }) {
+  }) async {
     // Zeitformatierung
     final event = gCal.Event();
     event.summary = subject;
     event.description = notes;
     event.location = location;
+
+    // Lokale Zeitzone ermitteln
+    final localTimeZone = await _getLocalTimeZone();
 
     // Start- und Endzeit
     if (isAllDay) {
@@ -697,16 +701,27 @@ class GoogleCalendarSyncService with ChangeNotifier {
         date: DateTime(endTime.year, endTime.month, endTime.day),
       );
     } else {
+      // Korrektur: Stunde subtrahieren, um die Zeitverschiebung zu kompensieren
+      final adjustedStartTime = startTime.subtract(const Duration(hours: 1));
+      final adjustedEndTime = endTime.subtract(const Duration(hours: 1));
+
       // Event mit Start- und Endzeit
-      // Wir senden die lokalen Zeiten ohne Zeitzonenkonvertierung und lassen
-      // Google Calendar die richtige Zeitzone basierend auf der Konfiguration des Benutzers verwenden
       event.start = gCal.EventDateTime(
-        dateTime: startTime,
+        dateTime: adjustedStartTime,
+        timeZone: localTimeZone,
       );
 
       event.end = gCal.EventDateTime(
-        dateTime: endTime,
+        dateTime: adjustedEndTime,
+        timeZone: localTimeZone,
       );
+
+      // Debug-Ausgabe für Zeitzonenprobleme
+      debugPrint('Event Zeitzone für ${subject}:');
+      debugPrint('- Originale Startzeit: ${startTime.toString()}');
+      debugPrint(
+          '- Angepasste Startzeit: ${adjustedStartTime.toString()} (-1h)');
+      debugPrint('- Verwendete Zeitzone: ${localTimeZone}');
     }
 
     // Wiederholungsregel
@@ -728,6 +743,27 @@ class GoogleCalendarSyncService with ChangeNotifier {
     }
 
     return event;
+  }
+
+  // Ermittelt die lokale Zeitzone
+  Future<String> _getLocalTimeZone() async {
+    try {
+      final String timeZone = await FlutterTimezone.getLocalTimezone();
+
+      // Prüfen, ob wir einen gültigen IANA-Namen haben
+      if (timeZone == 'GMT' || timeZone.isEmpty) {
+        // Deutschland ist standardmäßig in Europe/Berlin
+        return 'Europe/Berlin';
+      }
+
+      debugPrint('Verwendete IANA-Zeitzone: $timeZone');
+      return timeZone;
+    } catch (e) {
+      // Fallback zur Standardzeitzone des Geräts
+      debugPrint('Fehler beim Ermitteln der Zeitzone: $e');
+      // Deutschland ist standardmäßig in Europe/Berlin
+      return 'Europe/Berlin';
+    }
   }
 
   // Periodische Synchronisierung planen
