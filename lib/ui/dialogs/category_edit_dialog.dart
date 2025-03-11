@@ -81,9 +81,11 @@ class _CategoryEditDialogState extends State<CategoryEditDialog> {
 
   Future<void> _saveCategory() async {
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kategoriename darf nicht leer sein')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Kategoriename darf nicht leer sein')),
+        );
+      }
       return;
     }
 
@@ -102,7 +104,9 @@ class _CategoryEditDialogState extends State<CategoryEditDialog> {
       await _categoryRepository.updateCategory(updatedCategory);
 
       // Nach dem Speichern den CalendarSyncService benachrichtigen
-      _calendarSyncService.notifyCategoryChanges();
+      if (mounted) {
+        _calendarSyncService.notifyCategoryChanges();
+      }
 
       if (mounted) {
         Navigator.of(context).pop(true); // true = Kategorie wurde aktualisiert

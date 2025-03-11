@@ -14,6 +14,8 @@ import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
 import 'package:muslim_calendar/models/enums.dart';
 import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
+import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
+import 'package:muslim_calendar/data/repositories/category_repository.dart';
 
 // Detailseite
 import 'package:muslim_calendar/ui/pages/appointment_details_page.dart';
@@ -50,8 +52,10 @@ class DashboardPageState extends State<DashboardPage> {
 
   final PrayerTimeRepository _prayerTimeRepo = PrayerTimeRepository();
   final AppointmentRepository _appointmentRepo = AppointmentRepository();
+  final CategoryRepository _categoryRepo = CategoryRepository();
 
   late final PrayerTimeService _prayerTimeService;
+  late CalendarSyncService _calendarSyncService;
 
   bool _use24hFormat = false;
   bool _showPrayerSlotsInDashboard = true;
@@ -65,13 +69,44 @@ class DashboardPageState extends State<DashboardPage> {
     _initData();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // CalendarSyncService registrieren
+    _calendarSyncService =
+        Provider.of<CalendarSyncService>(context, listen: false);
+
+    // Listener hinzufügen, um auf Kategorieänderungen zu reagieren
+    _calendarSyncService.addListener(_onCategoriesChanged);
+  }
+
+  @override
+  void dispose() {
+    // Listener entfernen
+    _calendarSyncService.removeListener(_onCategoriesChanged);
+    super.dispose();
+  }
+
+  // Wird aufgerufen, wenn sich Kategorien ändern
+  void _onCategoriesChanged() {
+    if (!mounted) return;
+
+    debugPrint(
+        "🔄 DashboardPage: Kategorien wurden geändert, lade Termine neu...");
+    reloadData();
+  }
+
   /// Ermöglicht Reload von außen
   Future<void> reloadData() async {
+    if (!mounted) return;
     await _initData();
   }
 
   /// Lädt alle Daten für das Dashboard: Wetter, Gebetszeiten, heutige Termine
   Future<void> _initData() async {
+    if (!mounted) return;
+
     final loc = Provider.of<AppLocalizations>(context, listen: false);
     final languageCode = _mapAppLanguageToCode(loc.currentLanguage);
     await initializeDateFormatting(languageCode, null);
@@ -80,6 +115,8 @@ class DashboardPageState extends State<DashboardPage> {
     _use24hFormat = prefs.getBool('use24hFormat') ?? false;
     _showPrayerSlotsInDashboard =
         prefs.getBool('showPrayerSlotsInDashboard') ?? true;
+
+    if (!mounted) return;
 
     setState(() {
       _isWeatherLoading = true;
@@ -97,6 +134,8 @@ class DashboardPageState extends State<DashboardPage> {
     await _fetchPrayerTimesForToday(locationString);
     // 3) Nur heutige Termine
     await _loadTodayAppointments();
+
+    if (!mounted) return;
 
     setState(() {});
   }
@@ -211,6 +250,16 @@ class DashboardPageState extends State<DashboardPage> {
     final all = await _appointmentRepo.getAllAppointments();
     final tasks = <_DashboardTask>[];
 
+    // Lade alle Kategorien einmalig
+    final allCategories = await _categoryRepo.getAllCategories();
+    // Map für schnelleren Zugriff nach ID
+    final Map<int, Color> categoryColors = {};
+    for (var category in allCategories) {
+      if (category.id != null) {
+        categoryColors[category.id!] = category.color;
+      }
+    }
+
     // Set zum Nachverfolgen bereits hinzugefügter Termine, um Duplikate zu vermeiden
     final Set<int?> addedAppointmentIds = {};
 
@@ -253,7 +302,7 @@ class DashboardPageState extends State<DashboardPage> {
             end: end,
             durationInMinutes: diff,
             description: desc,
-            color: ap.color,
+            color: categoryColors[ap.categoryId] ?? Colors.grey,
             isAllDay: ap.isAllDay, // WICHTIG
           ),
         );

@@ -13,6 +13,7 @@ import 'package:muslim_calendar/data/repositories/category_repository.dart';
 import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 import 'package:muslim_calendar/data/services/recurrence_service.dart';
+import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
 
 // Models & Widgets
 import 'package:muslim_calendar/models/appointment_model.dart';
@@ -124,6 +125,9 @@ class HomePageState extends State<HomePage> {
 
   bool _use24hFormat = false;
 
+  // Referenz auf den CalendarSyncService
+  late CalendarSyncService _calendarSyncService;
+
   // Dezenter Farbton für Gebetszeiten (BlueGrey 300)
   static const Color _prayerTimeColor = Color(0xFF90A4AE);
 
@@ -150,6 +154,43 @@ class HomePageState extends State<HomePage> {
     _loadAllCategories();
     _fetchYearlyPrayerTimesIfNeeded().then((_) {
       loadAllAppointments();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // CalendarSyncService registrieren
+    _calendarSyncService =
+        Provider.of<CalendarSyncService>(context, listen: false);
+
+    // Listener hinzufügen, um auf Kategorieänderungen zu reagieren
+    _calendarSyncService.addListener(_onCategoriesChanged);
+  }
+
+  @override
+  void dispose() {
+    // Listener entfernen
+    _calendarSyncService.removeListener(_onCategoriesChanged);
+    super.dispose();
+  }
+
+  // Wird aufgerufen, wenn sich Kategorien ändern
+  void _onCategoriesChanged() {
+    if (!mounted) return;
+
+    debugPrint("🔄 HomePage: Kategorien wurden geändert, lade Termine neu...");
+    // Kategorien neu laden
+    _loadAllCategories().then((_) {
+      if (!mounted) return;
+
+      // Kategorien-Cache leeren, damit die aktualisierten Farben verwendet werden
+      _adapter.clearCategoryCache();
+      // Termine neu laden mit den aktualisierten Kategorien
+      loadAllAppointments();
+      // Dashboard aktualisieren
+      _dashboardKey.currentState?.reloadData();
     });
   }
 
@@ -230,162 +271,28 @@ class HomePageState extends State<HomePage> {
   /// Lädt alle normalen Appointments plus Gebetszeiten (falls aktiviert)
   Future<void> loadAllAppointments() async {
     try {
-      final models = await _appointmentRepo.getAllAppointments();
-      final now = DateTime.now();
+      List<Appointment> allAppointments = [];
 
-      // Korrigierte Datumsberechnung mit addMonths
-      final startRange = addMonths(DateTime(now.year, now.month, 1), -2);
-      final endRange = addMonths(DateTime(now.year, now.month, 1), 3);
+      // Termine aus der Datenbank laden
+      final appointments = await _appointmentRepo.getAllAppointments();
 
-      // Debug-Ausgabe für den Datumsbereich
-      debugPrint("📅 Lade Termine im Bereich: $startRange bis $endRange");
-
-      final List<Appointment> allAppointments = [];
-
-      // Debug-Ausgabe für verfügbare Kategorien und Termine
-      debugPrint("🏷️ Verfügbare Kategorien: $_selectedCategoryIds");
-      for (var m in models) {
-        debugPrint(
-            "📄 Termin ${m.id}: ${m.subject}, Kategorie: ${m.categoryId}, Datum: ${m.startTime}");
+      // Adapter verwenden, um Termine zu konvertieren
+      for (var appointment in appointments) {
+        final appointmentList = await _adapter.getAppointmentsForRange(
+          appointment,
+          DateTime.now().subtract(const Duration(days: 365)),
+          DateTime.now().add(const Duration(days: 365)),
+        );
+        allAppointments.addAll(appointmentList);
       }
 
-      // 1) Normale Appointments
-      try {
-        for (var m in models) {
-          if (m.categoryId == null ||
-              _selectedCategoryIds.contains(m.categoryId)) {
-            debugPrint("✅ Termin wird angezeigt: ${m.id} - ${m.subject}");
-            try {
-              final apps = await _adapter.getAppointmentsForRange(
-                  m, startRange, endRange);
-              allAppointments.addAll(apps);
-            } catch (e) {
-              debugPrint(
-                  "⚠️ Fehler beim Laden des Termins ${m.subject} (ID: ${m.id}): $e");
-
-              // Wenn der Fehler den String "Invalid weekly recurrence rule" enthält
-              if (e.toString().contains("Invalid weekly recurrence rule") &&
-                  m.recurrenceRule != null) {
-                debugPrint(
-                    "🔍 Gefunden: Ungültige wöchentliche Wiederholungsregel in Termin ${m.id}: ${m.recurrenceRule}");
-
-                // Überprüfen, ob die Regel BYDAY enthält
-                if (!m.recurrenceRule!.contains("BYDAY=")) {
-                  // Automatisch BYDAY-Parameter hinzufügen basierend auf dem Startdatum
-                  String weekday = 'MO'; // Standardwert
-                  if (m.startTime != null) {
-                    switch (m.startTime!.weekday) {
-                      case DateTime.monday:
-                        weekday = 'MO';
-                        break;
-                      case DateTime.tuesday:
-                        weekday = 'TU';
-                        break;
-                      case DateTime.wednesday:
-                        weekday = 'WE';
-                        break;
-                      case DateTime.thursday:
-                        weekday = 'TH';
-                        break;
-                      case DateTime.friday:
-                        weekday = 'FR';
-                        break;
-                      case DateTime.saturday:
-                        weekday = 'SA';
-                        break;
-                      case DateTime.sunday:
-                        weekday = 'SU';
-                        break;
-                    }
-                  }
-
-                  String correctedRule = m.recurrenceRule!;
-                  if (correctedRule.contains('UNTIL=')) {
-                    correctedRule = correctedRule.replaceFirst(
-                        'UNTIL=', 'BYDAY=$weekday;UNTIL=');
-                  } else {
-                    correctedRule = '$correctedRule;BYDAY=$weekday';
-                  }
-
-                  debugPrint(
-                      "🛠️ Korrigiere Termin ${m.id} mit neuer Regel: $correctedRule");
-
-                  // Korrigierte Regel speichern
-                  AppointmentModel updatedAppointment =
-                      m.copyWith(recurrenceRule: correctedRule);
-
-                  await _appointmentRepo.updateAppointment(updatedAppointment);
-                }
-              }
-            }
-          } else {
-            debugPrint(
-                "⛔ Termin wird GEFILTERT: ${m.id} - ${m.subject} - (Kat: ${m.categoryId})");
-          }
-        }
-      } catch (error) {
-        debugPrint("⚠️ Fehler beim Laden der Termine: $error");
-
-        // Zeige Dialog mit Optionen zur Fehlerbehebung an
-        if (mounted) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (ctx) => AlertDialog(
-              title: const Text("Fehler beim Laden der Termine"),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Es gab ein Problem beim Laden Ihrer Termine. Dies kann durch ungültige Wiederholungsregeln verursacht werden.",
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    "Fehlermeldung:",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    error.toString(),
-                    style:
-                        const TextStyle(fontFamily: "monospace", fontSize: 12),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text("Schließen"),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const SettingsPage(),
-                      ),
-                    );
-                  },
-                  child: const Text("Zu den Einstellungen"),
-                ),
-              ],
-            ),
-          );
-        }
-      }
-
-      // 2) Gebetszeiten
-      bool addPrayers = true;
-      if (_selectedView == CalendarView.day && !_showPrayerTimesInDayView) {
-        addPrayers = false;
-      } else if (_selectedView == CalendarView.week &&
-          !_showPrayerTimesInWeekView) {
-        addPrayers = false;
-      } else if (_selectedView == CalendarView.month) {
-        addPrayers = false;
-      }
-
-      if (addPrayers && _selectedNavIndex != 0) {
+      // Gebetszeiten laden, wenn aktiviert
+      if ((_selectedNavIndex == 1 && _showPrayerTimesInDayView) ||
+          (_selectedNavIndex == 2 && _showPrayerTimesInWeekView) ||
+          (_selectedNavIndex == 3 && _showPrayerTimesInMonthView)) {
+        final now = DateTime.now();
+        final startRange = DateTime(now.year - 1, now.month, now.day);
+        final endRange = DateTime(now.year + 1, now.month, now.day);
         final prayerTimeEntries = await _prayerTimeRepo.getPrayerTimesInRange(
           startRange,
           endRange,
@@ -399,6 +306,11 @@ class HomePageState extends State<HomePage> {
             final dbLoc = (row['location'] as String).toLowerCase();
             return dbLoc == userLocation;
           }).toList();
+
+          // Lade die Islam-Kategorie (ID 2) für Gebetszeiten
+          final islamCategory = await _categoryRepo.getCategory(2);
+          final prayerTimeColor = islamCategory?.color ?? _prayerTimeColor;
+
           for (var row in filteredEntries) {
             final dateStr = row['date'].toString();
             final parts = dateStr.split('-');
@@ -417,7 +329,8 @@ class HomePageState extends State<HomePage> {
                 startTime: start,
                 endTime: end,
                 isAllDay: false,
-                color: _prayerTimeColor,
+                color:
+                    prayerTimeColor, // Verwende die Farbe der Islam-Kategorie
               );
             }
 
@@ -758,6 +671,8 @@ class HomePageState extends State<HomePage> {
 
                                 if (result == true) {
                                   await _loadAllCategories();
+                                  // Cache leeren, damit die aktualisierten Kategoriefarben verwendet werden
+                                  _adapter.clearCategoryCache();
                                   loadAllAppointments();
                                   _dashboardKey.currentState?.reloadData();
 
@@ -804,29 +719,38 @@ class HomePageState extends State<HomePage> {
                                       await _categoryRepo
                                           .deleteCategory(cat.id!);
 
+                                      // Cache leeren
+                                      _adapter.clearCategoryCache();
+
                                       // UI aktualisieren
                                       await _loadAllCategories();
-                                      setStateDialog(
-                                          () {}); // Dialog aktualisieren
+                                      if (mounted) {
+                                        setStateDialog(
+                                            () {}); // Dialog aktualisieren
 
-                                      // Snackbar anzeigen
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                              'Kategorie "${cat.name}" gelöscht'),
-                                          duration: const Duration(seconds: 2),
-                                        ),
-                                      );
+                                        // Snackbar anzeigen
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                'Kategorie "${cat.name}" gelöscht'),
+                                            duration:
+                                                const Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
                                     } catch (e) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content:
-                                              Text('Fehler: ${e.toString()}'),
-                                          duration: const Duration(seconds: 3),
-                                        ),
-                                      );
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content:
+                                                Text('Fehler: ${e.toString()}'),
+                                            duration:
+                                                const Duration(seconds: 3),
+                                          ),
+                                        );
+                                      }
                                     }
                                   }
                                 },

@@ -4,10 +4,16 @@ import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 import 'package:muslim_calendar/data/services/recurrence_service.dart';
+import 'package:muslim_calendar/data/repositories/category_repository.dart';
+import 'package:muslim_calendar/models/category_model.dart';
 
 class PrayerTimeAppointmentAdapter {
   final PrayerTimeService prayerTimeService;
   final RecurrenceService recurrenceService;
+  final CategoryRepository _categoryRepository = CategoryRepository();
+
+  // Cache für Kategorien, um wiederholte Datenbankzugriffe zu vermeiden
+  final Map<int, CategoryModel> _categoryCache = {};
 
   PrayerTimeAppointmentAdapter({
     required this.prayerTimeService,
@@ -46,7 +52,7 @@ class PrayerTimeAppointmentAdapter {
 
       if (start != null && end != null) {
         if ((start.isBefore(endRange) && end.isAfter(startRange))) {
-          result.add(_toAppointment(model, start, end));
+          result.add(await _toAppointment(model, start, end));
         }
       }
     } else {
@@ -54,7 +60,7 @@ class PrayerTimeAppointmentAdapter {
         final start = model.startTime!;
         final end = model.endTime!;
         if ((start.isBefore(endRange) && end.isAfter(startRange))) {
-          result.add(_toAppointment(model, start, end));
+          result.add(await _toAppointment(model, start, end));
         }
       }
     }
@@ -76,6 +82,9 @@ class PrayerTimeAppointmentAdapter {
       uniqueDates.add(DateTime(d.year, d.month, d.day, d.hour, d.minute));
     }
 
+    // Farbe einmal abrufen für alle Wiederholungen
+    final color = await getCategoryColor(model.categoryId);
+
     for (var d in uniqueDates) {
       if (model.isRelatedToPrayerTimes) {
         final baseDate = DateTime(d.year, d.month, d.day);
@@ -92,7 +101,7 @@ class PrayerTimeAppointmentAdapter {
               notes: model.notes,
               startTime: start,
               endTime: end,
-              color: model.color,
+              color: color, // Aktuelle Kategoriefarbe verwenden
               isAllDay: model.isAllDay,
               location: model.location,
             ));
@@ -116,7 +125,7 @@ class PrayerTimeAppointmentAdapter {
             notes: model.notes,
             startTime: start,
             endTime: end,
-            color: model.color,
+            color: color, // Aktuelle Kategoriefarbe verwenden
             isAllDay: model.isAllDay,
             location: model.location,
           ));
@@ -127,8 +136,11 @@ class PrayerTimeAppointmentAdapter {
     return result;
   }
 
-  Appointment _toAppointment(
-      AppointmentModel model, DateTime start, DateTime end) {
+  Future<Appointment> _toAppointment(
+      AppointmentModel model, DateTime start, DateTime end) async {
+    // Aktuelle Kategoriefarbe verwenden
+    final color = await getCategoryColor(model.categoryId);
+
     // Hier ebenfalls keine recurrenceRule oder recurrenceExceptionDates setzen,
     // da wir Occurrences bereits selbst generieren
     return Appointment(
@@ -137,9 +149,45 @@ class PrayerTimeAppointmentAdapter {
       notes: model.notes,
       startTime: start,
       endTime: end,
-      color: model.color,
+      color: color, // Aktuelle Kategoriefarbe verwenden
       isAllDay: model.isAllDay,
       location: model.location,
     );
+  }
+
+  /// Lädt die aktuelle Farbe für eine Kategorie
+  Future<Color> getCategoryColor(int? categoryId) async {
+    if (categoryId == null) {
+      return Colors.blue; // Standardfarbe
+    }
+
+    // Versuche zuerst, die Kategorie aus dem Cache zu laden
+    if (_categoryCache.containsKey(categoryId)) {
+      return _categoryCache[categoryId]!.color;
+    }
+
+    // Lade die Kategorie aus der Datenbank
+    try {
+      final category = await _categoryRepository.getCategory(categoryId);
+      if (category != null) {
+        // Cache aktualisieren
+        _categoryCache[categoryId] = category;
+        return category.color;
+      }
+    } catch (e) {
+      debugPrint("Fehler beim Laden der Kategorie $categoryId: $e");
+    }
+
+    return Colors.blue; // Fallback
+  }
+
+  /// Leert den Kategorien-Cache
+  void clearCategoryCache({Function? onCacheCleared}) {
+    _categoryCache.clear();
+
+    // Optional: Callback ausführen nach dem Leeren des Caches
+    if (onCacheCleared != null) {
+      onCacheCleared();
+    }
   }
 }

@@ -50,23 +50,31 @@ class _CategoryListWidgetState extends State<CategoryListWidget> {
 
   // Wird aufgerufen, wenn sich Kategorien ändern
   void _onCategoriesChanged() {
+    if (!mounted) return;
+
     debugPrint(
         "🔄 CategoryListWidget: Kategorien wurden geändert, lade neu...");
     _loadCategories();
   }
 
   Future<void> _loadCategories() async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
     });
 
     try {
       final categories = await _repository.getAllCategories();
+      if (!mounted) return;
+
       setState(() {
         _categories = categories;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         _isLoading = false;
       });
@@ -98,6 +106,8 @@ class _CategoryListWidgetState extends State<CategoryListWidget> {
   }
 
   Future<void> _showDeleteConfirmation(CategoryModel category) async {
+    if (!mounted) return;
+
     if (category.id == 1 || category.id == 2 || category.id == 3) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -130,10 +140,17 @@ class _CategoryListWidgetState extends State<CategoryListWidget> {
       ),
     );
 
+    if (!mounted) return;
+
     if (result == true) {
       try {
         await _repository.deleteCategory(category.id!);
+        if (!mounted) return;
+
         _loadCategories();
+
+        // CalendarSyncService über Kategorieänderung informieren
+        _calendarSyncService.notifyCategoryChanges();
 
         // Informiere den übergeordneten Widget über die Änderung
         if (widget.onCategoriesChanged != null) {
@@ -144,6 +161,8 @@ class _CategoryListWidgetState extends State<CategoryListWidget> {
           const SnackBar(content: Text('Kategorie wurde gelöscht')),
         );
       } catch (e) {
+        if (!mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Fehler beim Löschen: $e')),
         );
