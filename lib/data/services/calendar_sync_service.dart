@@ -484,25 +484,40 @@ class CalendarSyncService {
   }
 
   /// Führt sofort einen Import von Google Calendar und Export nach Google Calendar durch
-  Future<void> syncGoogleCalendarNow() async {
+  Future<void> syncGoogleCalendarNow({int categoryOption = 0}) async {
     debugPrint("Starte Synchronisierung mit Google Calendar");
 
     // Zuerst fehlerhafte Wiederholungsregeln korrigieren
     await fixInvalidRecurrenceRules();
 
-    // Wenn der optimierte GoogleCalendarSyncService verfügbar ist, verwende diesen
-    if (googleCalendarSyncService != null) {
-      final result = await efficientSyncWithGoogle();
-      if (!result) {
-        // Fallback auf alte Methode
-        await importAppointments();
+    try {
+      // Importiere zunächst Termine von Google - IMMER!
+      debugPrint(
+          "Starte Import von Google Calendar Terminen (Option: $categoryOption)...");
+      await importAppointments(categoryOption: categoryOption);
+      debugPrint("Import von Google Calendar abgeschlossen");
+
+      // Export durchführen
+      debugPrint("Starte Export zu Google Calendar...");
+      bool exportSuccess = false;
+
+      // Wenn der optimierte GoogleCalendarSyncService verfügbar ist, verwende diesen für den Export
+      if (googleCalendarSyncService != null) {
+        exportSuccess = await efficientSyncWithGoogle();
+        if (!exportSuccess) {
+          // Fallback auf alte Export-Methode
+          debugPrint(
+              "Optimierter Export fehlgeschlagen, verwende Standard-Export");
+          await exportAppointments();
+        }
+      } else {
+        // Exportiere dann Termine zu Google
         await exportAppointments();
       }
-    } else {
-      // Importiere zuerst Termine von Google
-      await importAppointments();
-      // Exportiere dann Termine zu Google
-      await exportAppointments();
+
+      debugPrint("Export zu Google Calendar abgeschlossen");
+    } catch (e) {
+      debugPrint("Fehler bei der Synchronisierung: $e");
     }
 
     debugPrint("Synchronisierung mit Google Calendar abgeschlossen");
@@ -512,6 +527,7 @@ class CalendarSyncService {
   ///
   /// Diese Methode nutzt Batch-Operationen und intelligente Mappings, um die Synchronisierung
   /// erheblich zu beschleunigen und die API-Aufrufe zu reduzieren.
+  /// Hinweis: Diese Methode führt NUR den Export durch. Der Import muss separat aufgerufen werden.
   Future<bool> efficientSyncWithGoogle() async {
     if (googleCalendarSyncService == null) {
       debugPrint("GoogleCalendarSyncService nicht verfügbar");
@@ -519,6 +535,8 @@ class CalendarSyncService {
     }
 
     try {
+      // Wir können nicht direkt auf _initializeApiClient zugreifen,
+      // aber syncAllAppointments versucht dies intern
       final result = await googleCalendarSyncService!.syncAllAppointments();
 
       if (result) {

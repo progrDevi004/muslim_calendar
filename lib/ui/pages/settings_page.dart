@@ -661,8 +661,27 @@ class _SettingsPageState extends State<SettingsPage> {
                       // Sofort synchronisieren
                       OutlinedButton.icon(
                         onPressed: () async {
-                          await calendarSyncService.syncGoogleCalendarNow();
-                          setState(() {}); // UI aktualisieren
+                          // Importoptionen anzeigen
+                          final categoryOption =
+                              await _showImportOptionsDialog(context);
+
+                          if (categoryOption != null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text("Synchronisierung läuft...")),
+                            );
+
+                            await calendarSyncService.syncGoogleCalendarNow(
+                                categoryOption: categoryOption);
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content:
+                                      Text("Synchronisierung abgeschlossen")),
+                            );
+
+                            setState(() {}); // UI aktualisieren
+                          }
                         },
                         icon: const Icon(Icons.sync),
                         label: Text(loc.syncGoogleCalendarNow),

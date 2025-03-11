@@ -3,12 +3,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:googleapis/calendar/v3.dart' as gCal;
 import 'package:googleapis_auth/auth_io.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
 import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 import 'package:muslim_calendar/ui/widgets/prayer_time_appointment_adapter.dart';
 import 'package:muslim_calendar/data/repositories/google_event_mapping_repository.dart';
+import 'package:muslim_calendar/data/services/google_calendar_service.dart';
+
+// Wir verwenden die GoogleHttpClient-Klasse direkt aus GoogleCalendarService
 
 /// GoogleCalendarSyncConfig enthält Konstanten und Hilfsmethoden zur Konfiguration der Synchronisierung
 class GoogleCalendarSyncConfig {
@@ -99,12 +103,32 @@ class GoogleCalendarSyncService with ChangeNotifier {
   /// Hilfsmethode zur Initialisierung des API-Clients
   Future<bool> _initializeApiClient() async {
     try {
-      // Diese Methode sollte eine ordnungsgemäße Authentifizierung mit der Google API implementieren
-      // In einer Produktionsumgebung würde hier ein richtiger API-Client erstellt
+      // Integration mit GoogleCalendarService für die Authentifizierung
+      final googleCalendarService = GoogleCalendarService();
 
-      // Da dies von der App-Architektur abhängt, muss es für den Produktionscode
-      // mit einer echten Authentifizierung implementiert werden
-      return false;
+      // Prüfen ob bereits angemeldet, ansonsten Anmeldung versuchen
+      if (!googleCalendarService.isSignedIn) {
+        final signInSuccess = await googleCalendarService.signIn();
+        if (!signInSuccess) {
+          debugPrint("Konnte nicht bei Google anmelden");
+          return false;
+        }
+      }
+
+      // Google-Nutzer abrufen
+      final currentUser = googleCalendarService.currentUser;
+      if (currentUser == null) {
+        debugPrint("Kein Google-Nutzer angemeldet");
+        return false;
+      }
+
+      // Authentifizierungsheader holen und Calendar API initialisieren
+      final authHeaders = await currentUser.authHeaders;
+      final client = http.Client();
+      final httpClient = GoogleHttpClient(authHeaders, client);
+      _calendarApi = gCal.CalendarApi(httpClient);
+
+      return _calendarApi != null;
     } catch (e) {
       debugPrint("Fehler bei der API-Client-Initialisierung: $e");
       return false;
