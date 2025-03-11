@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:muslim_calendar/models/category_model.dart';
 import 'package:muslim_calendar/data/repositories/category_repository.dart';
 import 'package:muslim_calendar/ui/dialogs/category_edit_dialog.dart';
+import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
+import 'package:provider/provider.dart';
 
 class CategoryListWidget extends StatefulWidget {
   final Function()? onCategoriesChanged;
@@ -19,10 +21,37 @@ class _CategoryListWidgetState extends State<CategoryListWidget> {
   final CategoryRepository _repository = CategoryRepository();
   List<CategoryModel> _categories = [];
   bool _isLoading = true;
+  late CalendarSyncService _calendarSyncService;
 
   @override
   void initState() {
     super.initState();
+    _loadCategories();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // CalendarSyncService registrieren
+    _calendarSyncService =
+        Provider.of<CalendarSyncService>(context, listen: true);
+
+    // Listener hinzufügen, um auf Änderungen zu reagieren
+    _calendarSyncService.addListener(_onCategoriesChanged);
+  }
+
+  @override
+  void dispose() {
+    // Listener entfernen
+    _calendarSyncService.removeListener(_onCategoriesChanged);
+    super.dispose();
+  }
+
+  // Wird aufgerufen, wenn sich Kategorien ändern
+  void _onCategoriesChanged() {
+    debugPrint(
+        "🔄 CategoryListWidget: Kategorien wurden geändert, lade neu...");
     _loadCategories();
   }
 

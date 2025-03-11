@@ -66,6 +66,9 @@ class _SettingsPageState extends State<SettingsPage> {
   SyncFrequency _googleCalendarSyncFrequency = SyncFrequency.none;
   SyncFrequency _outlookCalendarSyncFrequency = SyncFrequency.none;
 
+  // Speichere eine Referenz auf den CalendarSyncService
+  late CalendarSyncService _calendarSyncService;
+
   @override
   void initState() {
     super.initState();
@@ -73,21 +76,24 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadCountryCityData();
     _initCalcMethodMap();
     _checkCalendarConnections();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Sichere Methode, um auf Provider zuzugreifen - wird aufgerufen, wenn das Widget gebaut wird
+    _calendarSyncService =
+        Provider.of<CalendarSyncService>(context, listen: false);
 
     // Listener für Kategorieänderungen hinzufügen
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final calendarSyncService =
-          Provider.of<CalendarSyncService>(context, listen: false);
-      calendarSyncService.addListener(_onCategoriesChanged);
-    });
+    _calendarSyncService.addListener(_onCategoriesChanged);
   }
 
   @override
   void dispose() {
-    // Listener entfernen
-    final calendarSyncService =
-        Provider.of<CalendarSyncService>(context, listen: false);
-    calendarSyncService.removeListener(_onCategoriesChanged);
+    // Listener entfernen - jetzt mit der gespeicherten Referenz
+    _calendarSyncService.removeListener(_onCategoriesChanged);
     super.dispose();
   }
 
@@ -186,7 +192,6 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _checkCalendarConnections() async {
-    final calendarService = context.read<CalendarSyncService>();
     final googleService = context.read<GoogleCalendarService>();
 
     // Tatsächliche Implementierung für Google
@@ -626,7 +631,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildGoogleCalendarSection(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
     final googleService = Provider.of<GoogleCalendarService>(context);
-    final calendarSyncService = Provider.of<CalendarSyncService>(context);
+    final calendarSyncService = _calendarSyncService;
 
     return Card(
       margin: const EdgeInsets.all(8.0),
@@ -891,6 +896,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       // Alle Termine zurücksetzen
                       OutlinedButton.icon(
                         onPressed: () async {
+                          final loc = Provider.of<AppLocalizations>(context,
+                              listen: false);
                           // Dialog anzeigen
                           final confirmed = await showDialog<bool>(
                             context: context,
@@ -902,7 +909,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 TextButton(
                                   onPressed: () =>
                                       Navigator.of(context).pop(false),
-                                  child: Text(loc.cancel),
+                                  child: Text('Abbrechen'),
                                 ),
                                 TextButton(
                                   onPressed: () =>
@@ -917,7 +924,13 @@ class _SettingsPageState extends State<SettingsPage> {
                           );
 
                           if (confirmed == true) {
-                            await clearAppointmentsAndReimport();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Zurücksetzen läuft...")),
+                            );
+
+                            // Verwende die gespeicherte _calendarSyncService Referenz
+                            await calendarSyncService
+                                .clearAppointmentsAndReimport();
                           }
                         },
                         icon: const Icon(Icons.delete_forever),
@@ -990,7 +1003,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _manageGoogleCalendars(BuildContext context) async {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
-    final calendarSyncService = context.read<CalendarSyncService>();
+    final calendarSyncService = _calendarSyncService;
 
     try {
       // Zeige Ladeindikator
@@ -1011,7 +1024,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
       // Lade verfügbare Kalender
       final availableCalendars =
-          await calendarSyncService.getAvailableCalendars();
+          await _calendarSyncService.getAvailableCalendars();
 
       // Schließe Ladeindikator
       if (mounted) Navigator.of(context).pop();
@@ -1112,7 +1125,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _syncGoogleCalendarNow(BuildContext context) async {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
-    final calendarSyncService = context.read<CalendarSyncService>();
+    final calendarSyncService = _calendarSyncService;
 
     try {
       await calendarSyncService.syncGoogleCalendarNow();
@@ -1140,8 +1153,7 @@ class _SettingsPageState extends State<SettingsPage> {
   /// Zeigt einen Dialog zur Auswahl der zu synchronisierenden Kalender an
   Future<void> _showCalendarSelectionDialog() async {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
-    final calendarSyncService =
-        Provider.of<CalendarSyncService>(context, listen: false);
+    final calendarSyncService = _calendarSyncService;
 
     try {
       // Zeige Ladeindikator
@@ -1162,7 +1174,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
       // Lade verfügbare Kalender
       final availableCalendars =
-          await calendarSyncService.getAvailableCalendars();
+          await _calendarSyncService.getAvailableCalendars();
 
       // Schließe Ladeindikator
       if (mounted) Navigator.of(context).pop();
@@ -1182,7 +1194,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
       if (result != null) {
         // Speichere ausgewählte Kalender
-        await calendarSyncService.saveSelectedCalendars(result);
+        await _calendarSyncService.saveSelectedCalendars(result);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1264,7 +1276,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   /// Löscht alle lokalen Termine und führt einen vollständigen Neuimport durch
   Future<void> clearAppointmentsAndReimport() async {
-    final calendarSyncService = context.read<CalendarSyncService>();
+    final calendarSyncService = _calendarSyncService;
     final loc = Provider.of<AppLocalizations>(context, listen: false);
 
     try {

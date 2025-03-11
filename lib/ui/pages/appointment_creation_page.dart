@@ -32,6 +32,9 @@ import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
 // Für das Zeitformat
 import 'package:intl/intl.dart';
 
+// CalendarSyncService
+import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
+
 class AppointmentCreationPage extends StatefulWidget {
   final int? appointmentId;
   final DateTime? selectedDate;
@@ -129,6 +132,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   // Füge die _location Variable hinzu (nach den anderen Deklarationen)
   String? _location;
 
+  // CalendarSyncService
+  late CalendarSyncService _calendarSyncService;
+
   // Füge die Hilfsmethode für die Konvertierung von Wochentagen ein (vor der _loadAppointmentData Methode)
   // Hilfsmethode für die Umwandlung von String-Tagesbezeichnungen in WeekDays Enum
   WeekDays _stringToWeekDay(String dayStr) {
@@ -210,6 +216,13 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       // Bei Sprachwechsel neu laden:
       _loadCountryCityData();
     }
+
+    // CalendarSyncService registrieren
+    _calendarSyncService =
+        Provider.of<CalendarSyncService>(context, listen: true);
+
+    // Listener hinzufügen, um auf Änderungen zu reagieren
+    _calendarSyncService.addListener(_onCategoriesChanged);
   }
 
   @override
@@ -218,6 +231,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     _descriptionController.removeListener(_autoCategorizeIfNeeded);
     _titleController.dispose();
     _descriptionController.dispose();
+    // Listener entfernen
+    _calendarSyncService.removeListener(_onCategoriesChanged);
     super.dispose();
   }
 
@@ -2261,6 +2276,12 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         );
       }
     }
+  }
+
+  // Wird aufgerufen, wenn sich Kategorien ändern
+  void _onCategoriesChanged() {
+    debugPrint("🔄 Kategorien wurden geändert, lade neu...");
+    _loadCategories();
   }
 }
 

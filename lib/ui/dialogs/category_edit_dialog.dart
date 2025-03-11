@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:muslim_calendar/models/category_model.dart';
 import 'package:muslim_calendar/data/repositories/category_repository.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
+import 'package:provider/provider.dart';
 
 class CategoryEditDialog extends StatefulWidget {
   final CategoryModel category;
@@ -19,19 +21,56 @@ class _CategoryEditDialogState extends State<CategoryEditDialog> {
   late TextEditingController _nameController;
   late Color _selectedColor;
   final CategoryRepository _categoryRepository = CategoryRepository();
+  late CalendarSyncService _calendarSyncService;
   bool _isStandardCategory = false;
   bool _isLoading = false;
+  CategoryModel? _currentCategory;
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.category.name);
-    _selectedColor = widget.category.color;
+    _currentCategory = widget.category;
+    _nameController = TextEditingController(text: _currentCategory!.name);
+    _selectedColor = _currentCategory!.color;
 
     // Prüfen, ob es sich um eine Standardkategorie handelt
-    _isStandardCategory = widget.category.id == 1 ||
-        widget.category.id == 2 ||
-        widget.category.id == 3;
+    _isStandardCategory = _currentCategory!.id == 1 ||
+        _currentCategory!.id == 2 ||
+        _currentCategory!.id == 3;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Provider für CalendarSyncService holen
+    _calendarSyncService =
+        Provider.of<CalendarSyncService>(context, listen: true);
+
+    // Wenn sich der CalendarSyncService ändert (z.B. durch neue Kategorien),
+    // lade die aktuelle Kategorie neu
+    _refreshCurrentCategory();
+  }
+
+  /// Aktualisiert die Kategoriedaten aus dem Repository
+  Future<void> _refreshCurrentCategory() async {
+    if (_currentCategory?.id == null) return;
+
+    try {
+      final updatedCategory =
+          await _categoryRepository.getCategory(_currentCategory!.id!);
+      if (updatedCategory != null && mounted) {
+        setState(() {
+          _currentCategory = updatedCategory;
+          // Nur Name aktualisieren, wenn er nicht manuell geändert wurde
+          if (_nameController.text == widget.category.name) {
+            _nameController.text = updatedCategory.name;
+          }
+          _selectedColor = updatedCategory.color;
+        });
+      }
+    } catch (e) {
+      debugPrint("Fehler beim Aktualisieren der Kategorie: $e");
+    }
   }
 
   @override
@@ -54,13 +93,16 @@ class _CategoryEditDialogState extends State<CategoryEditDialog> {
 
     try {
       final updatedCategory = CategoryModel(
-        id: widget.category.id,
+        id: _currentCategory!.id,
         name: _nameController.text.trim(),
         color: _selectedColor,
-        isDefault: widget.category.isDefault,
+        isDefault: _currentCategory!.isDefault,
       );
 
       await _categoryRepository.updateCategory(updatedCategory);
+
+      // Nach dem Speichern den CalendarSyncService benachrichtigen
+      _calendarSyncService.notifyCategoryChanges();
 
       if (mounted) {
         Navigator.of(context).pop(true); // true = Kategorie wurde aktualisiert

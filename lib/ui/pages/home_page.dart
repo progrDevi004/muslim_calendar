@@ -761,13 +761,13 @@ class HomePageState extends State<HomePage> {
                                   loadAllAppointments();
                                   _dashboardKey.currentState?.reloadData();
 
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                          'Kategorie "${cat.name}" wurde aktualisiert'),
-                                      duration: const Duration(seconds: 2),
-                                    ),
-                                  );
+                                  // ScaffoldMessenger.of(context).showSnackBar(
+                                  //   SnackBar(
+                                  //     content: Text(
+                                  //         'Kategorie "${cat.name}" wurde aktualisiert'),
+                                  //     duration: const Duration(seconds: 2),
+                                  //   ),
+                                  // );
                                 }
                               },
                             ),
