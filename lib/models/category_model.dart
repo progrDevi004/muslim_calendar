@@ -63,13 +63,7 @@ class CategoryModel {
         if ((colorValue & 0xFF000000) == 0) {
           colorValue |= 0xFF000000;
         }
-
-        // Debug-Ausgabe für Kategorie und Farbwert
-        print(
-            "Kategorie '${map['name']}' hat Farbwert: 0x${colorValue.toRadixString(16).toUpperCase()}");
       } catch (e) {
-        print("Fehler beim Parsen der Farbe für '${map['name']}': $e");
-
         // Spezifische Standardfarben je nach Kategoriename
         if (map['name'] == 'Privat') {
           colorValue = Colors.blue.value;

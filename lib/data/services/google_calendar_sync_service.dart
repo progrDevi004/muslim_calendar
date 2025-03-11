@@ -10,6 +10,7 @@ import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 import 'package:muslim_calendar/ui/widgets/prayer_time_appointment_adapter.dart';
 import 'package:muslim_calendar/data/repositories/google_event_mapping_repository.dart';
 
+/// GoogleCalendarSyncConfig enthält Konstanten und Hilfsmethoden zur Konfiguration der Synchronisierung
 class GoogleCalendarSyncConfig {
   // Konfigurationsparameter für die Synchronisierung
   static const int maxFutureMonths = 3;
@@ -18,8 +19,8 @@ class GoogleCalendarSyncConfig {
   // Limitierung für Batch-Operationen
   static const int maxBatchSize = 10;
 
-  // Zeitfenster für die Synchronisierung (90 Tage)
-  static const Duration syncWindow = Duration(days: 90);
+  // Zeitfenster für die Synchronisierung (28 Tage)
+  static const Duration syncWindow = Duration(days: 28);
 
   // Zeitraum, nach dem alte Mappings bereinigt werden (7 Tage in der Vergangenheit)
   static const Duration cleanupThreshold = Duration(days: 7);
@@ -41,6 +42,22 @@ class GoogleCalendarSyncConfig {
   }
 }
 
+/// GoogleCalendarSyncService - Effiziente Batch-Synchronisierung mit Google Calendar
+///
+/// Dieser Service ist für die effiziente Synchronisierung zwischen der lokalen
+/// Datenbank und Google Calendar optimiert. Seine Hauptaufgaben umfassen:
+///
+/// 1. Batch-Verarbeitung von Terminen für bessere Performance
+/// 2. Management von Zuordnungen zwischen lokalen und Google-Events
+/// 3. Spezielle Behandlung von wiederkehrenden Terminen
+/// 4. Zeitfenster-basierte Synchronisierung
+/// 5. Bereinigung veralteter Mappings
+///
+/// Der Service implementiert ChangeNotifier für UI-Updates und verwendet ein Repository
+/// zur Speicherung der Mappings zwischen lokalen und Google-Events.
+///
+/// Im Gegensatz zum GoogleCalendarService, der low-level API-Operationen durchführt,
+/// konzentriert sich dieser Service auf effiziente Synchronisierung mehrerer Termine.
 class GoogleCalendarSyncService with ChangeNotifier {
   // Dependencies
   final AppointmentRepository _appointmentRepo;
@@ -67,7 +84,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
         _mappingRepo = mappingRepo,
         _appointmentAdapter = appointmentAdapter;
 
-  // Initialisiert die Google API
+  // Initialisiert die Google API mit einem AuthClient
   Future<bool> initialize(AuthClient client) async {
     try {
       _calendarApi = gCal.CalendarApi(client);
@@ -75,6 +92,21 @@ class GoogleCalendarSyncService with ChangeNotifier {
       return true;
     } catch (e) {
       debugPrint('Fehler bei der Initialisierung: $e');
+      return false;
+    }
+  }
+
+  /// Hilfsmethode zur Initialisierung des API-Clients
+  Future<bool> _initializeApiClient() async {
+    try {
+      // Diese Methode sollte eine ordnungsgemäße Authentifizierung mit der Google API implementieren
+      // In einer Produktionsumgebung würde hier ein richtiger API-Client erstellt
+
+      // Da dies von der App-Architektur abhängt, muss es für den Produktionscode
+      // mit einer echten Authentifizierung implementiert werden
+      return false;
+    } catch (e) {
+      debugPrint("Fehler bei der API-Client-Initialisierung: $e");
       return false;
     }
   }
@@ -118,7 +150,25 @@ class GoogleCalendarSyncService with ChangeNotifier {
 
   // Hauptmethode: Synchronisiert alle Termine mit Google Calendar
   Future<bool> syncAllAppointments() async {
-    if (_isSyncing || _calendarApi == null || _selectedCalendarId == null) {
+    // Falls noch nicht initialisiert, versuche die Initialisierung
+    if (_calendarApi == null || _selectedCalendarId == null) {
+      try {
+        // Versuche, API-Client und Kalender-ID zu initialisieren
+        await _initializeApiClient();
+        await _loadSelectedCalendarId();
+      } catch (e) {
+        debugPrint("Fehler bei der Initialisierung: $e");
+        return false;
+      }
+
+      // Prüfen, ob die Initialisierung erfolgreich war
+      if (_calendarApi == null || _selectedCalendarId == null) {
+        return false;
+      }
+    }
+
+    if (_isSyncing) {
+      debugPrint("Synchronisierung läuft bereits");
       return false;
     }
 

@@ -13,8 +13,27 @@ import 'package:muslim_calendar/data/repositories/category_repository.dart';
 import 'package:muslim_calendar/data/services/google_calendar_service.dart';
 import 'package:muslim_calendar/data/services/recurrence_service.dart';
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
+import 'package:muslim_calendar/utils/recurrence_rule_converter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:muslim_calendar/data/services/google_calendar_sync_service.dart';
 
+/// CalendarSyncService - Fassade (Facade) für alle Kalendersynchronisierungsdienste
+///
+/// Dieser Service dient als zentraler Koordinator für die Kalendersynchronisierung
+/// und verwendet spezialisierte Services für konkrete Implementierungen:
+///
+/// 1. GoogleCalendarService für API-Aufrufe und Authentifizierung
+/// 2. RecurrenceService für Wiederholungsberechnung
+/// 3. PrayerTimeService für gebetszeitbezogene Termine
+///
+/// Die Hauptaufgaben dieses Dienstes sind:
+/// - Verfügbare Kalender abrufen und verwalten
+/// - Import/Export von Terminen zwischen lokaler Datenbank und externen Kalendern
+/// - Kategorie-Mapping zwischen App-Kategorien und externen Kalendern
+/// - Korrektur von Wiederholungsregeln
+///
+/// Alle UI-Komponenten sollten diesen Service verwenden, statt direkt mit den
+/// spezialisierten Services zu interagieren.
 class CalendarSyncService {
   /// Takvim sağlayıcısı; ileride Outlook, Apple gibi sağlayıcılar için de ortak interface tanımlanabilir.
   final GoogleCalendarService calendarProvider;
@@ -22,6 +41,7 @@ class CalendarSyncService {
   final CategoryRepository categoryRepository;
   final RecurrenceService recurrenceService;
   final PrayerTimeService prayerTimeService;
+  final GoogleCalendarSyncService? googleCalendarSyncService;
 
   CalendarSyncService({
     required this.calendarProvider,
@@ -29,6 +49,7 @@ class CalendarSyncService {
     required this.categoryRepository,
     required this.recurrenceService,
     required this.prayerTimeService,
+    this.googleCalendarSyncService,
   });
 
   /// Holt die Liste aller verfügbaren Kalender
@@ -64,8 +85,7 @@ class CalendarSyncService {
   /// Ortak import fonksiyonu: Sağlayıcı (örneğin Google) üzerinden event'leri çekip yerel veritabanına ekler.
   Future<void> importAppointments({int categoryOption = 0}) async {
     // Debug-Ausgabe für den Beginn des Imports
-    debugPrint(
-        "🔄 Importiere Termine aus Google Calendar (Kategorie-Option: $categoryOption)");
+    //debugPrint("🔄 Importiere Termine aus Google Calendar (Kategorie-Option: $categoryOption)");
 
     await calendarProvider.autoSignIn();
 
@@ -78,17 +98,15 @@ class CalendarSyncService {
 
     // Events aus allen ausgewählten Kalendern abrufen
     for (String calendarId in selectedCalendarIds) {
-      debugPrint("📅 Lade Termine aus Kalender: $calendarId");
+      ////debugPrint("📅 Lade Termine aus Kalender: $calendarId");
       final events =
           await calendarProvider.fetchCalendarEvents(calendarId: calendarId);
       allEvents.addAll(events);
-      debugPrint(
-          "📊 ${events.length} Termine aus Kalender $calendarId abgerufen");
+      //debugPrint("📊 ${events.length} Termine aus Kalender $calendarId abgerufen");
     }
 
     // Debug: Anzahl der abgerufenen Events
-    debugPrint(
-        "📊 Insgesamt ${allEvents.length} Termine aus Google Calendar abgerufen");
+    //debugPrint("📊 Insgesamt ${allEvents.length} Termine aus Google Calendar abgerufen");
 
     // Zähler für die Erfolgsstatistik
     int importCount = 0;
@@ -103,7 +121,7 @@ class CalendarSyncService {
     List<CategoryModel> categories = [];
     if (categoryOption > 0) {
       categories = await appointmentRepository.getAllCategories();
-      debugPrint("📂 ${categories.length} Kategorien geladen");
+      //debugPrint("📂 ${categories.length} Kategorien geladen");
     }
 
     // Standard-Import-Kategorie (für Option 0)
@@ -114,32 +132,31 @@ class CalendarSyncService {
 
     for (var event in allEvents) {
       // Debug: Event-Details
-      debugPrint("📅 Verarbeite Event: ${event.summary} (ID: ${event.id})");
+      //debugPrint("📅 Verarbeite Event: ${event.summary} (ID: ${event.id})");
 
       // Prüfe, ob dieses Event bereits verarbeitet wurde
       if (event.id != null && processedEventIds.contains(event.id)) {
-        debugPrint(
-            "🔄 Event überschlagen: Bereits verarbeitet (ID: ${event.id})");
+        //debugPrint("🔄 Event überschlagen: Bereits verarbeitet (ID: ${event.id})");
         skippedCount++;
         continue;
       }
 
       // Leere Events überspringen
       if (event.summary == null || event.summary!.trim().isEmpty) {
-        debugPrint("🚫 Event übersprungen: Leerer Titel");
+        //debugPrint("🚫 Event übersprungen: Leerer Titel");
         skippedCount++;
         continue;
       }
 
       // Fehlende Start- oder Endzeit
       if (event.start?.dateTime == null && event.start?.date == null) {
-        debugPrint("🚫 Event übersprungen: Keine Startzeit");
+        //debugPrint("🚫 Event übersprungen: Keine Startzeit");
         skippedCount++;
         continue;
       }
 
       if (event.end?.dateTime == null && event.end?.date == null) {
-        debugPrint("🚫 Event übersprungen: Keine Endzeit");
+        //debugPrint("🚫 Event übersprungen: Keine Endzeit");
         skippedCount++;
         continue;
       }
@@ -160,8 +177,7 @@ class CalendarSyncService {
               (event.summary!.toLowerCase().contains('birthday') ||
                   event.summary!.toLowerCase().contains('doğum günü')))) {
         // Wenn dies ein automatisch generiertes Event wie ein Geburtstag ist, überspringe es.
-        debugPrint(
-            "🚫 Event übersprungen: Automatisch erstelltes Event (z.B. Geburtstag)");
+        //debugPrint("🚫 Event übersprungen: Automatisch erstelltes Event (z.B. Geburtstag)");
         skippedCount++;
         continue;
       }
@@ -188,7 +204,8 @@ class CalendarSyncService {
               event.recurrence!.first.toString(), event.start!.dateTime!);
         } else {
           event.recurrence!.first =
-              convertGoogleToICalendarRRule(event.recurrence!.first.toString());
+              RecurrenceRuleConverter.convertGoogleToICalendar(
+                  event.recurrence!.first.toString());
         }
       }
 
@@ -203,7 +220,7 @@ class CalendarSyncService {
               colorIndex > 0 &&
               colorIndex <= categories.length) {
             appointmentCategoryId = colorIndex;
-            debugPrint("🎨 Verwende Google-Farbe als Kategorie: $colorIndex");
+            //debugPrint("🎨 Verwende Google-Farbe als Kategorie: $colorIndex");
           }
         }
       } else if (categoryOption == 2) {
@@ -257,10 +274,9 @@ class CalendarSyncService {
               color: eventColor,
             );
             appointmentCategoryId = category.id ?? defaultCategoryId;
-            debugPrint(
-                "✅ Neue oder bestehende Kategorie verwendet: ${category.name} (ID: ${category.id})");
+            //debugPrint("✅ Neue oder bestehende Kategorie verwendet: ${category.name} (ID: ${category.id})");
           } catch (e) {
-            debugPrint("⚠️ Fehler beim Erstellen der Kategorie: $e");
+            //debugPrint("⚠️ Fehler beim Erstellen der Kategorie: $e");
             // Fallback auf Standard-Kategorie
             appointmentCategoryId = defaultCategoryId;
           }
@@ -302,13 +318,11 @@ class CalendarSyncService {
       }
 
       if (existingAppointment == null) {
-        debugPrint(
-            "➕ Neuer Termin hinzugefügt: ${appointment.subject} (Kategorie: $appointmentCategoryId)");
+        //debugPrint("➕ Neuer Termin hinzugefügt: ${appointment.subject} (Kategorie: $appointmentCategoryId)");
         await appointmentRepository.insertAppointment(appointment);
         importCount++;
       } else {
-        debugPrint(
-            "🔄 Termin aktualisiert: ${appointment.subject} (Kategorie: $appointmentCategoryId)");
+        //debugPrint("🔄 Termin aktualisiert: ${appointment.subject} (Kategorie: $appointmentCategoryId)");
         await appointmentRepository.updateAppointment(appointment);
         updateCount++;
       }
@@ -330,8 +344,7 @@ class CalendarSyncService {
         }
         if (!foundMatchingEvent) {
           // Eğer eşleşen ein event yoksa, diesen appointment'ı sil.
-          debugPrint(
-              "🗑️ Termin gelöscht: ${existingAppointment.subject} (ID: ${existingAppointment.id})");
+          //debugPrint("🗑️ Termin gelöscht: ${existingAppointment.subject} (ID: ${existingAppointment.id})");
           await appointmentRepository
               .deleteAppointment(existingAppointment.id!);
           deleteCount++;
@@ -340,110 +353,20 @@ class CalendarSyncService {
     }
 
     // Debug-Ausgabe für die Importstatistik
-    debugPrint(
-        "✅ Import abgeschlossen: $importCount neue Termine, $updateCount aktualisiert, $deleteCount gelöscht, $skippedCount übersprungen");
+    //debugPrint("✅ Import abgeschlossen: $importCount neue Termine, $updateCount aktualisiert, $deleteCount gelöscht, $skippedCount übersprungen");
 
     // Liste aller Termine in der Datenbank ausgeben
     List<AppointmentModel> allAppointments =
         await appointmentRepository.getAllAppointments();
-    debugPrint(
-        "📋 Aktuelle Termine in der Datenbank: ${allAppointments.length}");
+    //debugPrint("📋 Aktuelle Termine in der Datenbank: ${allAppointments.length}");
     for (var app in allAppointments) {
-      debugPrint(
-          "  - ${app.subject} (ID: ${app.id}, Kategorie: ${app.categoryId}, Start: ${app.startTime})");
+      //debugPrint("  - ${app.subject} (ID: ${app.id}, Kategorie: ${app.categoryId}, Start: ${app.startTime})");
     }
-  }
-
-  String convertGoogleToICalendarRRule(String googleRrule) {
-    final params = googleRrule.split(';');
-    final icalParams = <String>[];
-    bool isWeekly = false;
-    bool hasByDay = false;
-
-    for (var param in params) {
-      final parts = param.split('=');
-      if (parts.length != 2) continue;
-
-      final key = parts[0];
-      final value = parts[1];
-
-      if (key == 'FREQ' && value.toUpperCase() == 'WEEKLY') {
-        isWeekly = true;
-      }
-
-      if (key == 'BYDAY') {
-        hasByDay = true;
-        // Google'ın 1TU formatını iCalendar'a dönüştür
-        final regex = RegExp(r'^(-?\d+)([A-Za-z]{2})$');
-        final match = regex.firstMatch(value);
-
-        if (match != null) {
-          final position = int.parse(match.group(1)!);
-          final day = match.group(2)!;
-          icalParams.add('BYSETPOS=$position');
-          icalParams.add('BYDAY=$day');
-        } else {
-          icalParams.add('BYDAY=$value');
-        }
-      } else if (key == 'FREQ') {
-        // FREQ değerini uppercase'e çevir
-        icalParams.add('FREQ=${value.toUpperCase()}');
-      } else {
-        // Diğer parametreleri aynen aktar
-        icalParams.add('$key=$value');
-      }
-    }
-
-    // Wenn es sich um eine wöchentliche Wiederholung handelt aber kein BYDAY-Parameter vorhanden ist
-    if (isWeekly && !hasByDay) {
-      // Den Wochentag des Startdatums verwenden (falls verfügbar) oder Montag als Standard
-      DateTime now = DateTime.now();
-      String weekday;
-
-      switch (now.weekday) {
-        case DateTime.monday:
-          weekday = 'MO';
-          break;
-        case DateTime.tuesday:
-          weekday = 'TU';
-          break;
-        case DateTime.wednesday:
-          weekday = 'WE';
-          break;
-        case DateTime.thursday:
-          weekday = 'TH';
-          break;
-        case DateTime.friday:
-          weekday = 'FR';
-          break;
-        case DateTime.saturday:
-          weekday = 'SA';
-          break;
-        case DateTime.sunday:
-          weekday = 'SU';
-          break;
-        default:
-          weekday = 'MO'; // Standardwert
-      }
-
-      debugPrint(
-          '🛠️ Wöchentliche Wiederholung ohne BYDAY gefunden, füge BYDAY=$weekday hinzu');
-      icalParams.add('BYDAY=$weekday');
-    }
-
-    // Özel durum: Aylık kurallarda BYSETPOS ekle
-    if (icalParams.any((p) => p.startsWith('FREQ=MONTHLY')) &&
-        icalParams.any((p) => p.startsWith('BYDAY=')) &&
-        !icalParams.any((p) => p.startsWith('BYSETPOS'))) {
-      icalParams.add('BYSETPOS=1');
-    }
-
-    return '${icalParams.join(';').toUpperCase()}';
   }
 
   /// Gemeinsame Export-Funktion: Überträgt Termine aus der lokalen Datenbank zum Provider (Google).
   Future<void> exportAppointments() async {
-    debugPrint("🔄 Exportiere Termine zu Google Calendar");
+    //debugPrint("🔄 Exportiere Termine zu Google Calendar");
     await calendarProvider.autoSignIn();
 
     // Lade ausgewählten Hauptkalender für den Export (standardmäßig 'primary')
@@ -455,8 +378,8 @@ class CalendarSyncService {
 
     List<AppointmentModel> appointments =
         await appointmentRepository.getAllAppointments();
-    debugPrint("📊 ${appointments.length} Termine zum Export gefunden");
-    debugPrint("📅 Export in Kalender: $exportCalendarId");
+    //debugPrint("📊 ${appointments.length} Termine zum Export gefunden");
+    //debugPrint("📅 Export in Kalender: $exportCalendarId");
 
     int exportCount = 0;
     int updateCount = 0;
@@ -469,16 +392,14 @@ class CalendarSyncService {
         List<DateTime> recurrenceDates = recurrenceService.getRecurrenceDates(
             appointment, startRange, endRange);
 
-        debugPrint(
-            "🕌 Prayer-related Termin: ${appointment.subject} mit ${recurrenceDates.length} Terminen");
+        //debugPrint("🕌 Prayer-related Termin: ${appointment.subject} mit ${recurrenceDates.length} Terminen");
         for (var date in recurrenceDates) {
           DateTime? calculatedStart =
               await prayerTimeService.getCalculatedStartTime(appointment, date);
           DateTime? calculatedEnd =
               await prayerTimeService.getCalculatedEndTime(appointment, date);
           if (calculatedStart == null || calculatedEnd == null) {
-            debugPrint(
-                "⚠️ Konnte Start/End-Zeit nicht berechnen für Datum: $date");
+            //debugPrint("⚠️ Konnte Start/End-Zeit nicht berechnen für Datum: $date");
             continue;
           }
 
@@ -499,13 +420,11 @@ class CalendarSyncService {
         );
       } else {
         if (appointment.startTime == null || appointment.endTime == null) {
-          debugPrint(
-              "⚠️ Termin ohne Start/End-Zeit übersprungen: ${appointment.subject}");
+          //debugPrint("⚠️ Termin ohne Start/End-Zeit übersprungen: ${appointment.subject}");
           continue;
         }
 
-        debugPrint(
-            "📆 Exportiere Termin: ${appointment.subject} (${appointment.startTime} - ${appointment.endTime})");
+        //debugPrint("📆 Exportiere Termin: ${appointment.subject} (${appointment.startTime} - ${appointment.endTime})");
         Event event = await calendarProvider.syncAppointmentEvent(
           appointment: appointment,
           startTime: appointment.startTime!,
@@ -515,26 +434,25 @@ class CalendarSyncService {
         );
 
         if (appointment.externalIdGoogle == null) {
-          debugPrint("🆕 Neuer Termin in Google erstellt: ${event.id}");
+          //debugPrint("🆕 Neuer Termin in Google erstellt: ${event.id}");
           // Hier muss ein copyWith verwendet werden, da wir nur ein Feld ändern wollen
           AppointmentModel updatedAppointment =
               appointment.copyWith(externalIdGoogle: event.id);
           await appointmentRepository.updateAppointment(updatedAppointment);
           exportCount++;
         } else {
-          debugPrint("🔄 Termin in Google aktualisiert: ${event.id}");
+          //debugPrint("🔄 Termin in Google aktualisiert: ${event.id}");
           updateCount++;
         }
       }
     }
 
-    debugPrint(
-        "✅ Export abgeschlossen: $exportCount neue Termine exportiert, $updateCount aktualisiert");
+    //debugPrint("✅ Export abgeschlossen: $exportCount neue Termine exportiert, $updateCount aktualisiert");
   }
 
   /// Korrigiert ungültige Wiederholungsregeln in der Datenbank
   Future<void> fixInvalidRecurrenceRules() async {
-    debugPrint("🔍 Prüfe auf ungültige Wiederholungsregeln in der Datenbank");
+    //debugPrint("🔍 Prüfe auf ungültige Wiederholungsregeln in der Datenbank");
 
     // Alle Termine aus der Datenbank laden
     List<AppointmentModel> appointments =
@@ -542,81 +460,83 @@ class CalendarSyncService {
     int fixedCount = 0;
 
     for (var appointment in appointments) {
-      if (appointment.recurrenceRule != null &&
-          appointment.recurrenceRule!.contains('FREQ=WEEKLY') &&
-          !appointment.recurrenceRule!.contains('BYDAY=')) {
-        // Wöchentliche Regel ohne BYDAY gefunden - korrigieren
-        String correctedRule = appointment.recurrenceRule!;
+      if (appointment.recurrenceRule != null) {
+        // Verwende den verbesserten RecurrenceService zur Korrektur
+        String correctedRule = recurrenceService.fixRecurrenceRule(
+            appointment.recurrenceRule, appointment.startTime);
 
-        // Wenn wir das Startdatum haben, verwenden wir dessen Wochentag
-        String weekday = 'MO'; // Standardwert
-        if (appointment.startTime != null) {
-          switch (appointment.startTime!.weekday) {
-            case DateTime.monday:
-              weekday = 'MO';
-              break;
-            case DateTime.tuesday:
-              weekday = 'TU';
-              break;
-            case DateTime.wednesday:
-              weekday = 'WE';
-              break;
-            case DateTime.thursday:
-              weekday = 'TH';
-              break;
-            case DateTime.friday:
-              weekday = 'FR';
-              break;
-            case DateTime.saturday:
-              weekday = 'SA';
-              break;
-            case DateTime.sunday:
-              weekday = 'SU';
-              break;
-          }
+        // Wenn die Regel geändert wurde, aktualisiere den Termin
+        if (correctedRule != appointment.recurrenceRule) {
+          // Termin aktualisieren
+          AppointmentModel updatedAppointment =
+              appointment.copyWith(recurrenceRule: correctedRule);
+
+          await appointmentRepository.updateAppointment(updatedAppointment);
+          fixedCount++;
+
+          debugPrint(
+              "🛠️ Wiederholungsregel korrigiert für Termin ${appointment.id} (${appointment.subject}): $correctedRule");
         }
-
-        // BYDAY hinzufügen
-        if (correctedRule.contains('UNTIL=')) {
-          correctedRule =
-              correctedRule.replaceFirst('UNTIL=', 'BYDAY=$weekday;UNTIL=');
-        } else {
-          correctedRule = '$correctedRule;BYDAY=$weekday';
-        }
-
-        // Termin aktualisieren
-        AppointmentModel updatedAppointment =
-            appointment.copyWith(recurrenceRule: correctedRule);
-
-        await appointmentRepository.updateAppointment(updatedAppointment);
-        fixedCount++;
-
-        debugPrint(
-            "🛠️ Wiederholungsregel korrigiert für Termin ${appointment.id} (${appointment.subject}): $correctedRule");
       }
     }
 
-    debugPrint(
-        "✅ Wiederholungsregel-Prüfung abgeschlossen: $fixedCount Termine korrigiert");
+    //debugPrint("✅ Wiederholungsregel-Prüfung abgeschlossen: $fixedCount Termine korrigiert");
   }
 
   /// Führt sofort einen Import von Google Calendar und Export nach Google Calendar durch
   Future<void> syncGoogleCalendarNow() async {
-    debugPrint("🔄 Starte sofortige Synchronisierung mit Google Calendar");
+    debugPrint("Starte Synchronisierung mit Google Calendar");
 
     // Zuerst fehlerhafte Wiederholungsregeln korrigieren
     await fixInvalidRecurrenceRules();
 
-    // Importiere zuerst Termine von Google
-    await importAppointments();
-    // Exportiere dann Termine zu Google
-    await exportAppointments();
-    debugPrint("✅ Synchronisierung mit Google Calendar abgeschlossen");
+    // Wenn der optimierte GoogleCalendarSyncService verfügbar ist, verwende diesen
+    if (googleCalendarSyncService != null) {
+      final result = await efficientSyncWithGoogle();
+      if (!result) {
+        // Fallback auf alte Methode
+        await importAppointments();
+        await exportAppointments();
+      }
+    } else {
+      // Importiere zuerst Termine von Google
+      await importAppointments();
+      // Exportiere dann Termine zu Google
+      await exportAppointments();
+    }
+
+    debugPrint("Synchronisierung mit Google Calendar abgeschlossen");
+  }
+
+  /// Verwendet den optimierten GoogleCalendarSyncService für effizientere Synchronisierung
+  ///
+  /// Diese Methode nutzt Batch-Operationen und intelligente Mappings, um die Synchronisierung
+  /// erheblich zu beschleunigen und die API-Aufrufe zu reduzieren.
+  Future<bool> efficientSyncWithGoogle() async {
+    if (googleCalendarSyncService == null) {
+      debugPrint("GoogleCalendarSyncService nicht verfügbar");
+      return false;
+    }
+
+    try {
+      final result = await googleCalendarSyncService!.syncAllAppointments();
+
+      if (result) {
+        debugPrint("Synchronisierung erfolgreich abgeschlossen");
+      } else {
+        debugPrint("Synchronisierung fehlgeschlagen");
+      }
+
+      return result;
+    } catch (e) {
+      debugPrint("Fehler bei der Synchronisierung: $e");
+      return false;
+    }
   }
 
   /// Löscht alle lokalen Termine und führt einen vollständigen Neuimport durch
   Future<void> clearAppointmentsAndReimport() async {
-    debugPrint("🧹 Lösche alle lokalen Termine für Neuimport");
+    //debugPrint("🧹 Lösche alle lokalen Termine für Neuimport");
 
     // Alle lokalen Termine aus der Datenbank laden
     List<AppointmentModel> allAppointments =
@@ -631,11 +551,11 @@ class CalendarSyncService {
       }
     }
 
-    debugPrint("🗑️ $deleteCount Termine gelöscht");
+    //debugPrint("🗑️ $deleteCount Termine gelöscht");
 
     // Neu synchronisieren
     await importAppointments();
-    debugPrint("✅ Neuimport abgeschlossen");
+    //debugPrint("✅ Neuimport abgeschlossen");
   }
 }
 

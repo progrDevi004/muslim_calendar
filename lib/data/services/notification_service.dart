@@ -25,7 +25,7 @@ class NotificationService {
   /// Aufruf zum globalen Aktivieren. Hier kann man ggf. nochmal `_initIfNeeded()` triggern.
   Future<void> enableNotifications() async {
     if (kDebugMode) {
-      print("[NotificationService] Notifications globally enabled.");
+      //print("[NotificationService] Notifications globally enabled.");
     }
     await _initIfNeeded();
   }
@@ -33,7 +33,7 @@ class NotificationService {
   /// Globales Deaktivieren (alle geplanten Notifications abbrechen).
   Future<void> disableNotifications() async {
     if (kDebugMode) {
-      print("[NotificationService] Notifications globally disabled.");
+      //print("[NotificationService] Notifications globally disabled.");
     }
     await cancelAllNotifications();
   }
@@ -61,7 +61,7 @@ class NotificationService {
         sound: true,
       );
       if (kDebugMode) {
-        print("[NotificationService] iOS Permission granted? $granted");
+        //print("[NotificationService] iOS Permission granted? $granted");
       }
     }
   }
@@ -77,7 +77,7 @@ class NotificationService {
 
     if (dateTime.isBefore(DateTime.now())) {
       if (kDebugMode) {
-        print("[NotificationService] Start time is in the past, skipping.");
+        //print("[NotificationService] Start time is in the past, skipping.");
       }
       return;
     }
@@ -104,29 +104,29 @@ class NotificationService {
       matchDateTimeComponents: DateTimeComponents.dateAndTime,
     );
 
-    if (kDebugMode) {
-      print(
-          "[NotificationService] Scheduled notification for $dateTime (ID=$id)");
-    }
+    // if (kDebugMode) {
+    //   print(
+    //       "[NotificationService] Scheduled notification for $dateTime (ID=$id)");
+    // }
   }
 
   /// Bricht eine Notification mit der entsprechenden ID ab.
   Future<void> cancelNotification(int appointmentId) async {
     await _initIfNeeded();
     await _flutterLocalNotificationsPlugin.cancel(appointmentId);
-    if (kDebugMode) {
-      print(
-          "[NotificationService] Canceled notification for ID=$appointmentId");
-    }
+    // if (kDebugMode) {
+    //   print(
+    //       "[NotificationService] Canceled notification for ID=$appointmentId");
+    // }
   }
 
   /// Bricht alle Notifications ab.
   Future<void> cancelAllNotifications() async {
     await _initIfNeeded();
     await _flutterLocalNotificationsPlugin.cancelAll();
-    if (kDebugMode) {
-      print("[NotificationService] Canceled all notifications.");
-    }
+    // if (kDebugMode) {
+    //   print("[NotificationService] Canceled all notifications.");
+    // }
   }
 
   /// >>> NEU: An einer zentralen Stelle initialisieren wir (falls nicht schon geschehen)
@@ -139,10 +139,10 @@ class NotificationService {
       tz.setLocalLocation(tz.getLocation(localTimeZoneName));
       _timeZoneInitialized = true;
 
-      if (kDebugMode) {
-        print(
-            "[NotificationService] Time zone initialized: $localTimeZoneName");
-      }
+      // if (kDebugMode) {
+      //   print(
+      //       "[NotificationService] Time zone initialized: $localTimeZoneName");
+      // }
     }
 
     if (!_initialized) {
@@ -162,9 +162,9 @@ class NotificationService {
       await _flutterLocalNotificationsPlugin.initialize(initSettings);
       _initialized = true;
 
-      if (kDebugMode) {
-        print("[NotificationService] LocalNotifications initialized.");
-      }
+      // if (kDebugMode) {
+      //   print("[NotificationService] LocalNotifications initialized.");
+      // }
     }
   }
 

@@ -54,27 +54,27 @@ class PrayerTimeService with ChangeNotifier {
       baseSource.day,
     ).add(Duration(minutes: minutes));
 
-    debugPrint("Gebetszeit berechnet für ${appointment.subject}:");
-    debugPrint("- Gebetszeit: ${appointment.prayerTime}");
-    debugPrint("- Basiszeit (Minuten seit Mitternacht): $minutes");
-    debugPrint("- Berechnete Uhrzeit: ${baseTime.hour}:${baseTime.minute}");
+    // debugPrint("Gebetszeit berechnet für ${appointment.subject}:");
+    // debugPrint("- Gebetszeit: ${appointment.prayerTime}");
+    // debugPrint("- Basiszeit (Minuten seit Mitternacht): $minutes");
+    // debugPrint("- Berechnete Uhrzeit: ${baseTime.hour}:${baseTime.minute}");
 
     // Vor-/Nachkorrektur
     if (appointment.timeRelation == TimeRelation.before &&
         appointment.minutesBeforeAfter != null) {
       baseTime =
           baseTime.subtract(Duration(minutes: appointment.minutesBeforeAfter!));
-      debugPrint(
-          "- Zeitkorrektur: ${appointment.minutesBeforeAfter} Minuten vorher");
+      // debugPrint(
+      //     "- Zeitkorrektur: ${appointment.minutesBeforeAfter} Minuten vorher");
     } else if (appointment.timeRelation == TimeRelation.after &&
         appointment.minutesBeforeAfter != null) {
       baseTime =
           baseTime.add(Duration(minutes: appointment.minutesBeforeAfter!));
-      debugPrint(
-          "- Zeitkorrektur: ${appointment.minutesBeforeAfter} Minuten nachher");
+      // debugPrint(
+      //     "- Zeitkorrektur: ${appointment.minutesBeforeAfter} Minuten nachher");
     }
 
-    debugPrint("- Finale Zeit: ${baseTime.toIso8601String()}");
+    //debugPrint("- Finale Zeit: ${baseTime.toIso8601String()}");
     return baseTime;
   }
 
@@ -84,20 +84,20 @@ class PrayerTimeService with ChangeNotifier {
   ) async {
     final start = await getCalculatedStartTime(appointment, date);
     if (start == null) {
-      debugPrint(
-          "Warnung: Startzeit konnte nicht berechnet werden für: ${appointment.subject}");
+      // debugPrint(
+      //     "Warnung: Startzeit konnte nicht berechnet werden für: ${appointment.subject}");
       return null;
     }
     if (appointment.isRelatedToPrayerTimes && appointment.duration != null) {
       final end = start.add(appointment.duration!);
-      debugPrint("Endzeit berechnet für ${appointment.subject}:");
-      debugPrint("- Startzeit: ${start.toIso8601String()}");
-      debugPrint("- Dauer: ${appointment.duration!.inMinutes} Minuten");
-      debugPrint("- Endzeit: ${end.toIso8601String()}");
+      // debugPrint("Endzeit berechnet für ${appointment.subject}:");
+      // debugPrint("- Startzeit: ${start.toIso8601String()}");
+      // debugPrint("- Dauer: ${appointment.duration!.inMinutes} Minuten");
+      // debugPrint("- Endzeit: ${end.toIso8601String()}");
       return end;
     }
-    debugPrint(
-        "Verwendung der direkten Endzeit für ${appointment.subject}: ${appointment.endTime?.toIso8601String()}");
+    // debugPrint(
+    //     "Verwendung der direkten Endzeit für ${appointment.subject}: ${appointment.endTime?.toIso8601String()}");
     return appointment.endTime;
   }
 

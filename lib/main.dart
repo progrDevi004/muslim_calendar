@@ -45,10 +45,15 @@ void main() async {
   final appointmentRepository = AppointmentRepository();
   final prayerTimeRepository = PrayerTimeRepository();
   final googleEventMappingRepository = GoogleEventMappingRepository();
+  final categoryRepository = CategoryRepository();
 
   // Services erstellen
   final prayerTimeService = PrayerTimeService(prayerTimeRepository);
   final recurrenceService = RecurrenceService();
+
+  // Google Calendar Service erstellen
+  final googleCalendarService =
+      GoogleCalendarService.withPrayerTimeService(prayerTimeService);
 
   // Adapter für die Terminumwandlung erstellen
   final prayerTimeAppointmentAdapter = PrayerTimeAppointmentAdapter(
@@ -62,6 +67,16 @@ void main() async {
     prayerTimeService: prayerTimeService,
     mappingRepo: googleEventMappingRepository,
     appointmentAdapter: prayerTimeAppointmentAdapter,
+  );
+
+  // Calendar Sync Service erstellen
+  final calendarSyncService = CalendarSyncService(
+    calendarProvider: googleCalendarService,
+    appointmentRepository: appointmentRepository,
+    categoryRepository: categoryRepository,
+    recurrenceService: recurrenceService,
+    prayerTimeService: prayerTimeService,
+    googleCalendarSyncService: googleCalendarSyncService,
   );
 
   // Verbindung zwischen Repository und Sync Service herstellen
@@ -81,6 +96,14 @@ void main() async {
         // PrayerTimeService als Provider
         ChangeNotifierProvider(
           create: (_) => prayerTimeService,
+        ),
+        // Google Calendar Service als Provider
+        Provider(
+          create: (_) => googleCalendarService,
+        ),
+        // Calendar Sync Service als Provider
+        Provider(
+          create: (_) => calendarSyncService,
         ),
         // Google Calendar Sync Service als Provider
         ChangeNotifierProvider(

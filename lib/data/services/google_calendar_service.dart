@@ -10,7 +10,23 @@ import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
+import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:muslim_calendar/models/enums.dart';
+import 'package:muslim_calendar/utils/recurrence_rule_converter.dart';
 
+/// GoogleCalendarService - Low-Level API-Schnittstelle
+///
+/// Dieser Service ist für die direkte Interaktion mit der Google Calendar API zuständig
+/// und sollte primär für folgende Aufgaben verwendet werden:
+///
+/// 1. Authentifizierung mit Google-Konto (Login/Logout)
+/// 2. Abrufen von Kalenderlisten und Events
+/// 3. Grundlegende CRUD-Operationen für einzelne Events
+/// 4. Konvertierung zwischen App-Modellen und Google Calendar Events
+///
+/// Dieser Service ist als Singleton implementiert und sollte nicht direkt für
+/// Batch-Operationen oder komplexe Synchronisierungslogik verwendet werden.
+/// Für diese Zwecke wurde der GoogleCalendarSyncService entwickelt.
 class GoogleCalendarService {
   static final GoogleCalendarService _instance =
       GoogleCalendarService._internal();
@@ -363,45 +379,291 @@ class GoogleCalendarService {
       }
     }
 
-    // Bei gebetszeitabhängigen Terminen zuerst die berechneten Zeiten ermitteln
-    AppointmentModel appointmentToSync = appointment;
-
+    // Sonderbehandlung für gebetszeitabhängige Termine mit Wiederholung
     if (_prayerTimeService != null &&
         appointment.isRelatedToPrayerTimes &&
-        appointment.prayerTime != null) {
-      debugPrint(
-          'Berechne gebetszeitabhängige Zeiten für Google Calendar Synchronisierung');
+        appointment.prayerTime != null &&
+        appointment.recurrenceRule != null &&
+        appointment.id != null) {
+      debugPrint('Gebetszeitabhängiger Termin mit Wiederholung erkannt');
 
-      final calculatedStart = await _prayerTimeService!.getCalculatedStartTime(
-          appointment, appointment.startTime ?? DateTime.now());
+      // Zeitraum bestimmen (3 Monate in die Zukunft)
+      final DateTime today = DateTime.now();
+      final DateTime startRangeDate =
+          DateTime(today.year, today.month, today.day);
+      final DateTime endRangeDate =
+          startRangeDate.add(const Duration(days: 90));
 
-      final calculatedEnd = await _prayerTimeService!.getCalculatedEndTime(
-          appointment, appointment.startTime ?? DateTime.now());
-
-      if (calculatedStart != null && calculatedEnd != null) {
-        debugPrint('Google Calendar Sync - Gebetszeitabhängiger Termin:');
-        debugPrint('- Original startTime: ${appointment.startTime}');
-        debugPrint('- Berechnet startTime: $calculatedStart');
-        debugPrint('- Berechnet endTime: $calculatedEnd');
-
-        // Erstelle eine Kopie des Appointment mit den berechneten Zeiten
-        appointmentToSync = appointment.copyWith(
-          startTime: calculatedStart,
-          endTime: calculatedEnd,
+      try {
+        // Wiederholungstermine generieren
+        final RecurrenceProperties recurrenceProperties = SfCalendar.parseRRule(
+          appointment.recurrenceRule!,
+          appointment.startTime ?? DateTime.now(),
         );
-      } else {
+
+        final List<DateTime> occurrences = _getRecurrenceDates(
+          recurrenceProperties,
+          appointment.startTime ?? DateTime.now(),
+          startRangeDate,
+          endRangeDate,
+        );
+
+        debugPrint('${occurrences.length} Wiederholungen gefunden');
+
+        // Entferne bereits vorhandene Events für diesen Termin, die nicht in den aktuellen Wiederholungen enthalten sind
+        await _removeOutdatedEvents(appointment, occurrences);
+
+        // Für jedes Datum in der Wiederholung individuelle Termine erstellen
+        String? lastExternalId;
+        for (DateTime occurrenceDate in occurrences) {
+          // Basismodell für diesen Tag erstellen
+          final baseDate = DateTime(
+            occurrenceDate.year,
+            occurrenceDate.month,
+            occurrenceDate.day,
+          );
+
+          debugPrint(
+              'Verarbeite Wiederholung am ${baseDate.toIso8601String()}');
+
+          // Gebetszeiten für dieses spezifische Datum berechnen
+          final calculatedStart = await _prayerTimeService!
+              .getCalculatedStartTime(appointment, baseDate);
+
+          final calculatedEnd = await _prayerTimeService!
+              .getCalculatedEndTime(appointment, baseDate);
+
+          if (calculatedStart != null && calculatedEnd != null) {
+            // Einzeltermin ohne Wiederholung erstellen
+            final singleAppointment = appointment.copyWith(
+              startTime: calculatedStart,
+              endTime: calculatedEnd,
+              recurrenceRule:
+                  null, // Wichtig: Keine Wiederholung für Einzeltermine
+              recurrenceExceptionDates: null,
+            );
+
+            // Prüfen, ob bereits ein Event für diesen Termin an diesem Datum existiert
+            final existingEvent = await getEventForAppointmentOnDate(
+              appointment.id!,
+              baseDate,
+            );
+
+            if (existingEvent != null) {
+              // Event aktualisieren
+              final event = await _createGoogleEvent(singleAppointment);
+              await _calendarApi!.events.update(
+                event,
+                'primary',
+                existingEvent.id!,
+              );
+              lastExternalId = existingEvent.id;
+              debugPrint(
+                  'Event für ${baseDate.toIso8601String()} aktualisiert');
+            } else {
+              // Neues Event erstellen
+              final event = await _createGoogleEvent(singleAppointment);
+              final createdEvent =
+                  await _calendarApi!.events.insert(event, 'primary');
+              lastExternalId = createdEvent.id;
+              debugPrint('Event für ${baseDate.toIso8601String()} erstellt');
+            }
+          } else {
+            debugPrint(
+                'Konnte Gebetszeiten für ${baseDate.toIso8601String()} nicht berechnen');
+          }
+        }
+
+        // Die ID des letzten erstellten/aktualisierten Events zurückgeben
+        return lastExternalId;
+      } catch (e) {
         debugPrint(
-            'Warnung: Gebetszeiten konnten nicht berechnet werden für: ${appointment.subject}');
+            'Fehler bei der Verarbeitung des wiederkehrenden Termins: $e');
+        // Fallback zum normalen Verhalten
+      }
+    } else {
+      // Bei gebetszeitabhängigen Terminen ohne Wiederholung zuerst die berechneten Zeiten ermitteln
+      AppointmentModel appointmentToSync = appointment;
+
+      if (_prayerTimeService != null &&
+          appointment.isRelatedToPrayerTimes &&
+          appointment.prayerTime != null) {
+        debugPrint(
+            'Berechne gebetszeitabhängige Zeiten für Google Calendar Synchronisierung');
+
+        final calculatedStart = await _prayerTimeService!
+            .getCalculatedStartTime(
+                appointment, appointment.startTime ?? DateTime.now());
+
+        final calculatedEnd = await _prayerTimeService!.getCalculatedEndTime(
+            appointment, appointment.startTime ?? DateTime.now());
+
+        if (calculatedStart != null && calculatedEnd != null) {
+          debugPrint('Google Calendar Sync - Gebetszeitabhängiger Termin:');
+          debugPrint('- Original startTime: ${appointment.startTime}');
+          debugPrint('- Berechnet startTime: $calculatedStart');
+          debugPrint('- Berechnet endTime: $calculatedEnd');
+
+          // Erstelle eine Kopie des Appointment mit den berechneten Zeiten
+          appointmentToSync = appointment.copyWith(
+            startTime: calculatedStart,
+            endTime: calculatedEnd,
+          );
+        } else {
+          debugPrint(
+              'Warnung: Gebetszeiten konnten nicht berechnet werden für: ${appointment.subject}');
+        }
+      }
+
+      // Wenn der Termin bereits eine Google-ID hat, aktualisieren
+      if (appointmentToSync.externalIdGoogle != null) {
+        bool success = await updateEventInGoogleCalendar(appointmentToSync);
+        return success ? appointmentToSync.externalIdGoogle : null;
+      } else {
+        // Ansonsten neuen Termin erstellen
+        return await addEventToGoogleCalendar(appointmentToSync);
+      }
+    }
+  }
+
+  // Hilfsmethode: Berechnet Wiederholungsdaten für einen Termin
+  List<DateTime> _getRecurrenceDates(
+    RecurrenceProperties recurrenceProperties,
+    DateTime patternStartDate,
+    DateTime startRangeDate,
+    DateTime endRangeDate,
+  ) {
+    List<DateTime> dates = [];
+
+    int count = recurrenceProperties.recurrenceCount ?? 0;
+    DateTime? endDate = recurrenceProperties.endDate;
+
+    DateTime currentDate = patternStartDate;
+
+    // Sicherstellen, dass wir keine unendliche Schleife erzeugen
+    int maxIterations = 200;
+    int iteration = 0;
+
+    while (currentDate.isBefore(endRangeDate) && iteration < maxIterations) {
+      iteration++;
+
+      // Prüfen, ob das aktuelle Datum im Bereich liegt
+      if (!currentDate.isBefore(startRangeDate) &&
+          !currentDate.isAfter(endRangeDate)) {
+        dates.add(currentDate);
+      }
+
+      // Nächstes Datum gemäß Wiederholungsregel berechnen
+      switch (recurrenceProperties.recurrenceType) {
+        case RecurrenceType.daily:
+          currentDate =
+              currentDate.add(Duration(days: recurrenceProperties.interval));
+          break;
+
+        case RecurrenceType.weekly:
+          if (recurrenceProperties.weekDays.isEmpty) {
+            // Wenn keine Wochentage angegeben, verwende den gleichen Wochentag
+            currentDate = currentDate
+                .add(Duration(days: 7 * recurrenceProperties.interval));
+          } else {
+            // Überspringe zum nächsten ausgewählten Wochentag
+            // Vereinfachte Implementierung: Wir fügen einen Tag hinzu und prüfen
+            currentDate = currentDate.add(const Duration(days: 1));
+
+            // Prüfung, ob wir in der nächsten Woche sind und den Interval anwenden müssen
+            int weeksBetween =
+                (currentDate.difference(patternStartDate).inDays / 7).floor();
+            if (weeksBetween >= recurrenceProperties.interval) {
+              // Überspringe weitere Tage, wenn wir den Interval erreicht haben
+              currentDate = currentDate.add(Duration(
+                  days: (7 *
+                          (((weeksBetween / recurrenceProperties.interval)
+                                          .floor() +
+                                      1) *
+                                  recurrenceProperties.interval -
+                              7 * weeksBetween))
+                      .toInt()));
+            }
+          }
+          break;
+
+        case RecurrenceType.monthly:
+          // Füge einen Monat hinzu (vereinfacht)
+          int newMonth = currentDate.month + recurrenceProperties.interval;
+          int yearAdd = (newMonth - 1) ~/ 12; // Wie viele Jahre hinzufügen
+          int finalMonth = ((newMonth - 1) % 12) + 1; // Finaler Monat (1-12)
+
+          DateTime nextMonth = DateTime(
+            currentDate.year + yearAdd,
+            finalMonth,
+            1,
+          );
+
+          int day = currentDate.day;
+          int lastDayOfMonth =
+              DateTime(nextMonth.year, nextMonth.month + 1, 0).day;
+          if (day > lastDayOfMonth) {
+            day = lastDayOfMonth;
+          }
+
+          currentDate = DateTime(nextMonth.year, nextMonth.month, day);
+          break;
+
+        case RecurrenceType.yearly:
+          currentDate = DateTime(
+            currentDate.year + recurrenceProperties.interval,
+            currentDate.month,
+            currentDate.day,
+          );
+          break;
+
+        default:
+          currentDate =
+              currentDate.add(Duration(days: recurrenceProperties.interval));
+      }
+
+      // Prüfe, ob wir die Anzahl der Wiederholungen erreicht haben
+      if (count > 0 && dates.length >= count) {
+        break;
+      }
+
+      // Prüfe, ob wir das Enddatum erreicht haben
+      if (endDate != null && currentDate.isAfter(endDate)) {
+        break;
       }
     }
 
-    // Wenn der Termin bereits eine Google-ID hat, aktualisieren
-    if (appointmentToSync.externalIdGoogle != null) {
-      bool success = await updateEventInGoogleCalendar(appointmentToSync);
-      return success ? appointmentToSync.externalIdGoogle : null;
-    } else {
-      // Ansonsten neuen Termin erstellen
-      return await addEventToGoogleCalendar(appointmentToSync);
+    return dates;
+  }
+
+  // Entfernt veraltete Events, die nicht mehr im Wiederholungsmuster sind
+  Future<void> _removeOutdatedEvents(
+    AppointmentModel appointment,
+    List<DateTime> validDates,
+  ) async {
+    if (appointment.id == null) return;
+
+    String filter = 'muslimcalendarID=${appointment.id}';
+    List<calendar.Event> events = await fetchEventsByExtendedProperty(
+      filter,
+      calendarId: 'primary',
+    );
+
+    for (var event in events) {
+      DateTime? eventDate =
+          event.start?.dateTime?.toLocal() ?? event.start?.date?.toLocal();
+      if (eventDate == null) continue;
+
+      // Prüfe, ob dieses Datum in der Liste der gültigen Daten ist
+      bool isValidDate = validDates.any((date) =>
+          date.year == eventDate.year &&
+          date.month == eventDate.month &&
+          date.day == eventDate.day);
+
+      if (!isValidDate && event.id != null) {
+        debugPrint('Lösche veraltetes Event am ${eventDate.toIso8601String()}');
+        await _calendarApi!.events.delete('primary', event.id!);
+      }
     }
   }
 
@@ -586,7 +848,8 @@ class GoogleCalendarService {
     List<String>? recurrence;
     if (appointment.recurrenceRule != null &&
         appointment.recurrenceRule!.isNotEmpty) {
-      String formattedRule = _formatRecurrenceRuleForGoogle(
+      String formattedRule =
+          RecurrenceRuleConverter.formatRecurrenceRuleForGoogle(
         appointment.recurrenceRule!,
         start,
       );
@@ -609,69 +872,6 @@ class GoogleCalendarService {
         private: {'muslimcalendarID': appointment.id?.toString() ?? 'new'},
       ),
     );
-  }
-
-  // Formatiert die Wiederholungsregel für Google Calendar
-  String _formatRecurrenceRuleForGoogle(
-      String recurrenceRule, DateTime? startDate) {
-    debugPrint("🔄 Originale Wiederholungsregel: $recurrenceRule");
-
-    // Stellen Sie sicher, dass die Regel mit 'RRULE:' beginnt
-    if (!recurrenceRule.startsWith('RRULE:')) {
-      recurrenceRule = 'RRULE:$recurrenceRule';
-    }
-
-    // Entferne Leerzeichen und doppelte Semikolons
-    recurrenceRule =
-        recurrenceRule.replaceAll(' ', '').replaceAll(';;', ';').toUpperCase();
-
-    // Prüfe, ob die Regel 'FREQ=WEEKLY' enthält, aber kein 'BYDAY'
-    if (recurrenceRule.contains('FREQ=WEEKLY') &&
-        !recurrenceRule.contains('BYDAY')) {
-      // Wenn ein Startdatum vorhanden ist, fügen wir den entsprechenden Wochentag hinzu
-      if (startDate != null) {
-        String weekday = _getWeekdayFromDate(startDate);
-        recurrenceRule = '${recurrenceRule};BYDAY=$weekday';
-      }
-    }
-
-    // Stelle sicher, dass bei 'FREQ=WEEKLY' ein 'INTERVAL' vorhanden ist
-    if (recurrenceRule.contains('FREQ=WEEKLY') &&
-        !recurrenceRule.contains('INTERVAL')) {
-      recurrenceRule = '${recurrenceRule};INTERVAL=1';
-    }
-
-    // Bei monatlichen Wiederholungen mit BYDAY, aber ohne BYSETPOS
-    if (recurrenceRule.contains('FREQ=MONTHLY') &&
-        recurrenceRule.contains('BYDAY=') &&
-        !recurrenceRule.contains('BYSETPOS=')) {
-      // Standardmäßig das erste Vorkommen im Monat verwenden
-      recurrenceRule = '${recurrenceRule};BYSETPOS=1';
-    }
-
-    return recurrenceRule;
-  }
-
-  // Hilfsmethode: Gibt den Wochentag als String im iCalendar-Format zurück
-  String _getWeekdayFromDate(DateTime date) {
-    switch (date.weekday) {
-      case DateTime.monday:
-        return 'MO';
-      case DateTime.tuesday:
-        return 'TU';
-      case DateTime.wednesday:
-        return 'WE';
-      case DateTime.thursday:
-        return 'TH';
-      case DateTime.friday:
-        return 'FR';
-      case DateTime.saturday:
-        return 'SA';
-      case DateTime.sunday:
-        return 'SU';
-      default:
-        return 'MO'; // Fallback
-    }
   }
 
   // Wandelt Flutter-Farben in Google Calendar Farb-IDs um

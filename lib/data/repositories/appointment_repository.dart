@@ -17,7 +17,7 @@ class AppointmentRepository {
 
   Future<int> insertAppointment(AppointmentModel appointment) async {
     final db = await dbHelper.database;
-    print(appointment.recurrenceRule);
+    //print(appointment.recurrenceRule);
     final id = await db.insert(
       'appointments',
       appointment.toMap(),
