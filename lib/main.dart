@@ -147,8 +147,8 @@ class _MyAppState extends State<MyApp> {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final themeMode = themeNotifier.currentThemeMode;
 
-    // Basiskonfiguration: Seed-Farbe
-    const seedColor = Color(0xFF4285F4);
+    // Basiskonfiguration: Seed-Farbe (geändert zur Logo-Farbe)
+    const seedColor = Color(0xFF468178);
 
     // -------------------------
     // Light Theme
@@ -176,8 +176,34 @@ class _MyAppState extends State<MyApp> {
         fillColor: Color.fromARGB(255, 245, 245, 245),
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.all(seedColor),
-        trackColor: WidgetStateProperty.all(seedColor.withOpacity(0.5)),
+        thumbColor: MaterialStateProperty.resolveWith<Color>((states) {
+          if (states.contains(MaterialState.selected)) {
+            return seedColor;
+          }
+          return Colors.grey;
+        }),
+        trackColor: MaterialStateProperty.resolveWith<Color>((states) {
+          if (states.contains(MaterialState.selected)) {
+            return seedColor.withOpacity(0.5);
+          }
+          return Colors.grey.withOpacity(0.3);
+        }),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: MaterialStateProperty.resolveWith<Color>((states) {
+          if (states.contains(MaterialState.selected)) {
+            return seedColor;
+          }
+          return Colors.grey;
+        }),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: MaterialStateProperty.resolveWith<Color>((states) {
+          if (states.contains(MaterialState.selected)) {
+            return seedColor;
+          }
+          return Colors.grey;
+        }),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -185,6 +211,12 @@ class _MyAppState extends State<MyApp> {
           foregroundColor: Colors.white,
           shape: const StadiumBorder(),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: seedColor,
+          side: BorderSide(color: seedColor),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -230,6 +262,36 @@ class _MyAppState extends State<MyApp> {
         seedColor: seedColor,
         brightness: Brightness.dark,
       ),
+      switchTheme: SwitchThemeData(
+        thumbColor: MaterialStateProperty.resolveWith<Color>((states) {
+          if (states.contains(MaterialState.selected)) {
+            return seedColor;
+          }
+          return Colors.grey;
+        }),
+        trackColor: MaterialStateProperty.resolveWith<Color>((states) {
+          if (states.contains(MaterialState.selected)) {
+            return seedColor.withOpacity(0.5);
+          }
+          return Colors.grey.withOpacity(0.3);
+        }),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: MaterialStateProperty.resolveWith<Color>((states) {
+          if (states.contains(MaterialState.selected)) {
+            return seedColor;
+          }
+          return Colors.grey;
+        }),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: MaterialStateProperty.resolveWith<Color>((states) {
+          if (states.contains(MaterialState.selected)) {
+            return seedColor;
+          }
+          return Colors.grey;
+        }),
+      ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: seedColor,
@@ -242,6 +304,12 @@ class _MyAppState extends State<MyApp> {
           foregroundColor: Colors.white,
           shape: const StadiumBorder(),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: seedColor,
+          side: BorderSide(color: seedColor),
         ),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(

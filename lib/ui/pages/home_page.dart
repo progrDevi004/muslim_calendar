@@ -90,6 +90,9 @@ extension AppointmentModelExtension on AppointmentModel {
   }
 }
 
+// Logo-Farbe für die Konsistenz der App
+const Color logoColor = Color(0xFF468178);
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -807,6 +810,8 @@ class HomePageState extends State<HomePage> {
       floatingActionButton: showFab
           ? FloatingActionButton(
               tooltip: loc.addNewAppointment,
+              backgroundColor: logoColor,
+              foregroundColor: Colors.white,
               onPressed: () async {
                 final result = await Navigator.of(context).push(
                   MaterialPageRoute(

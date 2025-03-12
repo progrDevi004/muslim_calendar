@@ -9,6 +9,9 @@ import 'dart:math' as math;
 import 'package:provider/provider.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 
+// Logo-Farbe für die Konsistenz der App
+const Color logoColor = Color(0xFF468178);
+
 class QiblaCompassPage extends StatefulWidget {
   const QiblaCompassPage({Key? key}) : super(key: key);
 
@@ -102,7 +105,7 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
         ),
         body: const Center(
           child: SpinKitFadingCircle(
-            color: Colors.blue,
+            color: logoColor,
             size: 50.0,
           ),
         ),
@@ -119,7 +122,7 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: SpinKitFadingCircle(
-                color: Colors.blue,
+                color: logoColor,
                 size: 50.0,
               ),
             );
@@ -149,7 +152,7 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
               if (qiblahSnapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
                   child: SpinKitFadingCircle(
-                    color: Colors.blue,
+                    color: logoColor,
                     size: 50.0,
                   ),
                 );
@@ -208,7 +211,7 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white,
-                border: Border.all(color: Colors.blueAccent, width: 4),
+                border: Border.all(color: logoColor, width: 4),
                 boxShadow: const [
                   BoxShadow(
                     color: Colors.black26,
@@ -265,7 +268,7 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
               child: const Icon(
                 Icons.navigation,
                 size: 80,
-                color: Colors.redAccent,
+                color: logoColor,
               ),
             ),
             // Fester Qibla-Marker (mit Übersetzung)
@@ -278,7 +281,7 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
                   const Icon(
                     Icons.place,
                     size: 24,
-                    color: Colors.green,
+                    color: logoColor,
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -286,7 +289,7 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: Colors.green,
+                      color: logoColor,
                     ),
                   ),
                 ],

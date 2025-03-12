@@ -14,6 +14,9 @@ import 'package:muslim_calendar/localization/app_localizations.dart'
     show AppLanguage, AppLocalizations;
 import 'package:muslim_calendar/ui/pages/home_page.dart';
 
+// Logo-Farbe für die Konsistenz der App
+const Color logoColor = Color(0xFF468178);
+
 class InitialLocationPage extends StatefulWidget {
   const InitialLocationPage({Key? key}) : super(key: key);
 
