@@ -35,18 +35,36 @@ class PrayerTimeRepository {
   }
 
   // Lädt Gebetszeiten für ein ganzes Jahr monatsweise
-  Future<void> fetchAndSaveYearlyPrayerTimes(int year, String location) async {
+  Future<void> fetchAndSaveYearlyPrayerTimes(int year, String location,
+      {bool forceReload = false}) async {
     // Alles kleinschreiben, damit in DB einheitlich gespeichert wird
     location = location.trim().toLowerCase();
 
     final hasYear = await _hasFullYearInDB(year, location);
-    if (hasYear) {
+    // Wenn forceReload true ist, ignorieren wir den Cache-Status und laden neu
+    if (hasYear && !forceReload) {
+      debugPrint(
+          "🕌 Gebetszeiten für $year und $location bereits im Cache, überspringen");
       return;
+    }
+
+    if (forceReload) {
+      debugPrint(
+          "🕌 Erzwinge Neuladung der Gebetszeiten für $year und $location");
+      // Löschen der bestehenden Einträge für dieses Jahr und diesen Standort
+      final db = await dbHelper.database;
+      final startOfYear = '$year-01-01';
+      final endOfYear = '$year-12-31';
+      await db.delete(
+        'prayer_times',
+        where: 'LOWER(location) = ? AND date >= ? AND date <= ?',
+        whereArgs: [location.toLowerCase(), startOfYear, endOfYear],
+      );
     }
 
     for (int month = 1; month <= 12; month++) {
       final hasFullMonth = await _hasFullMonthInDB(year, month, location);
-      if (!hasFullMonth) {
+      if (!hasFullMonth || forceReload) {
         await _fetchAndSaveMonthlyPrayerTimes(year, month, location);
       }
     }

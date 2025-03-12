@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:googleapis/calendar/v3.dart' as gCal;
-import 'package:googleapis_auth/auth_io.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
@@ -90,7 +89,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
         _appointmentAdapter = appointmentAdapter;
 
   // Initialisiert die Google API mit einem AuthClient
-  Future<bool> initialize(AuthClient client) async {
+  Future<bool> initialize(http.Client client) async {
     try {
       _calendarApi = gCal.CalendarApi(client);
       await _loadSelectedCalendarId();

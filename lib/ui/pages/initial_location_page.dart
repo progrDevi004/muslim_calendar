@@ -119,6 +119,20 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
 
   /// Speichert Daten und wechselt zur HomePage
   Future<void> _saveAndContinue() async {
+    // Sicherheitsprüfung: Stelle sicher, dass Land und Stadt ausgewählt wurden
+    if (_selectedCountry == null || _selectedCity == null) {
+      debugPrint("⚠️ FEHLER: Land oder Stadt nicht ausgewählt!");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Bitte wählen Sie sowohl ein Land als auch eine Stadt aus'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return; // Nicht fortfahren
+    }
+
     final prefs = await SharedPreferences.getInstance();
 
     // Sprache
@@ -128,13 +142,12 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     // Zeitformat
     await prefs.setBool('use24hFormat', _use24hFormat);
 
-    // Standort
-    if (_selectedCountry != null) {
-      await prefs.setString('defaultCountry', _selectedCountry!);
-    }
-    if (_selectedCity != null) {
-      await prefs.setString('defaultCity', _selectedCity!);
-    }
+    // Standort - Wir haben bereits geprüft, dass die Werte nicht null sind
+    await prefs.setString('defaultCountry', _selectedCountry!);
+    await prefs.setString('defaultCity', _selectedCity!);
+
+    // Debug-Ausgabe, um sicherzustellen, dass die Werte richtig gespeichert wurden
+    debugPrint("✅ Standort gespeichert: $_selectedCountry, $_selectedCity");
 
     // Markiere, dass die Einstellungen bereits erfasst wurden
     await prefs.setBool('wasLocationAsked', true);
@@ -149,13 +162,29 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
 
   /// Stepper: Logik, um weiterzuschalten
   void _onStepContinue() {
-    if (_currentStep < _buildSteps().length - 1) {
+    // Wenn wir im letzten Schritt sind und auf "Fertig" klicken
+    if (_currentStep == _buildSteps().length - 1) {
+      // Überprüfen, ob Land und Stadt ausgewählt wurden
+      if (_selectedCountry == null || _selectedCity == null) {
+        // Zeige einen Fehler an, wenn Land oder Stadt nicht ausgewählt wurden
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Bitte wählen Sie sowohl ein Land als auch eine Stadt aus'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return; // Nicht fortfahren
+      }
+
+      // Alles in Ordnung, Daten speichern und fortfahren
+      _saveAndContinue();
+    } else if (_currentStep < _buildSteps().length - 1) {
+      // Normales Weitergehen zum nächsten Schritt
       setState(() {
         _currentStep++;
       });
-    } else {
-      // Letzter Step => Daten speichern
-      _saveAndContinue();
     }
   }
 
@@ -292,7 +321,16 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                       ),
                       const SizedBox(height: 16),
                       // Land
-                      Text(loc.country),
+                      Row(
+                        children: [
+                          Text(loc.country),
+                          const SizedBox(width: 8),
+                          Text(
+                            "* (Pflichtfeld)",
+                            style: TextStyle(color: Colors.red, fontSize: 12),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 8),
                       DropdownSearch<String>(
                         items: _countryCityData.keys.toList()..sort(),
@@ -310,6 +348,10 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                           dropdownSearchDecoration: InputDecoration(
                             labelText: loc.country,
                             border: const OutlineInputBorder(),
+                            errorText:
+                                _currentStep == 2 && _selectedCountry == null
+                                    ? 'Bitte Land auswählen'
+                                    : null,
                           ),
                         ),
                       ),
@@ -319,7 +361,17 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(loc.city),
+                            Row(
+                              children: [
+                                Text(loc.city),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "* (Pflichtfeld)",
+                                  style: TextStyle(
+                                      color: Colors.red, fontSize: 12),
+                                ),
+                              ],
+                            ),
                             const SizedBox(height: 8),
                             DropdownSearch<String>(
                               items: _countryCityData[_selectedCountry!] ?? [],
@@ -336,10 +388,42 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                                 dropdownSearchDecoration: InputDecoration(
                                   labelText: loc.city,
                                   border: const OutlineInputBorder(),
+                                  errorText:
+                                      _currentStep == 2 && _selectedCity == null
+                                          ? 'Bitte Stadt auswählen'
+                                          : null,
                                 ),
                               ),
                             ),
                           ],
+                        ),
+                      if (_selectedCountry == null)
+                        Text(
+                          "Bitte wählen Sie erst ein Land aus",
+                          style: TextStyle(color: Colors.orange),
+                        ),
+                      const SizedBox(height: 16),
+                      // Hinweis
+                      if (_currentStep == 2 &&
+                          (_selectedCountry == null || _selectedCity == null))
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.yellow[100],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline, color: Colors.orange),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  "Bitte wählen Sie sowohl ein Land als auch eine Stadt aus, um fortzufahren.",
+                                  style: TextStyle(color: Colors.orange[800]),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                     ],
                   ),

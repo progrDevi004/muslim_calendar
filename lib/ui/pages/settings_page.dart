@@ -130,6 +130,44 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
 
+    // Lade die Standorteinstellungen aus SharedPreferences
+    String? country = prefs.getString('defaultCountry');
+    String? city = prefs.getString('defaultCity');
+
+    // Wenn automaticLocation aktiviert ist oder Standortdaten fehlen,
+    // müssen wir eventuell zur InitialLocationPage zurückkehren
+    final bool locationSet = (country != null &&
+        city != null &&
+        country.isNotEmpty &&
+        city.isNotEmpty);
+    final bool wasLocationAsked = prefs.getBool('wasLocationAsked') ?? false;
+
+    // Wenn die Standorteinstellungen fehlen und der Benutzer bereits nach seiner Lage gefragt wurde,
+    // liegt ein Fehler vor - navigiere zurück zur InitialLocationPage
+    if (!locationSet && wasLocationAsked) {
+      debugPrint(
+          "⚠️ KRITISCHER FEHLER: Standorteinstellungen fehlen trotz wasLocationAsked = true");
+
+      // Setze wasLocationAsked zurück, damit der Benutzer erneut nach seinem Standort gefragt wird
+      await prefs.setBool('wasLocationAsked', false);
+
+      if (mounted) {
+        // Zeige eine Fehlermeldung an
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Standorteinstellungen fehlen. Sie werden zur Standortkonfiguration weitergeleitet.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 5),
+          ),
+        );
+
+        // Wir müssen aus der SettingsPage zurückkehren, damit die App zur InitialLocationPage navigieren kann
+        Navigator.of(context).pop();
+        return;
+      }
+    }
+
     setState(() {
       _isDarkMode = prefs.getBool('isDarkMode') ?? false;
       _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
@@ -141,8 +179,8 @@ class _SettingsPageState extends State<SettingsPage> {
       _showPrayerSlotsInDashboard =
           prefs.getBool('showPrayerSlotsInDashboard') ?? true;
       _automaticLocation = prefs.getBool('automaticLocation') ?? true;
-      _defaultCountry = prefs.getString('defaultCountry');
-      _defaultCity = prefs.getString('defaultCity');
+      _defaultCountry = country;
+      _defaultCity = city;
       _selectedCalcMethod = prefs.getInt('calculationMethod') ?? 0;
       _selectedLanguageIndex = prefs.getInt('selectedLanguageIndex') ?? 0;
       _selectedLanguage = AppLanguage.values[_selectedLanguageIndex];
@@ -270,6 +308,24 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
 
+    // Wenn automaticLocation deaktiviert ist, aber keine Stadt/Land ausgewählt wurde,
+    // zeige eine Fehlermeldung an und breche ab
+    if (!_automaticLocation &&
+        (_defaultCountry == null ||
+            _defaultCity == null ||
+            _defaultCountry!.isEmpty ||
+            _defaultCity!.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Bitte wählen Sie sowohl ein Land als auch eine Stadt aus'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
     // Aktualisieren des Themes über den ThemeNotifier
     themeNotifier.toggleTheme(_isDarkMode);
     await prefs.setBool('isDarkMode', _isDarkMode);
@@ -277,13 +333,29 @@ class _SettingsPageState extends State<SettingsPage> {
     await prefs.setBool('use24hFormat', _use24hFormat);
     await prefs.setBool('automaticLocation', _automaticLocation);
 
-    if (!_automaticLocation) {
-      await prefs.setString('defaultCountry', _defaultCountry ?? '');
-      await prefs.setString('defaultCity', _defaultCity ?? '');
+    // Standardwerte für Land und Stadt immer setzen
+    if (_defaultCountry != null &&
+        _defaultCity != null &&
+        _defaultCountry!.isNotEmpty &&
+        _defaultCity!.isNotEmpty) {
+      await prefs.setString('defaultCountry', _defaultCountry!);
+      await prefs.setString('defaultCity', _defaultCity!);
+      debugPrint("✅ Standort gespeichert: $_defaultCountry, $_defaultCity");
     } else {
-      await prefs.remove('defaultCountry');
-      await prefs.remove('defaultCity');
+      // Wenn keine Werte gesetzt sind, zeige eine Fehlermeldung an
+      debugPrint(
+          "⚠️ Land oder Stadt fehlen, Einstellungen können nicht gespeichert werden");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Bitte wählen Sie sowohl ein Land als auch eine Stadt aus'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return; // Abbrechen, bis die Einstellungen gesetzt sind
     }
+
     await prefs.setInt('selectedLanguageIndex', _selectedLanguage.index);
     await prefs.setBool(
         'showPrayerSlotsInDashboard', _showPrayerSlotsInDashboard);

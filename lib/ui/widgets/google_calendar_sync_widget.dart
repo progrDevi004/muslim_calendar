@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:googleapis_auth/auth_io.dart';
 import 'package:http/http.dart' as http;
 import 'package:muslim_calendar/data/services/google_calendar_sync_service.dart';
 import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
@@ -448,23 +447,11 @@ class _GoogleCalendarSyncWidgetState extends State<GoogleCalendarSyncWidget> {
 }
 
 // Hilfsklasse für die Google API-Authentifizierung
-class GoogleAuthClient extends http.BaseClient implements AuthClient {
+class GoogleAuthClient extends http.BaseClient {
   final String _accessToken;
   final http.Client _client = http.Client();
 
   GoogleAuthClient(this._accessToken);
-
-  @override
-  AccessCredentials get credentials => AccessCredentials(
-        AccessToken(
-          'Bearer',
-          _accessToken,
-          // Wir setzen die Ablaufzeit des Tokens bewusst kurz an, damit das Aktualisierungssystem greift
-          DateTime.now().add(const Duration(minutes: 50)).toUtc(),
-        ),
-        null, // refreshToken
-        ['https://www.googleapis.com/auth/calendar'], // scopes
-      );
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
