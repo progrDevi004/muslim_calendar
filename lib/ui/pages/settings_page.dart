@@ -106,14 +106,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _initCalcMethodMap() {
     _calcMethodMap = {
-      0: 'Muslim World League',
-      1: 'Egyptian General Authority',
-      2: 'University of Islamic Sciences, Karachi',
-      3: 'Umm al-Qura University, Makkah',
-      4: 'Islamic Society of North America',
-      5: 'Union des Organisations Islamiques de France',
-      6: 'Majlis Ugama Islam Singapura',
-      7: 'Institute of Geophysics, University of Tehran',
+      0: 'MWL (Muslim World League)',
+      1: 'Egypt (GAS)',
+      2: 'Karachi (UIS)',
+      3: 'Makkah (Umm al-Qura)',
+      4: 'ISNA (North America)',
+      5: 'UOIF (France)',
+      6: 'MUIS (Singapore)',
+      7: 'Tehran (Geophysics)',
       8: 'Shia Ithna-Ashari',
       9: 'Gulf Region',
       10: 'Kuwait',
@@ -121,7 +121,7 @@ class _SettingsPageState extends State<SettingsPage> {
       12: 'Singapore',
       13: 'Turkey',
       14: 'Dubai',
-      15: 'Moonsighting Committee Worldwide',
+      15: 'Moonsighting Committee',
     };
   }
 
@@ -579,25 +579,43 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
       ),
       const SizedBox(height: 16),
-      DropdownButtonFormField<int>(
-        value: _selectedCalcMethod,
-        decoration: const InputDecoration(
-          labelText: 'Calculation Method',
-          border: OutlineInputBorder(),
+      Container(
+        // Definiert eine maximale Breite, um zu verhindern, dass der Text zu breit wird
+        constraints:
+            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.9),
+        child: DropdownButtonFormField<int>(
+          value: _selectedCalcMethod,
+          isExpanded:
+              true, // Stellt sicher, dass das Dropdown die volle Breite nutzt
+          menuMaxHeight: 350, // Begrenzt die maximale Höhe des Dropdown-Menüs
+          decoration: const InputDecoration(
+            labelText: 'Calculation Method',
+            border: OutlineInputBorder(),
+            // Fügt zusätzlichen Platz für die Label-Text hinzu
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          ),
+          onChanged: (value) async {
+            setState(() {
+              _selectedCalcMethod = value ?? 0;
+            });
+            await _saveSettings();
+            await _updatePrayerTimes();
+          },
+          items: _calcMethodMap.entries.map((entry) {
+            return DropdownMenuItem<int>(
+              value: entry.key,
+              // Verwendet FittedBox um sicherzustellen, dass der Text passt
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  entry.value,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            );
+          }).toList(),
         ),
-        onChanged: (value) async {
-          setState(() {
-            _selectedCalcMethod = value ?? 0;
-          });
-          await _saveSettings();
-          await _updatePrayerTimes();
-        },
-        items: _calcMethodMap.entries.map((entry) {
-          return DropdownMenuItem<int>(
-            value: entry.key,
-            child: Text(entry.value),
-          );
-        }).toList(),
       ),
 
       // New Calendar Sync Section
@@ -741,6 +759,7 @@ class _SettingsPageState extends State<SettingsPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Google Calendar',
@@ -765,14 +784,17 @@ class _SettingsPageState extends State<SettingsPage> {
                           color: isConnected ? Colors.green : Colors.grey,
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          isConnected
-                              ? loc.googleCalendarConnected
-                              : loc.googleCalendarDisconnected,
-                          style: TextStyle(
-                            color: isConnected ? Colors.green : Colors.black,
-                            fontWeight: FontWeight.normal,
-                            fontSize: 16,
+                        Expanded(
+                          child: Text(
+                            isConnected
+                                ? loc.googleCalendarConnected
+                                : loc.googleCalendarDisconnected,
+                            style: TextStyle(
+                              color: isConnected ? Colors.green : Colors.black,
+                              fontWeight: FontWeight.normal,
+                              fontSize: 16,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -783,7 +805,12 @@ class _SettingsPageState extends State<SettingsPage> {
                       OutlinedButton.icon(
                         onPressed: _showCalendarSelectionDialog,
                         icon: const Icon(Icons.calendar_month),
-                        label: Text(loc.selectWhichCalendarsToSync),
+                        label: Flexible(
+                          child: Text(
+                            loc.selectWhichCalendarsToSync,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 48),
                         ),
@@ -815,7 +842,12 @@ class _SettingsPageState extends State<SettingsPage> {
                           }
                         },
                         icon: const Icon(Icons.sync),
-                        label: Text(loc.syncGoogleCalendarNow),
+                        label: Flexible(
+                          child: Text(
+                            loc.syncGoogleCalendarNow,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 48),
                         ),
@@ -1076,30 +1108,72 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _buildOutlookCalendarSection(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SwitchListTile(
-          title: Text(loc.connectWithOutlookCalendar),
-          subtitle: Text(loc.outlookCalendarDisconnected),
-          value: _outlookCalendarEnabled,
-          onChanged: (value) async {
-            setState(() {
-              _outlookCalendarEnabled = value;
-            });
-            await _saveSettings();
-          },
+    return Card(
+      margin: const EdgeInsets.all(8.0),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Outlook Calendar',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(
+                  _outlookCalendarConnected ? Icons.check_circle : Icons.cancel,
+                  color: _outlookCalendarConnected ? Colors.green : Colors.grey,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _outlookCalendarConnected
+                        ? 'Connected to Outlook Calendar'
+                        : 'Not connected to Outlook Calendar',
+                    style: TextStyle(
+                      color: _outlookCalendarConnected
+                          ? Colors.green
+                          : Colors.black,
+                      fontWeight: FontWeight.normal,
+                      fontSize: 16,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () async {
+                try {
+                  // Placeholder für Outlook-Verbindungsimplementierung
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Outlook Integration coming soon!')),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text('Connection error: ${e.toString()}')),
+                  );
+                }
+              },
+              icon: const Icon(Icons.login),
+              label: Flexible(
+                child: Text(
+                  loc.connectWithOutlookCalendar,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+              ),
+            ),
+          ],
         ),
-        // Wenn Outlook Kalender aktiviert und verbunden ist, zeige weitere Optionen
-        if (_outlookCalendarEnabled && _outlookCalendarConnected) ...[
-          ListTile(
-            leading: const Icon(Icons.manage_accounts),
-            title: Text(loc.manageConnection),
-            subtitle: Text(loc.manageOutlookCalendarConnection),
-            onTap: () => _manageOutlookCalendarConnection(context),
-          ),
-        ],
-      ],
+      ),
     );
   }
 

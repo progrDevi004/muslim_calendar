@@ -221,47 +221,6 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
                 ],
               ),
             ),
-            // Statische Himmelsrichtungen
-            const Positioned(
-              top: 10,
-              child: Text(
-                "N",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: Colors.black),
-              ),
-            ),
-            const Positioned(
-              bottom: 10,
-              child: Text(
-                "S",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: Colors.black),
-              ),
-            ),
-            const Positioned(
-              left: 10,
-              child: Text(
-                "W",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: Colors.black),
-              ),
-            ),
-            const Positioned(
-              right: 10,
-              child: Text(
-                "E",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: Colors.black),
-              ),
-            ),
             // Drehender Kompasspfeil, der die Qibla-Richtung anzeigt.
             Transform.rotate(
               angle: angle,
