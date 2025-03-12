@@ -164,6 +164,19 @@ class _SettingsPageState extends State<SettingsPage> {
       }
     }
 
+    // Wenn wir eine manuelle Standortauswahl haben und nie automaticLocation aktiviert haben,
+    // sollten wir automaticLocation standardmäßig deaktivieren
+    bool autoLocation;
+    if (locationSet && !(prefs.containsKey('automaticLocation'))) {
+      // Wenn Standort bereits gesetzt ist und nie explizit automaticLocation aktiviert wurde,
+      // setzen wir automaticLocation auf false
+      autoLocation = false;
+      await prefs.setBool('automaticLocation', false);
+    } else {
+      // Ansonsten nutzen wir den gespeicherten Wert oder true als Standard
+      autoLocation = prefs.getBool('automaticLocation') ?? true;
+    }
+
     setState(() {
       _isDarkMode = prefs.getBool('isDarkMode') ?? false;
       _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
@@ -174,7 +187,7 @@ class _SettingsPageState extends State<SettingsPage> {
           prefs.getBool('showPrayerTimesInWeekView') ?? true;
       _showPrayerSlotsInDashboard =
           prefs.getBool('showPrayerSlotsInDashboard') ?? true;
-      _automaticLocation = prefs.getBool('automaticLocation') ?? true;
+      _automaticLocation = autoLocation;
       _defaultCountry = country;
       _defaultCity = city;
       _selectedCalcMethod = prefs.getInt('calculationMethod') ?? 0;
@@ -560,7 +573,11 @@ class _SettingsPageState extends State<SettingsPage> {
       const SizedBox(height: 16),
       SwitchListTile(
         title: Text(loc.automaticLocation),
-        subtitle: Text(loc.automaticLocationSubtitle),
+        subtitle: _automaticLocation
+            ? (_defaultCity != null && _defaultCountry != null)
+                ? Text('$_defaultCity, $_defaultCountry')
+                : Text(loc.automaticLocationSubtitle)
+            : null,
         value: _automaticLocation,
         onChanged: (value) async {
           setState(() => _automaticLocation = value);
