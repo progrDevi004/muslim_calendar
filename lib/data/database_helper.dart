@@ -10,7 +10,7 @@ class DatabaseHelper {
 
   static Database? _database;
 
-  // >>> Version von 5 auf 6 erhöht
+  // >>> Version von 6 auf 7 erhöht
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDatabase();
@@ -21,9 +21,9 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'appointments.db');
     return await openDatabase(
       path,
-      version: 6, // <-- NEU: DB-Version auf 6 erhöht
+      version: 7, // <-- NEU: DB-Version auf 7 erhöht
       onCreate: (db, version) async {
-        // Version 6 bedeutet, wir führen gleich alles an.
+        // Version 7 bedeutet, wir führen gleich alles an.
 
         // appointments
         await db.execute('''
@@ -40,6 +40,7 @@ class DatabaseHelper {
             location TEXT,
             recurrenceRule TEXT,
             recurrenceExceptionDates TEXT,
+            recurrenceEndDate TEXT,
             color INTEGER,
             startTime TEXT,
             endTime TEXT,
@@ -172,6 +173,13 @@ class DatabaseHelper {
               last_synced_at TEXT,
               UNIQUE(local_appointment_id, original_date)
             )
+          ''');
+        }
+
+        if (oldVersion < 7) {
+          // Neue Spalte für das Enddatum der Wiederholung
+          await db.execute('''
+            ALTER TABLE appointments ADD COLUMN recurrenceEndDate TEXT
           ''');
         }
       },

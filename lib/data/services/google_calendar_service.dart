@@ -11,6 +11,8 @@ import 'package:muslim_calendar/models/appointment_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:syncfusion_flutter_calendar/src/calendar/common/enums.dart'
+    as sf;
 import 'package:muslim_calendar/models/enums.dart';
 import 'package:muslim_calendar/utils/recurrence_rule_converter.dart';
 
@@ -566,12 +568,12 @@ class GoogleCalendarService {
 
       // Nächstes Datum gemäß Wiederholungsregel berechnen
       switch (recurrenceProperties.recurrenceType) {
-        case RecurrenceType.daily:
+        case sf.RecurrenceType.daily:
           currentDate =
               currentDate.add(Duration(days: recurrenceProperties.interval));
           break;
 
-        case RecurrenceType.weekly:
+        case sf.RecurrenceType.weekly:
           if (recurrenceProperties.weekDays.isEmpty) {
             // Wenn keine Wochentage angegeben, verwende den gleichen Wochentag
             currentDate = currentDate
@@ -598,7 +600,7 @@ class GoogleCalendarService {
           }
           break;
 
-        case RecurrenceType.monthly:
+        case sf.RecurrenceType.monthly:
           // Füge einen Monat hinzu (vereinfacht)
           int newMonth = currentDate.month + recurrenceProperties.interval;
           int yearAdd = (newMonth - 1) ~/ 12; // Wie viele Jahre hinzufügen
@@ -620,7 +622,7 @@ class GoogleCalendarService {
           currentDate = DateTime(nextMonth.year, nextMonth.month, day);
           break;
 
-        case RecurrenceType.yearly:
+        case sf.RecurrenceType.yearly:
           currentDate = DateTime(
             currentDate.year + recurrenceProperties.interval,
             currentDate.month,

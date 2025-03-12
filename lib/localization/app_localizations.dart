@@ -1174,18 +1174,38 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
+  String get selectRecurrenceType {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Wiederholungstyp auswählen';
+      case AppLanguage.turkish:
+        return 'Tekrarlama Tipini Seç';
+      case AppLanguage.arabic:
+        return 'اختر نوع التكرار';
+      case AppLanguage.bosnian:
+        return 'Odaberite vrstu ponavljanja';
+      case AppLanguage.spanish:
+        return 'Seleccionar tipo de recurrencia';
+      case AppLanguage.persian:
+        return 'انتخاب نوع تکرار';
+      case AppLanguage.english:
+      default:
+        return 'Select Recurrence Type';
+    }
+  }
+
   String get recurrenceEndDate {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return 'Wiederholungsenddatum';
+        return 'Enddatum der Wiederholung';
       case AppLanguage.turkish:
-        return 'Tekrar Bitiş Tarihi';
+        return 'Tekrarlama Bitiş Tarihi';
       case AppLanguage.arabic:
         return 'تاريخ انتهاء التكرار';
       case AppLanguage.bosnian:
         return 'Datum završetka ponavljanja';
       case AppLanguage.spanish:
-        return 'Fecha de fin de recurrencia';
+        return 'Fecha de finalización de repetición';
       case AppLanguage.persian:
         return 'تاریخ پایان تکرار';
       case AppLanguage.english:
@@ -1194,43 +1214,63 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
-  String get selectEndDate {
+  String get recurrenceEndDateHint {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return 'Enddatum wählen';
+        return 'Wählen Sie ein Enddatum für die Wiederholung';
       case AppLanguage.turkish:
-        return 'Bitiş Tarihi Seç';
+        return 'Tekrarın sona ereceği tarihi seçin';
       case AppLanguage.arabic:
-        return 'اختر تاريخ الانتهاء';
+        return 'اختر تاريخ انتهاء التكرار';
       case AppLanguage.bosnian:
-        return 'Izaberi datum završetka';
+        return 'Odaberite datum završetka ponavljanja';
       case AppLanguage.spanish:
-        return 'Seleccionar fecha de finalización';
+        return 'Seleccione una fecha de finalización para la repetición';
       case AppLanguage.persian:
-        return 'انتخاب تاریخ پایان';
+        return 'تاریخ پایان تکرار را انتخاب کنید';
       case AppLanguage.english:
       default:
-        return 'Select End Date';
+        return 'Select an end date for recurrence';
     }
   }
 
-  String get recurrenceDays {
+  String get recurrenceExceptionDates {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return 'Wochentage der Wiederholung';
+        return 'Ausnahmedaten';
       case AppLanguage.turkish:
-        return 'Tekrar Günleri';
+        return 'İstisna Tarihleri';
       case AppLanguage.arabic:
-        return 'أيام التكرار';
+        return 'تواريخ الاستثناء';
       case AppLanguage.bosnian:
-        return 'Dani ponavljanja';
+        return 'Dati izuzeća';
       case AppLanguage.spanish:
-        return 'Días de recurrencia';
+        return 'Fechas de excepción';
       case AppLanguage.persian:
-        return 'روزهای تکرار';
+        return 'تاریخ‌های استثنا';
       case AppLanguage.english:
       default:
-        return 'Recurrence Days';
+        return 'Exception Dates';
+    }
+  }
+
+  String get recurrenceExceptionDatesHint {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Tage wählen, an denen der Termin nicht stattfindet';
+      case AppLanguage.turkish:
+        return 'Etkinliğin gerçekleşmeyeceği günleri seçin';
+      case AppLanguage.arabic:
+        return 'اختر الأيام التي لن يتم فيها الحدث';
+      case AppLanguage.bosnian:
+        return 'Odaberite dane kada se događaj neće dogoditi';
+      case AppLanguage.spanish:
+        return 'Seleccione días en los que el evento no tendrá lugar';
+      case AppLanguage.persian:
+        return 'روزهایی را که رویداد اتفاق نمی‌افتد انتخاب کنید';
+      case AppLanguage.english:
+      default:
+        return 'Select days when the event will not occur';
     }
   }
 
@@ -1239,18 +1279,38 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.german:
         return 'Ausnahmedatum hinzufügen';
       case AppLanguage.turkish:
-        return 'İstisna Tarih Ekle';
+        return 'İstisna Tarihi Ekle';
       case AppLanguage.arabic:
         return 'إضافة تاريخ استثناء';
       case AppLanguage.bosnian:
-        return 'Dodaj datum izuzetka';
+        return 'Dodaj datum izuzeća';
       case AppLanguage.spanish:
         return 'Añadir fecha de excepción';
       case AppLanguage.persian:
-        return 'اضافه کردن تاریخ استثناء';
+        return 'افزودن تاریخ استثنا';
       case AppLanguage.english:
       default:
         return 'Add Exception Date';
+    }
+  }
+
+  String get removeExceptionDate {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Ausnahmedatum entfernen';
+      case AppLanguage.turkish:
+        return 'İstisna Tarihini Kaldır';
+      case AppLanguage.arabic:
+        return 'إزالة تاريخ الاستثناء';
+      case AppLanguage.bosnian:
+        return 'Ukloni datum izuzeća';
+      case AppLanguage.spanish:
+        return 'Eliminar fecha de excepción';
+      case AppLanguage.persian:
+        return 'حذف تاریخ استثنا';
+      case AppLanguage.english:
+      default:
+        return 'Remove Exception Date';
     }
   }
 
@@ -4482,6 +4542,26 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.english:
       default:
         return "Fixing completed";
+    }
+  }
+
+  String get exceptionDatesSelected {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Ausnahmedaten ausgewählt';
+      case AppLanguage.turkish:
+        return 'İstisna tarihleri seçildi';
+      case AppLanguage.arabic:
+        return 'تواريخ الاستثناء المحددة';
+      case AppLanguage.bosnian:
+        return 'Odabrani dati izuzeća';
+      case AppLanguage.spanish:
+        return 'Fechas de excepción seleccionadas';
+      case AppLanguage.persian:
+        return 'تاریخ‌های استثنا انتخاب شده';
+      case AppLanguage.english:
+      default:
+        return 'Exception dates selected';
     }
   }
 }

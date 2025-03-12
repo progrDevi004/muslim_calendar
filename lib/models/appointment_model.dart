@@ -17,6 +17,7 @@ class AppointmentModel {
   final String? location;
   final String? recurrenceRule;
   final List<DateTime>? recurrenceExceptionDates;
+  final DateTime? recurrenceEndDate;
   final Color color;
   final DateTime? startTime;
   final DateTime? endTime;
@@ -46,6 +47,7 @@ class AppointmentModel {
     this.location,
     this.recurrenceRule,
     this.recurrenceExceptionDates,
+    this.recurrenceEndDate,
     required this.color,
     this.startTime,
     this.endTime,
@@ -74,6 +76,7 @@ class AppointmentModel {
     String? location,
     String? recurrenceRule,
     List<DateTime>? recurrenceExceptionDates,
+    DateTime? recurrenceEndDate,
     Color? color,
     DateTime? startTime,
     DateTime? endTime,
@@ -100,6 +103,7 @@ class AppointmentModel {
       recurrenceRule: recurrenceRule ?? this.recurrenceRule,
       recurrenceExceptionDates:
           recurrenceExceptionDates ?? this.recurrenceExceptionDates,
+      recurrenceEndDate: recurrenceEndDate ?? this.recurrenceEndDate,
       color: color ?? this.color,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
@@ -135,6 +139,7 @@ class AppointmentModel {
                   .toList(),
             )
           : null,
+      'recurrenceEndDate': recurrenceEndDate?.toIso8601String(),
       'color': color.value,
       'startTime': startTime?.toIso8601String(),
       'endTime': endTime?.toIso8601String(),
@@ -181,6 +186,9 @@ class AppointmentModel {
       location: map['location'],
       recurrenceRule: map['recurrenceRule'],
       recurrenceExceptionDates: exceptionDates,
+      recurrenceEndDate: map['recurrenceEndDate'] != null
+          ? DateTime.parse(map['recurrenceEndDate'])
+          : null,
       color: Color(map['color']),
       startTime:
           map['startTime'] != null ? DateTime.parse(map['startTime']) : null,
@@ -215,6 +223,7 @@ class AppointmentModel {
       location: $location,
       recurrenceRule: $recurrenceRule,
       recurrenceExceptionDates: $recurrenceExceptionDates,
+      recurrenceEndDate: $recurrenceEndDate,
       color: ${color.value},
       startTime: $startTime,
       endTime: $endTime,

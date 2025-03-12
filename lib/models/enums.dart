@@ -11,3 +11,5 @@ enum TimeRelation {
   before,
   after,
 }
+
+enum RecurrenceType { daily, weekly, monthly, yearly, custom }

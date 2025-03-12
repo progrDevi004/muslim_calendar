@@ -19,14 +19,23 @@ class RecurrenceService {
       AppointmentModel appointment, DateTime startRange, DateTime endRange) {
     if (appointment.recurrenceRule == null) return [];
 
+    // Wenn ein Enddatum für die Wiederholung definiert ist, verwenden wir das als obere Grenze
+    DateTime actualEndRange = endRange;
+    if (appointment.recurrenceEndDate != null &&
+        appointment.recurrenceEndDate!.isBefore(endRange)) {
+      actualEndRange = appointment.recurrenceEndDate!;
+    }
+
     final dates = SfCalendar.getRecurrenceDateTimeCollection(
       appointment.recurrenceRule!,
       appointment.startTime ?? DateTime.now(),
       specificStartDate: startRange,
-      specificEndDate: endRange,
+      specificEndDate: actualEndRange,
     );
 
-    if (appointment.recurrenceExceptionDates != null) {
+    // Filtere Ausnahmedaten heraus
+    if (appointment.recurrenceExceptionDates != null &&
+        appointment.recurrenceExceptionDates!.isNotEmpty) {
       return dates
           .where((d) => !appointment.recurrenceExceptionDates!.any((ex) =>
               ex.year == d.year && ex.month == d.month && ex.day == d.day))
