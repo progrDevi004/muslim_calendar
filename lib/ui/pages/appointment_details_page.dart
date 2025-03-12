@@ -453,9 +453,54 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                   if (_appointment!.isRelatedToPrayerTimes) ...[
                     const Icon(Icons.star, color: Colors.green),
                     const SizedBox(width: 8),
-                    Text(
-                      loc.relatedToPrayerTimes,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                loc.relatedToPrayerTimes,
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              if (_appointment!.prayerTime != null) ...[
+                                Text(
+                                  ': ',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                                Text(
+                                  loc.getPrayerTimeLabel(
+                                      _appointment!.prayerTime!),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          if (_appointment!.timeRelation != null &&
+                              _appointment!.prayerTime != null) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Text(
+                                  '${loc.getTimeRelationLabel(_appointment!.timeRelation!)} ',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                if (_appointment!.minutesBeforeAfter != null)
+                                  Text(
+                                    '(${_appointment!.minutesBeforeAfter} ${loc.minutesBeforeAfter})',
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   ],
                 ],
@@ -463,6 +508,42 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
             ),
           ),
 
+        // NEU: Wiederholungsregel anzeigen, falls vorhanden
+        if (_appointment!.recurrenceRule != null &&
+            _appointment!.recurrenceRule!.isNotEmpty)
+          Card(
+            color: Theme.of(context).cardColor,
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                children: [
+                  const Icon(Icons.repeat, color: Colors.purple),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          loc.recurrence,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _getRecurrenceTypeText(
+                              _appointment!.recurrenceRule!, loc),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         // Erinnerung anzeigen (wenn vorhanden)
         if (_appointment!.reminderMinutesBefore != null &&
             _appointment!.reminderMinutesBefore! > 0)
@@ -680,6 +761,21 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
     } else {
       final days = (minutesBefore / 1440).floor();
       return loc.daysBefore(days);
+    }
+  }
+
+  // Helper-Methode, um die Wiederholungsregel in lesbaren Text umzuwandeln
+  String _getRecurrenceTypeText(String recurrenceRule, AppLocalizations loc) {
+    if (recurrenceRule.contains("FREQ=DAILY")) {
+      return loc.getRecurrenceTypeLabel("daily");
+    } else if (recurrenceRule.contains("FREQ=WEEKLY")) {
+      return loc.getRecurrenceTypeLabel("weekly");
+    } else if (recurrenceRule.contains("FREQ=MONTHLY")) {
+      return loc.getRecurrenceTypeLabel("monthly");
+    } else if (recurrenceRule.contains("FREQ=YEARLY")) {
+      return loc.getRecurrenceTypeLabel("yearly");
+    } else {
+      return loc.getRecurrenceTypeLabel("custom");
     }
   }
 

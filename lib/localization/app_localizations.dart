@@ -361,26 +361,6 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
-  String get relatedToPrayerTimesSubtitle {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Ereigniszeit hängt von täglichen Gebetszeiten ab';
-      case AppLanguage.turkish:
-        return 'Etkinlik zamanı günlük namaz vakitlerine bağlıdır';
-      case AppLanguage.arabic:
-        return 'وقت الحدث يعتمد على أوقات الصلاة اليومية';
-      case AppLanguage.bosnian:
-        return 'Vrijeme događaja zavisi od dnevnih vremena namaza';
-      case AppLanguage.spanish:
-        return 'La hora del evento depende de los tiempos de oración diarios';
-      case AppLanguage.persian:
-        return 'زمان رویداد به اوقات نماز روزانه بستگی دارد';
-      case AppLanguage.english:
-      default:
-        return 'Event time depends on daily prayer times';
-    }
-  }
-
   String get save {
     switch (_currentLanguage) {
       case AppLanguage.german:
