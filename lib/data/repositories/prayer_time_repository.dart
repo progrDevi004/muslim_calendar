@@ -43,14 +43,10 @@ class PrayerTimeRepository {
     final hasYear = await _hasFullYearInDB(year, location);
     // Wenn forceReload true ist, ignorieren wir den Cache-Status und laden neu
     if (hasYear && !forceReload) {
-      debugPrint(
-          "🕌 Gebetszeiten für $year und $location bereits im Cache, überspringen");
       return;
     }
 
     if (forceReload) {
-      debugPrint(
-          "🕌 Erzwinge Neuladung der Gebetszeiten für $year und $location");
       // Löschen der bestehenden Einträge für dieses Jahr und diesen Standort
       final db = await dbHelper.database;
       final startOfYear = '$year-01-01';
@@ -79,11 +75,6 @@ class PrayerTimeRepository {
     final String dateString = _formatDate(date);
     final prayerName = prayerTime.toString().split('.').last.toLowerCase();
 
-    debugPrint("Suche Gebetszeit in DB für:");
-    debugPrint("- Datum: $dateString");
-    debugPrint("- Ort: $location");
-    debugPrint("- Gebetszeit: $prayerName");
-
     final List<Map<String, dynamic>> result = await db.query(
       'prayer_times',
       columns: [prayerName],
@@ -93,10 +84,8 @@ class PrayerTimeRepository {
 
     if (result.isNotEmpty && result.first.values.first != null) {
       final minutes = int.tryParse(result.first.values.first.toString());
-      debugPrint("Gebetszeit gefunden: $minutes Minuten seit Mitternacht");
       return minutes;
     } else {
-      debugPrint("Keine Gebetszeit gefunden, lade neue Daten...");
       // Daten fehlen => wir laden (falls nicht schon vorhanden) die Daten neu
       await _fetchAndSaveMonthlyPrayerTimes(date.year, date.month, location);
 
@@ -108,12 +97,7 @@ class PrayerTimeRepository {
       );
       if (newResult.isNotEmpty && newResult.first.values.first != null) {
         final minutes = int.tryParse(newResult.first.values.first.toString());
-        debugPrint(
-            "Gebetszeit nach Neuladung gefunden: $minutes Minuten seit Mitternacht");
         return minutes;
-      } else {
-        debugPrint(
-            "Gebetszeit konnte auch nach Neuladung nicht gefunden werden!");
       }
     }
 

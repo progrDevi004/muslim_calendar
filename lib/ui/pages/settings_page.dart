@@ -101,7 +101,6 @@ class _SettingsPageState extends State<SettingsPage> {
   void _onCategoriesChanged() {
     setState(() {
       // UI aktualisieren
-      debugPrint("🔄 Kategorien wurden geändert, UI wird aktualisiert");
     });
   }
 
@@ -145,9 +144,6 @@ class _SettingsPageState extends State<SettingsPage> {
     // Wenn die Standorteinstellungen fehlen und der Benutzer bereits nach seiner Lage gefragt wurde,
     // liegt ein Fehler vor - navigiere zurück zur InitialLocationPage
     if (!locationSet && wasLocationAsked) {
-      debugPrint(
-          "⚠️ KRITISCHER FEHLER: Standorteinstellungen fehlen trotz wasLocationAsked = true");
-
       // Setze wasLocationAsked zurück, damit der Benutzer erneut nach seinem Standort gefragt wird
       await prefs.setBool('wasLocationAsked', false);
 
@@ -340,11 +336,8 @@ class _SettingsPageState extends State<SettingsPage> {
         _defaultCity!.isNotEmpty) {
       await prefs.setString('defaultCountry', _defaultCountry!);
       await prefs.setString('defaultCity', _defaultCity!);
-      debugPrint("✅ Standort gespeichert: $_defaultCountry, $_defaultCity");
     } else {
       // Wenn keine Werte gesetzt sind, zeige eine Fehlermeldung an
-      debugPrint(
-          "⚠️ Land oder Stadt fehlen, Einstellungen können nicht gespeichert werden");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content:

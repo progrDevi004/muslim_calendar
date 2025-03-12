@@ -188,7 +188,6 @@ class HomePageState extends State<HomePage> {
   void _onCategoriesChanged() {
     if (!mounted) return;
 
-    debugPrint("🔄 HomePage: Kategorien wurden geändert, lade Termine neu...");
     // Kategorien neu laden
     _loadAllCategories().then((_) {
       if (!mounted) return;
@@ -218,12 +217,6 @@ class HomePageState extends State<HomePage> {
     final showInDayView = prefs.getBool('showPrayerTimesInDayView') ?? true;
     final showInWeekView = prefs.getBool('showPrayerTimesInWeekView') ?? true;
 
-    debugPrint('📱 Gebetszeiten-Einstellungen geladen:');
-    debugPrint(' - 24h Format: $use24h');
-    debugPrint(' - Im Dashboard anzeigen: $showInDashboard');
-    debugPrint(' - In Tagesansicht anzeigen: $showInDayView');
-    debugPrint(' - In Wochenansicht anzeigen: $showInWeekView');
-
     setState(() {
       _use24hFormat = use24h;
       _showPrayerSlotsInDashboard = showInDashboard;
@@ -243,8 +236,6 @@ class HomePageState extends State<HomePage> {
 
     // Prüfen, ob die Standorteinstellungen fehlen
     if (country == null || city == null) {
-      debugPrint(
-          "⚠️ FEHLER: Land oder Stadt nicht in SharedPreferences gesetzt!");
       // Da diese Methode von verschiedenen Stellen aufgerufen werden kann,
       // können wir hier keine UI-Fehlermeldung anzeigen
       // Die aufrufende Methode muss sich darum kümmern
@@ -324,30 +315,19 @@ class HomePageState extends State<HomePage> {
       // Die aktuelle Kalenderansicht bestimmen
       CalendarView currentView = _selectedView;
 
-      debugPrint("🕌 loadAllAppointments: View = $currentView");
-      debugPrint("🕌 showPrayerTimesInDayView = $_showPrayerTimesInDayView");
-      debugPrint("🕌 showPrayerTimesInWeekView = $_showPrayerTimesInWeekView");
-
       // Gebetszeiten nur hinzufügen, wenn sie für die aktuelle Ansicht aktiviert sind
       bool addPrayers = false; // Default: keine Gebetszeiten anzeigen
 
       if (_selectedView == CalendarView.day) {
         // In Tagesansicht nur anzeigen, wenn die entsprechende Einstellung aktiviert ist
         addPrayers = _showPrayerTimesInDayView;
-        debugPrint(
-            "🕌 Tagesansicht: addPrayers = $addPrayers (basierend auf _showPrayerTimesInDayView)");
       } else if (_selectedView == CalendarView.week) {
         // In Wochenansicht nur anzeigen, wenn die entsprechende Einstellung aktiviert ist
         addPrayers = _showPrayerTimesInWeekView;
-        debugPrint(
-            "🕌 Wochenansicht: addPrayers = $addPrayers (basierend auf _showPrayerTimesInWeekView)");
       } else {
         // In anderen Ansichten (z.B. Monatsansicht) keine Gebetszeiten anzeigen
         addPrayers = false;
-        debugPrint("🕌 Andere Ansicht: addPrayers = false");
       }
-
-      debugPrint("🕌 Finale Entscheidung: addPrayers = $addPrayers");
 
       if (addPrayers && _selectedNavIndex != 0) {
         final now = DateTime.now();
@@ -369,8 +349,6 @@ class HomePageState extends State<HomePage> {
 
         // Prüfen, ob die Standorteinstellungen fehlen
         if (country == null || city == null) {
-          debugPrint(
-              "⚠️ FEHLER: Land oder Stadt nicht in SharedPreferences gesetzt!");
           // Zeige eine Fehlermeldung an
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -393,9 +371,6 @@ class HomePageState extends State<HomePage> {
           final dbLoc = (row['location'] as String).toLowerCase();
           return dbLoc == userLocation;
         }).toList();
-
-        debugPrint(
-            "Gefundene Gebetszeiten für den aktuellen Standort: ${filteredEntries.length}");
 
         // Lade die Islam-Kategorie (ID 2) für Gebetszeiten
         final islamCategory = await _categoryRepo.getCategory(2);
@@ -462,16 +437,13 @@ class HomePageState extends State<HomePage> {
             gebetszeitenAnzahl++;
           }
         }
-
-        debugPrint(
-            "Insgesamt ${gebetszeitenAnzahl} Gebetszeiten zum Kalender hinzugefügt");
       }
 
       setState(() {
         _dataSource = EventDataSource(allAppointments);
       });
     } catch (e) {
-      debugPrint('Error loading appointments: $e');
+      // debugPrint('Error loading appointments: $e');
     }
   }
 
@@ -485,17 +457,17 @@ class HomePageState extends State<HomePage> {
     );
 
     // Ausführliche Aktualisierung nach Rückkehr von den Einstellungen
-    debugPrint("🔄 Zurück von Einstellungen: Lade alle Daten neu");
+    // debugPrint("🔄 Zurück von Einstellungen: Lade alle Daten neu");
 
     // Einstellungen neu laden
     await _loadUserPrefs();
 
     // Vergleiche alte und neue Einstellungen für Debugging
-    debugPrint("⚙️ Gebetszeiten-Einstellungen Änderung:");
-    debugPrint(
-        " - Tagesansicht: $oldDayViewSetting -> $_showPrayerTimesInDayView");
-    debugPrint(
-        " - Wochenansicht: $oldWeekViewSetting -> $_showPrayerTimesInWeekView");
+    // debugPrint("⚙️ Gebetszeiten-Einstellungen Änderung:");
+    // debugPrint(
+    //     " - Tagesansicht: $oldDayViewSetting -> $_showPrayerTimesInDayView");
+    // debugPrint(
+    //     " - Wochenansicht: $oldWeekViewSetting -> $_showPrayerTimesInWeekView");
 
     // WICHTIG: Vollständige Neuladung der Daten erzwingen, indem wir den dataSource zurücksetzen
     setState(() {
@@ -508,7 +480,7 @@ class HomePageState extends State<HomePage> {
     final city = prefs.getString('defaultCity');
     if (country != null && city != null) {
       final location = '${city.trim()},${country.trim()}'.toLowerCase();
-      debugPrint("📅 Erzwinge Neuladung der Gebetszeiten für $location");
+      // debugPrint("📅 Erzwinge Neuladung der Gebetszeiten für $location");
       // Statt direktem Aufruf verwenden wir die Methode mit forceReload
       await _fetchYearlyPrayerTimesIfNeeded(forceReload: true);
     }
@@ -539,11 +511,10 @@ class HomePageState extends State<HomePage> {
     // UI aktualisieren
     setState(() {});
 
-    // Debug-Ausgabe nach der Neuladung
-    debugPrint("✅ Daten nach Einstellungsänderung neu geladen");
+    // debugPrint("✅ Daten nach Einstellungsänderung neu geladen");
     if (_dataSource != null) {
-      debugPrint(
-          " - Anzahl Termine im DataSource: ${_dataSource!.appointments!.length}");
+      // debugPrint(
+      //     " - Anzahl Termine im DataSource: ${_dataSource!.appointments!.length}");
 
       // Zähle Gebetszeiteinträge
       int prayerTimeCount = 0;
@@ -552,9 +523,9 @@ class HomePageState extends State<HomePage> {
           prayerTimeCount++;
         }
       }
-      debugPrint(" - Davon Gebetszeiten: $prayerTimeCount");
+      // debugPrint(" - Davon Gebetszeiten: $prayerTimeCount");
     } else {
-      debugPrint(" - DataSource ist null!");
+      // debugPrint(" - DataSource ist null!");
     }
   }
 
@@ -661,26 +632,17 @@ class HomePageState extends State<HomePage> {
                     // Für Gebetszeiten spezielles Styling
                     final bool isPrayerTime = appointment.notes == 'prayerTime';
 
-                    debugPrint(
-                        "Appointment: ${appointment.subject}, isPrayerTime: $isPrayerTime");
-
                     // In jedem Fall überprüfen wir die aktuelle Ansicht und die entsprechenden Einstellungen
                     bool shouldShowPrayerTime = false;
 
                     if (isPrayerTime) {
                       if (_selectedView == CalendarView.day) {
                         shouldShowPrayerTime = _showPrayerTimesInDayView;
-                        debugPrint(
-                            "Gebetszeit in Tagesansicht: ${appointment.subject}, anzeigen: $shouldShowPrayerTime");
                       } else if (_selectedView == CalendarView.week) {
                         shouldShowPrayerTime = _showPrayerTimesInWeekView;
-                        debugPrint(
-                            "Gebetszeit in Wochenansicht: ${appointment.subject}, anzeigen: $shouldShowPrayerTime");
                       } else {
                         // In anderen Ansichten keine Gebetszeiten anzeigen
                         shouldShowPrayerTime = false;
-                        debugPrint(
-                            "Gebetszeit in anderen Ansichten: ${appointment.subject}, anzeigen: false");
                       }
 
                       // Wenn Gebetszeit nicht angezeigt werden soll, leeres Widget zurückgeben
@@ -691,8 +653,6 @@ class HomePageState extends State<HomePage> {
 
                     // Spezielles Styling für Gebetszeiten, wenn sie angezeigt werden sollen
                     if (isPrayerTime) {
-                      debugPrint(
-                          "Gebetszeit wird angezeigt: ${appointment.subject}");
                       return Container(
                         padding: const EdgeInsets.all(2),
                         decoration: BoxDecoration(
@@ -865,7 +825,7 @@ class HomePageState extends State<HomePage> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedNavIndex,
         onDestinationSelected: (int index) {
-          debugPrint("⏭️ Navigation: Wechsel zu Index $index");
+          // debugPrint("⏭️ Navigation: Wechsel zu Index $index");
           setState(() {
             _selectedNavIndex = index;
           });
@@ -952,14 +912,6 @@ class HomePageState extends State<HomePage> {
                                   _adapter.clearCategoryCache();
                                   loadAllAppointments();
                                   _dashboardKey.currentState?.reloadData();
-
-                                  // ScaffoldMessenger.of(context).showSnackBar(
-                                  //   SnackBar(
-                                  //     content: Text(
-                                  //         'Kategorie "${cat.name}" wurde aktualisiert'),
-                                  //     duration: const Duration(seconds: 2),
-                                  //   ),
-                                  // );
                                 }
                               },
                             ),
@@ -1180,8 +1132,8 @@ class HomePageState extends State<HomePage> {
                 onPressed: () async {
                   final name = nameController.text.trim();
                   if (name.isNotEmpty) {
-                    debugPrint(
-                        "Erstelle Kategorie: $name mit Farbe: $selectedColor");
+                    // debugPrint(
+                    //     "Erstelle Kategorie: $name mit Farbe: $selectedColor");
 
                     final newCategory = CategoryModel.newCategory(
                       name: name,

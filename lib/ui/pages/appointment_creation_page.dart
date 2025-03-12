@@ -520,7 +520,22 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           return;
         }
 
-        _endTime ??= _startTime!.add(const Duration(minutes: 30));
+        // Endzeit-Validierung und -Berechnung
+        if (_isRelatedToPrayerTimes) {
+          // Bei gebetszeitabhängigen Terminen berechnen wir die Endzeit aus der Dauer
+          if (_duration == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Bitte geben Sie eine Dauer an')),
+            );
+            return;
+          }
+
+          // Die Endzeit wird automatisch aus der berechneten Startzeit und der Dauer ermittelt
+          // Wir müssen hier nichts tun, da die Berechnung in der PrayerTimeService geschieht
+        } else {
+          // Bei normalen Terminen prüfen wir, ob eine Endzeit angegeben wurde
+          _endTime ??= _startTime!.add(const Duration(minutes: 30));
+        }
 
         // Aktualisiere _selectedReminderMinutes aus der _remindersList
         if (_remindersList.isNotEmpty) {
@@ -627,7 +642,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               : null,
           color: _color,
           startTime: _startTime,
-          endTime: _endTime,
+          // Bei gebetszeitabhängigen Terminen setzen wir die Endzeit auf null,
+          // da die korrekte Endzeit später durch den Service berechnet wird
+          endTime: _isRelatedToPrayerTimes ? null : _endTime,
           categoryId: _selectedCategory?.id,
           reminderMinutesBefore: _selectedReminderMinutes,
           // NEU: Flag für Google Kalender Synchronisierung
@@ -637,6 +654,38 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         if (_currentAppointmentId == null) {
           // Neuer Termin
           final newId = await _appointmentRepo.insertAppointment(appointment);
+
+          // Wenn der Termin gebetszeitabhängig ist, müssen wir die berechneten Zeiten abrufen
+          if (_isRelatedToPrayerTimes && appointment.prayerTime != null) {
+            final baseDate = DateTime(
+              appointment.startTime!.year,
+              appointment.startTime!.month,
+              appointment.startTime!.day,
+            );
+
+            // Berechnete Start- und Endzeiten abrufen
+            final calculatedStart =
+                await _prayerTimeService.getCalculatedStartTime(
+              appointment,
+              baseDate,
+            );
+            final calculatedEnd = await _prayerTimeService.getCalculatedEndTime(
+              appointment,
+              baseDate,
+            );
+
+            if (calculatedStart != null && calculatedEnd != null) {
+              // Neues Appointment mit berechneten Zeiten erstellen
+              final finalAppointment = appointment.copyWith(
+                id: newId,
+                startTime: calculatedStart,
+                endTime: calculatedEnd,
+              );
+
+              // In DB aktualisieren
+              await _appointmentRepo.updateAppointment(finalAppointment);
+            }
+          }
 
           if (_selectedReminderMinutes != null &&
               _selectedReminderMinutes! > 0 &&
@@ -660,6 +709,37 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           await NotificationService()
               .cancelNotification(_currentAppointmentId!);
           await _appointmentRepo.updateAppointment(appointment);
+
+          // Wenn der Termin gebetszeitabhängig ist, müssen wir die berechneten Zeiten abrufen
+          if (_isRelatedToPrayerTimes && appointment.prayerTime != null) {
+            final baseDate = DateTime(
+              appointment.startTime!.year,
+              appointment.startTime!.month,
+              appointment.startTime!.day,
+            );
+
+            // Berechnete Start- und Endzeiten abrufen
+            final calculatedStart =
+                await _prayerTimeService.getCalculatedStartTime(
+              appointment,
+              baseDate,
+            );
+            final calculatedEnd = await _prayerTimeService.getCalculatedEndTime(
+              appointment,
+              baseDate,
+            );
+
+            if (calculatedStart != null && calculatedEnd != null) {
+              // Neues Appointment mit berechneten Zeiten erstellen
+              final finalAppointment = appointment.copyWith(
+                startTime: calculatedStart,
+                endTime: calculatedEnd,
+              );
+
+              // In DB aktualisieren
+              await _appointmentRepo.updateAppointment(finalAppointment);
+            }
+          }
 
           if (_selectedReminderMinutes != null &&
               _selectedReminderMinutes! > 0 &&
@@ -1087,6 +1167,13 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                             onChanged: (value) {
                               setState(() {
                                 _minutesBeforeAfter = int.tryParse(value) ?? 15;
+                                // Aktualisiere auch bei Änderung der Minuten die berechnete Endzeit
+                                if (_isRelatedToPrayerTimes &&
+                                    _startTime != null &&
+                                    _duration != null) {
+                                  // Wir versuchen, die Startzeit neu zu berechnen
+                                  _updateCalculatedTimes();
+                                }
                               });
                             },
                           ),
@@ -1108,7 +1195,12 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                                 _duration = Duration(
                                     minutes: int.tryParse(value) ?? 30);
                                 // Aktualisiere auch die Endzeit basierend auf der neuen Dauer
-                                if (_startTime != null) {
+                                if (_isRelatedToPrayerTimes &&
+                                    _startTime != null) {
+                                  // Bei gebetszeitabhängigen Terminen die Endzeit automatisch aktualisieren
+                                  _updateCalculatedTimes();
+                                } else if (_startTime != null) {
+                                  // Bei normalen Terminen die Endzeit berechnen
                                   _endTime = _startTime!.add(_duration!);
                                 }
                               });
@@ -1149,6 +1241,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 24, child: VerticalDivider()),
                       Expanded(
                         child: Material(
                           elevation: 0,
@@ -1158,7 +1251,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                               child: Text(
                                   _startTime != null
                                       ? _formatTime(_startTime!)
-                                      : '---',
+                                      : '--:--',
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w500)),
                             ),
@@ -1170,51 +1263,51 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                       ),
                     ],
                   ),
+                  // Endzeit
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Material(
+                          elevation: 0,
+                          color: Colors.transparent,
+                          child: ListTile(
+                            title: Center(
+                              child: Text(
+                                  _endTime != null
+                                      ? _formatDate(_endTime!)
+                                      : '---',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w500)),
+                            ),
+                            onTap: () async {
+                              await _pickEndDate();
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24, child: VerticalDivider()),
+                      Expanded(
+                        child: Material(
+                          elevation: 0,
+                          color: Colors.transparent,
+                          child: ListTile(
+                            title: Center(
+                              child: Text(
+                                  _endTime != null
+                                      ? _formatTime(_endTime!)
+                                      : '--:--',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w500)),
+                            ),
+                            onTap: () async {
+                              await _pickEndTime();
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
-
-                // Endzeit
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Material(
-                        elevation: 0,
-                        color: Colors.transparent,
-                        child: ListTile(
-                          title: Center(
-                            child: Text(
-                                _endTime != null
-                                    ? _formatDate(_endTime!)
-                                    : '---',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w500)),
-                          ),
-                          onTap: () async {
-                            await _pickEndDate();
-                          },
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Material(
-                        elevation: 0,
-                        color: Colors.transparent,
-                        child: ListTile(
-                          title: Center(
-                            child: Text(
-                                _endTime != null
-                                    ? _formatTime(_endTime!)
-                                    : '---',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w500)),
-                          ),
-                          onTap: () async {
-                            await _pickEndTime();
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
@@ -2772,6 +2865,55 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           ],
         ),
       );
+    }
+  }
+
+  // Füge eine neue Methode hinzu, um die berechneten Zeiten zu aktualisieren
+  Future<void> _updateCalculatedTimes() async {
+    if (!_isRelatedToPrayerTimes || _startTime == null) return;
+
+    // Referenzdatum basierend auf aktuellem Startdatum
+    final baseDate = DateTime(
+      _startTime!.year,
+      _startTime!.month,
+      _startTime!.day,
+    );
+
+    // Versuche eine Demo-Berechnung des Start-/Endzeitpunkts
+    // Wir erstellen ein temporäres AppointmentModel für die Berechnung
+    final demoAppointment = AppointmentModel(
+      subject: "Temp",
+      isAllDay: false,
+      isRelatedToPrayerTimes: true,
+      prayerTime: _selectedPrayerTime,
+      timeRelation: _selectedTimeRelation,
+      minutesBeforeAfter: _minutesBeforeAfter,
+      duration: _duration,
+      location: _selectedCity != null && _selectedCountry != null
+          ? "$_selectedCity,$_selectedCountry"
+          : null,
+      color: Colors.blue,
+      startTime: baseDate,
+    );
+
+    try {
+      // Wir verwenden die Service-Methoden, um eine Vorschau zu generieren
+      final calculatedStart = await _prayerTimeService.getCalculatedStartTime(
+        demoAppointment,
+        baseDate,
+      );
+
+      if (calculatedStart != null && _duration != null) {
+        final calculatedEnd = calculatedStart.add(_duration!);
+
+        setState(() {
+          // Setze die berechneten Werte für Anzeigezwecke
+          _startTime = calculatedStart;
+          _endTime = calculatedEnd;
+        });
+      }
+    } catch (e) {
+      debugPrint("Fehler bei der Vorschauberechnung: $e");
     }
   }
 }

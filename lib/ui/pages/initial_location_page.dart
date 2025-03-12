@@ -121,7 +121,6 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
   Future<void> _saveAndContinue() async {
     // Sicherheitsprüfung: Stelle sicher, dass Land und Stadt ausgewählt wurden
     if (_selectedCountry == null || _selectedCity == null) {
-      debugPrint("⚠️ FEHLER: Land oder Stadt nicht ausgewählt!");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content:
@@ -145,9 +144,6 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     // Standort - Wir haben bereits geprüft, dass die Werte nicht null sind
     await prefs.setString('defaultCountry', _selectedCountry!);
     await prefs.setString('defaultCity', _selectedCity!);
-
-    // Debug-Ausgabe, um sicherzustellen, dass die Werte richtig gespeichert wurden
-    debugPrint("✅ Standort gespeichert: $_selectedCountry, $_selectedCity");
 
     // Markiere, dass die Einstellungen bereits erfasst wurden
     await prefs.setBool('wasLocationAsked', true);
