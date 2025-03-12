@@ -2739,6 +2739,146 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
+  String get prayerTimeDisplay {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Gebetszeiten-Anzeige";
+      case AppLanguage.turkish:
+        return "Namaz Vakitleri Görüntüleme";
+      case AppLanguage.arabic:
+        return "عرض أوقات الصلاة";
+      case AppLanguage.bosnian:
+        return "Prikaz vremena molitve";
+      case AppLanguage.spanish:
+        return "Visualización de los tiempos de oración";
+      case AppLanguage.persian:
+        return "نمایش اوقات نماز";
+      case AppLanguage.english:
+      default:
+        return "Prayer Time Display";
+    }
+  }
+
+  String get showPrayerTimesInDayView {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Gebetszeiten in der Tagesansicht anzeigen";
+      case AppLanguage.turkish:
+        return "Gün Görünümünde Namaz Vakitlerini Göster";
+      case AppLanguage.arabic:
+        return "عرض أوقات الصلاة في عرض اليوم";
+      case AppLanguage.bosnian:
+        return "Prikaži vremena molitve u dnevnom prikazu";
+      case AppLanguage.spanish:
+        return "Mostrar tiempos de oración en vista diaria";
+      case AppLanguage.persian:
+        return "نمایش اوقات نماز در نمای روزانه";
+      case AppLanguage.english:
+      default:
+        return "Show Prayer Times in Day View";
+    }
+  }
+
+  String get showPrayerTimesInDayViewSubtitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Zeigt Gebetszeiten in der Kalender-Tagesansicht an";
+      case AppLanguage.turkish:
+        return "Takvim Gün Görünümünde Namaz Vakitlerini Gösterir";
+      case AppLanguage.arabic:
+        return "يعرض أوقات الصلاة في عرض اليوم للتقويم";
+      case AppLanguage.bosnian:
+        return "Prikazuje vremena molitve u dnevnom prikazu kalendara";
+      case AppLanguage.spanish:
+        return "Muestra los tiempos de oración en la vista diaria del calendario";
+      case AppLanguage.persian:
+        return "نمایش اوقات نماز در نمای روزانه تقویم";
+      case AppLanguage.english:
+      default:
+        return "Shows prayer times in the calendar day view";
+    }
+  }
+
+  String get showPrayerTimesInWeekView {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Gebetszeiten in der Wochenansicht anzeigen";
+      case AppLanguage.turkish:
+        return "Hafta Görünümünde Namaz Vakitlerini Göster";
+      case AppLanguage.arabic:
+        return "عرض أوقات الصلاة في عرض الأسبوع";
+      case AppLanguage.bosnian:
+        return "Prikaži vremena molitve u sedmičnom prikazu";
+      case AppLanguage.spanish:
+        return "Mostrar tiempos de oración en vista semanal";
+      case AppLanguage.persian:
+        return "نمایش اوقات نماز در نمای هفتگی";
+      case AppLanguage.english:
+      default:
+        return "Show Prayer Times in Week View";
+    }
+  }
+
+  String get showPrayerTimesInWeekViewSubtitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Zeigt Gebetszeiten in der Kalender-Wochenansicht an";
+      case AppLanguage.turkish:
+        return "Takvim Hafta Görünümünde Namaz Vakitlerini Gösterir";
+      case AppLanguage.arabic:
+        return "يعرض أوقات الصلاة في عرض الأسبوع للتقويم";
+      case AppLanguage.bosnian:
+        return "Prikazuje vremena molitve u sedmičnom prikazu kalendara";
+      case AppLanguage.spanish:
+        return "Muestra los tiempos de oración en la vista semanal del calendario";
+      case AppLanguage.persian:
+        return "نمایش اوقات نماز در نمای هفتگی تقویم";
+      case AppLanguage.english:
+      default:
+        return "Shows prayer times in the calendar week view";
+    }
+  }
+
+  String get showPrayerSlotsInDashboard {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Gebetszeiten im Dashboard anzeigen";
+      case AppLanguage.turkish:
+        return "Gösterge Panelinde Namaz Vakitlerini Göster";
+      case AppLanguage.arabic:
+        return "عرض فترات الصلاة في لوحة المعلومات";
+      case AppLanguage.bosnian:
+        return "Prikaži vremena molitve na nadzornoj ploči";
+      case AppLanguage.spanish:
+        return "Mostrar tiempos de oración en el tablero";
+      case AppLanguage.persian:
+        return "نمایش اسلات‌های نماز در داشبورد";
+      case AppLanguage.english:
+      default:
+        return "Show Prayer Slots in Dashboard";
+    }
+  }
+
+  String get showPrayerSlotsInDashboardSubtitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Zeigt Gebetszeit-Karten im Dashboard an";
+      case AppLanguage.turkish:
+        return "Gösterge Panelinde Namaz Vakti Kartlarını Gösterir";
+      case AppLanguage.arabic:
+        return "يعرض بطاقات وقت الصلاة في لوحة المعلومات";
+      case AppLanguage.bosnian:
+        return "Prikazuje kartice vremena molitve na nadzornoj ploči";
+      case AppLanguage.spanish:
+        return "Muestra tarjetas de tiempo de oración en el tablero";
+      case AppLanguage.persian:
+        return "نمایش کارت‌های زمان نماز در داشبورد";
+      case AppLanguage.english:
+      default:
+        return "Shows prayer time cards in the dashboard";
+    }
+  }
+
   String get automaticLocation {
     switch (_currentLanguage) {
       case AppLanguage.german:

@@ -413,6 +413,43 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       const Divider(height: 32),
 
+      // Prayer Times Display Section
+      Text(
+        loc.prayerTimeDisplay,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+      ),
+      const SizedBox(height: 16),
+      SwitchListTile(
+        title: Text(loc.showPrayerTimesInDayView),
+        subtitle: Text(loc.showPrayerTimesInDayViewSubtitle),
+        value: _showPrayerTimesInDayView,
+        onChanged: (value) async {
+          setState(() => _showPrayerTimesInDayView = value);
+          await _saveSettings();
+        },
+      ),
+      SwitchListTile(
+        title: Text(loc.showPrayerTimesInWeekView),
+        subtitle: Text(loc.showPrayerTimesInWeekViewSubtitle),
+        value: _showPrayerTimesInWeekView,
+        onChanged: (value) async {
+          setState(() => _showPrayerTimesInWeekView = value);
+          await _saveSettings();
+        },
+      ),
+      SwitchListTile(
+        title: Text(loc.showPrayerSlotsInDashboard),
+        subtitle: Text(loc.showPrayerSlotsInDashboardSubtitle),
+        value: _showPrayerSlotsInDashboard,
+        onChanged: (value) async {
+          setState(() => _showPrayerSlotsInDashboard = value);
+          await _saveSettings();
+        },
+      ),
+      const Divider(height: 32),
+
       // Language Settings Section
       Text(
         loc.language,

@@ -149,11 +149,19 @@ class HomePageState extends State<HomePage> {
     _calendarController.selectedDate = _selectedDate;
     _calendarController.displayDate = _selectedDate;
 
-    _updateCalendarViewFromNavIndex();
-    _loadUserPrefs();
-    _loadAllCategories();
-    _fetchYearlyPrayerTimesIfNeeded().then((_) {
-      loadAllAppointments();
+    // Zuerst die Benutzereinstellungen laden
+    _loadUserPrefs().then((_) {
+      // Dann die Kalenderansicht aktualisieren
+      _updateCalendarViewFromNavIndex();
+
+      // Kategorien laden
+      _loadAllCategories();
+
+      // Gebetszeiten für das ganze Jahr laden, falls nötig
+      _fetchYearlyPrayerTimesIfNeeded().then((_) {
+        // Termine laden, nachdem alle Vorbereitungen abgeschlossen sind
+        loadAllAppointments();
+      });
     });
   }
 
@@ -205,14 +213,22 @@ class HomePageState extends State<HomePage> {
   /// Lädt Zeitformat- und Gebetszeiteinstellungen aus SharedPreferences
   Future<void> _loadUserPrefs() async {
     final prefs = await SharedPreferences.getInstance();
+    final use24h = prefs.getBool('use24hFormat') ?? false;
+    final showInDashboard = prefs.getBool('showPrayerSlotsInDashboard') ?? true;
+    final showInDayView = prefs.getBool('showPrayerTimesInDayView') ?? true;
+    final showInWeekView = prefs.getBool('showPrayerTimesInWeekView') ?? true;
+
+    debugPrint('📱 Gebetszeiten-Einstellungen geladen:');
+    debugPrint(' - 24h Format: $use24h');
+    debugPrint(' - Im Dashboard anzeigen: $showInDashboard');
+    debugPrint(' - In Tagesansicht anzeigen: $showInDayView');
+    debugPrint(' - In Wochenansicht anzeigen: $showInWeekView');
+
     setState(() {
-      _use24hFormat = prefs.getBool('use24hFormat') ?? false;
-      _showPrayerSlotsInDashboard =
-          prefs.getBool('showPrayerSlotsInDashboard') ?? true;
-      _showPrayerTimesInDayView =
-          prefs.getBool('showPrayerTimesInDayView') ?? true;
-      _showPrayerTimesInWeekView =
-          prefs.getBool('showPrayerTimesInWeekView') ?? true;
+      _use24hFormat = use24h;
+      _showPrayerSlotsInDashboard = showInDashboard;
+      _showPrayerTimesInDayView = showInDayView;
+      _showPrayerTimesInWeekView = showInWeekView;
       // In der Monatsansicht sollen keine Gebetszeiten angezeigt werden.
       _showPrayerTimesInMonthView = false;
     });
@@ -231,6 +247,8 @@ class HomePageState extends State<HomePage> {
 
   /// Updated den CalendarView und lädt neu
   void _updateCalendarViewFromNavIndex() {
+    CalendarView oldView = _selectedView;
+
     switch (_selectedNavIndex) {
       case 0:
         // Dashboard – kein CalendarView
@@ -245,10 +263,25 @@ class HomePageState extends State<HomePage> {
         _selectedView = CalendarView.month;
         break;
     }
-    _calendarController.view = _selectedView;
+
+    // Kalenderansicht aktualisieren, falls notwendig
+    if (_calendarController.view != _selectedView) {
+      _calendarController.view = _selectedView;
+    }
+
+    debugPrint(
+        "🕌 _updateCalendarViewFromNavIndex: Wechsel von $oldView zu ${_selectedView}");
+    debugPrint("🕌 showPrayerTimesInDayView = $_showPrayerTimesInDayView");
+    debugPrint("🕌 showPrayerTimesInWeekView = $_showPrayerTimesInWeekView");
+
     setState(() {});
+
     if (_selectedNavIndex != 0) {
-      loadAllAppointments();
+      // Nach dem Aktualisieren der Ansicht laden wir die Termine neu
+      // Erst settings laden, um sicherzustellen, dass wir die aktuellen Einstellungen haben
+      _loadUserPrefs().then((_) {
+        loadAllAppointments();
+      });
     }
   }
 
@@ -286,20 +319,70 @@ class HomePageState extends State<HomePage> {
         allAppointments.addAll(appointmentList);
       }
 
+      // Die aktuelle Kalenderansicht bestimmen
+      CalendarView currentView = _selectedView;
+
+      debugPrint("🕌 loadAllAppointments: View = $currentView");
+      debugPrint("🕌 showPrayerTimesInDayView = $_showPrayerTimesInDayView");
+      debugPrint("🕌 showPrayerTimesInWeekView = $_showPrayerTimesInWeekView");
+
       // Gebetszeiten laden, wenn aktiviert
-      if ((_selectedNavIndex == 1 && _showPrayerTimesInDayView) ||
-          (_selectedNavIndex == 2 && _showPrayerTimesInWeekView) ||
-          (_selectedNavIndex == 3 && _showPrayerTimesInMonthView)) {
+      final loadPrayerTimes =
+          (currentView == CalendarView.day && _showPrayerTimesInDayView) ||
+              (currentView == CalendarView.week && _showPrayerTimesInWeekView);
+
+      debugPrint("🕌 loadPrayerTimes = $loadPrayerTimes");
+
+      if (loadPrayerTimes) {
+        // Zusätzliche Sicherheitsmaßnahme: Einstellungen neu laden
+        final prefsCheck = await SharedPreferences.getInstance();
+        final showInDayView =
+            prefsCheck.getBool('showPrayerTimesInDayView') ?? true;
+        final showInWeekView =
+            prefsCheck.getBool('showPrayerTimesInWeekView') ?? true;
+
+        // Prüfen, ob wir aufgrund der direkten Einstellungen laden sollten
+        final shouldLoadFromPrefs =
+            (currentView == CalendarView.day && showInDayView) ||
+                (currentView == CalendarView.week && showInWeekView);
+
+        debugPrint("🕌 shouldLoadFromPrefs = $shouldLoadFromPrefs");
+
+        if (shouldLoadFromPrefs) {
+          // In diesem Fall die Einstellungen synchronisieren
+          if (_showPrayerTimesInDayView != showInDayView ||
+              _showPrayerTimesInWeekView != showInWeekView) {
+            setState(() {
+              _showPrayerTimesInDayView = showInDayView;
+              _showPrayerTimesInWeekView = showInWeekView;
+            });
+          }
+        } else if (!shouldLoadFromPrefs && !loadPrayerTimes) {
+          // Wenn die Einstellungen sich widersprechen, früh beenden
+          debugPrint("🕌 Widersprüchliche Einstellungen, breche Laden ab!");
+          setState(() {
+            _dataSource = EventDataSource(allAppointments);
+          });
+          return;
+        }
+
         final now = DateTime.now();
-        final startRange = DateTime(now.year - 1, now.month, now.day);
-        final endRange = DateTime(now.year + 1, now.month, now.day);
+        // Für Tag- und Wochenansicht brauchen wir nicht so viele Daten, nur einen begrenzten Zeitraum
+        final int daysBack = currentView == CalendarView.day ? 7 : 30;
+        final int daysForward = currentView == CalendarView.day ? 7 : 30;
+
+        final startRange = now.subtract(Duration(days: daysBack));
+        final endRange = now.add(Duration(days: daysForward));
+
         final prayerTimeEntries = await _prayerTimeRepo.getPrayerTimesInRange(
           startRange,
           endRange,
         );
+
         final prefs = await SharedPreferences.getInstance();
         final country = prefs.getString('defaultCountry');
         final city = prefs.getString('defaultCity');
+
         if (country != null && city != null) {
           final userLocation = '${city.trim()},${country.trim()}'.toLowerCase();
           final filteredEntries = prayerTimeEntries.where((row) {
@@ -318,10 +401,14 @@ class HomePageState extends State<HomePage> {
             final month = int.parse(parts[1]);
             final day = int.parse(parts[2]);
             final baseDay = DateTime(year, month, day);
+
+            // Lücke zwischen Gebetszeiten verkürzen (5 Minuten statt 15)
+            final gebetszeitDuration = 5;
+
             Appointment? createPrayerAppointment(String name, int? minutes) {
               if (minutes == null) return null;
               final start = baseDay.add(Duration(minutes: minutes));
-              final end = start.add(const Duration(minutes: 15));
+              final end = start.add(Duration(minutes: gebetszeitDuration));
               return Appointment(
                 id: 'prayer_${name}_${baseDay.toIso8601String()}',
                 subject: name,
@@ -329,33 +416,37 @@ class HomePageState extends State<HomePage> {
                 startTime: start,
                 endTime: end,
                 isAllDay: false,
-                color:
-                    prayerTimeColor, // Verwende die Farbe der Islam-Kategorie
+                color: prayerTimeColor,
               );
             }
 
             final fajrApp =
                 createPrayerAppointment('Fajr', _toInt(row['fajr']));
             if (fajrApp != null) allAppointments.add(fajrApp);
+
             final dhuhrApp =
                 createPrayerAppointment('Dhuhr', _toInt(row['dhuhr']));
             if (dhuhrApp != null) allAppointments.add(dhuhrApp);
+
             final asrApp = createPrayerAppointment('Asr', _toInt(row['asr']));
             if (asrApp != null) allAppointments.add(asrApp);
+
             final maghribApp =
                 createPrayerAppointment('Maghrib', _toInt(row['maghrib']));
             if (maghribApp != null) allAppointments.add(maghribApp);
+
             final ishaApp =
                 createPrayerAppointment('Isha', _toInt(row['isha']));
             if (ishaApp != null) allAppointments.add(ishaApp);
           }
         }
       }
+
       setState(() {
         _dataSource = EventDataSource(allAppointments);
       });
     } catch (e) {
-      print('Error loading appointments: $e');
+      debugPrint('Error loading appointments: $e');
     }
   }
 
@@ -363,11 +454,18 @@ class HomePageState extends State<HomePage> {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const SettingsPage()),
     );
+
+    // Einstellungen neu laden
+    await _loadUserPrefs();
+
+    // Dashboard aktualisieren, falls wir uns im Dashboard befinden
     if (_selectedNavIndex == 0) {
       _dashboardKey.currentState?.reloadData();
     }
-    await _loadUserPrefs();
+
+    // Termine neu laden, um die aktualisierten Einstellungen zu berücksichtigen
     await loadAllAppointments();
+
     setState(() {});
   }
 
@@ -470,11 +568,52 @@ class HomePageState extends State<HomePage> {
                       return const SizedBox.shrink();
                     }
                     final Appointment appointment = details.appointments.first;
-                    if (appointment.notes == 'prayerTime' &&
-                        _selectedView != CalendarView.day &&
-                        _selectedView != CalendarView.week) {
-                      return const SizedBox.shrink();
+
+                    // Für Gebetszeiten spezielles Styling
+                    final bool isPrayerTime = appointment.notes == 'prayerTime';
+
+                    // Gebetszeiten nur in der Tages- und Wochenansicht anzeigen,
+                    // wenn die entsprechenden Einstellungen aktiviert sind
+                    if (isPrayerTime) {
+                      if (_selectedView == CalendarView.month) {
+                        // In der Monatsansicht keine Gebetszeiten anzeigen
+                        return const SizedBox.shrink();
+                      } else if (_selectedView == CalendarView.day &&
+                          !_showPrayerTimesInDayView) {
+                        // In der Tagesansicht nur anzeigen, wenn die Einstellung aktiviert ist
+                        return const SizedBox.shrink();
+                      } else if (_selectedView == CalendarView.week &&
+                          !_showPrayerTimesInWeekView) {
+                        // In der Wochenansicht nur anzeigen, wenn die Einstellung aktiviert ist
+                        return const SizedBox.shrink();
+                      }
+
+                      // Spezielles Styling für Gebetszeiten
+                      return Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: appointment.color.withOpacity(0.8),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.5),
+                            width: 1,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            appointment.subject,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      );
                     }
+
+                    // Für die Monatsansicht
                     if (_selectedView == CalendarView.month) {
                       return Container(
                         decoration: BoxDecoration(
@@ -516,6 +655,8 @@ class HomePageState extends State<HomePage> {
                               ),
                       );
                     }
+
+                    // Für normale Termine in Tag- und Wochenansicht
                     return Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
@@ -539,6 +680,35 @@ class HomePageState extends State<HomePage> {
                   },
                   onSelectionChanged: (details) {
                     _selectedDate = details.date;
+                  },
+                  onViewChanged: (ViewChangedDetails details) {
+                    // Wenn sich die Ansicht ändert, aktualisieren wir die Variablen
+                    // und laden die Termine neu
+                    if (_calendarController.view != null) {
+                      CalendarView newView = _calendarController.view!;
+
+                      // Nur wenn sich die Ansicht tatsächlich geändert hat
+                      if (newView != _selectedView) {
+                        _selectedView = newView;
+
+                        // Synchronisiere _selectedNavIndex mit der neuen Ansicht
+                        if (newView == CalendarView.day) {
+                          _selectedNavIndex = 1;
+                        } else if (newView == CalendarView.week) {
+                          _selectedNavIndex = 2;
+                        } else if (newView == CalendarView.month) {
+                          _selectedNavIndex = 3;
+                        }
+
+                        // UI aktualisieren und Termine neu laden
+                        setState(() {});
+
+                        // Erst Einstellungen laden, dann Termine
+                        _loadUserPrefs().then((_) {
+                          loadAllAppointments();
+                        });
+                      }
+                    }
                   },
                   onTap: (calendarTapDetails) async {
                     if (calendarTapDetails.targetElement ==
@@ -591,7 +761,10 @@ class HomePageState extends State<HomePage> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedNavIndex,
         onDestinationSelected: (int index) {
-          _selectedNavIndex = index;
+          debugPrint("⏭️ Navigation: Wechsel zu Index $index");
+          setState(() {
+            _selectedNavIndex = index;
+          });
           _updateCalendarViewFromNavIndex();
         },
         destinations: [
