@@ -187,7 +187,6 @@ class DashboardPageState extends State<DashboardPage> {
       _weatherErrorMessage = null;
     });
 
-    // Beispiel-API-Key
     const apiKey = 'ea71a51c210c3fa6760039a8b592c19c';
     try {
       final url = Uri.parse(
