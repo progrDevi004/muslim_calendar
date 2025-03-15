@@ -35,7 +35,7 @@ class PrayerTimeTile extends StatelessWidget {
             Icon(Icons.wifi_off, color: Colors.red.shade400, size: 28),
             const SizedBox(height: 8),
             Text(
-              "Netzwerkfehler",
+              loc.networkError,
               style: TextStyle(
                   color: Colors.red.shade400,
                   fontWeight: FontWeight.bold,
@@ -44,7 +44,7 @@ class PrayerTimeTile extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              "Gebetszeiten konnten nicht abgerufen werden",
+              loc.prayerTimesFetchError,
               style: TextStyle(color: Colors.red.shade300, fontSize: 12),
               textAlign: TextAlign.center,
             ),

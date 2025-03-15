@@ -60,7 +60,7 @@ class TaskList extends StatelessWidget {
           const SizedBox(height: 16),
           Center(
             child: Text(
-              'Keine Termine für heute',
+              loc.noAppointmentsToday,
               style: TextStyle(
                 color: Colors.grey.shade600,
                 fontStyle: FontStyle.italic,

@@ -4885,4 +4885,85 @@ class AppLocalizations extends ChangeNotifier {
         return "Location detection failed";
     }
   }
+
+  // Dashboard-Widget Texte
+  String get networkError {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Netzwerkfehler';
+      case AppLanguage.turkish:
+        return 'Ağ hatası';
+      case AppLanguage.arabic:
+        return 'خطأ في الشبكة';
+      case AppLanguage.bosnian:
+        return 'Greška mreže';
+      case AppLanguage.spanish:
+        return 'Error de red';
+      case AppLanguage.persian:
+        return 'خطای شبکه';
+      case AppLanguage.english:
+      default:
+        return 'Network Error';
+    }
+  }
+
+  String get weatherFetchError {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Wetter konnte nicht abgerufen werden';
+      case AppLanguage.turkish:
+        return 'Hava durumu alınamadı';
+      case AppLanguage.arabic:
+        return 'تعذر جلب بيانات الطقس';
+      case AppLanguage.bosnian:
+        return 'Nije moguće preuzeti vremenske podatke';
+      case AppLanguage.spanish:
+        return 'No se pudieron recuperar los datos meteorológicos';
+      case AppLanguage.persian:
+        return 'اطلاعات آب و هوا قابل بازیابی نیست';
+      case AppLanguage.english:
+      default:
+        return 'Weather data could not be retrieved';
+    }
+  }
+
+  String get prayerTimesFetchError {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Gebetszeiten konnten nicht abgerufen werden';
+      case AppLanguage.turkish:
+        return 'Namaz vakitleri alınamadı';
+      case AppLanguage.arabic:
+        return 'تعذر جلب أوقات الصلاة';
+      case AppLanguage.bosnian:
+        return 'Nije moguće preuzeti vremena namaza';
+      case AppLanguage.spanish:
+        return 'No se pudieron recuperar los tiempos de oración';
+      case AppLanguage.persian:
+        return 'اوقات نماز قابل بازیابی نیست';
+      case AppLanguage.english:
+      default:
+        return 'Prayer times could not be retrieved';
+    }
+  }
+
+  String get noAppointmentsToday {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Keine Termine für heute';
+      case AppLanguage.turkish:
+        return 'Bugün için randevu yok';
+      case AppLanguage.arabic:
+        return 'لا مواعيد لهذا اليوم';
+      case AppLanguage.bosnian:
+        return 'Nema termina za danas';
+      case AppLanguage.spanish:
+        return 'No hay citas para hoy';
+      case AppLanguage.persian:
+        return 'امروز قراری وجود ندارد';
+      case AppLanguage.english:
+      default:
+        return 'No appointments for today';
+    }
+  }
 }
