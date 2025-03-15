@@ -1,5 +1,6 @@
 // lib/pages/dashboard.dart
 
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -27,7 +28,9 @@ import 'package:muslim_calendar/ui/pages/home_page.dart';
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({Key? key}) : super(key: key);
+  final Function(DashboardPageState)? onStateCreated;
+
+  const DashboardPage({Key? key, this.onStateCreated}) : super(key: key);
 
   @override
   State<DashboardPage> createState() => DashboardPageState();
@@ -54,7 +57,7 @@ class DashboardPageState extends State<DashboardPage> {
   final AppointmentRepository _appointmentRepo = AppointmentRepository();
   final CategoryRepository _categoryRepo = CategoryRepository();
 
-  late final PrayerTimeService _prayerTimeService;
+  PrayerTimeService? _prayerTimeService;
   late CalendarSyncService _calendarSyncService;
 
   bool _use24hFormat = false;
@@ -65,8 +68,10 @@ class DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
-    _prayerTimeService = PrayerTimeService(_prayerTimeRepo);
     _initData();
+
+    // Callback zur Weitergabe der State-Referenz
+    widget.onStateCreated?.call(this);
   }
 
   @override
@@ -77,6 +82,13 @@ class DashboardPageState extends State<DashboardPage> {
     _calendarSyncService =
         Provider.of<CalendarSyncService>(context, listen: false);
 
+    // PrayerTimeService als Listener registrieren
+    if (_prayerTimeService != null) {
+      _prayerTimeService!.removeListener(_onPrayerTimesChanged);
+    }
+    _prayerTimeService = Provider.of<PrayerTimeService>(context, listen: false);
+    _prayerTimeService!.addListener(_onPrayerTimesChanged);
+
     // Listener hinzufügen, um auf Kategorieänderungen zu reagieren
     _calendarSyncService.addListener(_onCategoriesChanged);
   }
@@ -85,7 +97,19 @@ class DashboardPageState extends State<DashboardPage> {
   void dispose() {
     // Listener entfernen
     _calendarSyncService.removeListener(_onCategoriesChanged);
+    if (_prayerTimeService != null) {
+      _prayerTimeService!.removeListener(_onPrayerTimesChanged);
+    }
     super.dispose();
+  }
+
+  // Wird aufgerufen, wenn sich die Gebetszeiten ändern
+  void _onPrayerTimesChanged() {
+    if (!mounted) return;
+
+    debugPrint(
+        "🕌 DashboardPage: Gebetszeiten wurden geändert, lade Daten neu...");
+    reloadData();
   }
 
   // Wird aufgerufen, wenn sich Kategorien ändern
@@ -100,7 +124,13 @@ class DashboardPageState extends State<DashboardPage> {
   /// Ermöglicht Reload von außen
   Future<void> reloadData() async {
     if (!mounted) return;
-    await _initData();
+
+    try {
+      await _initData();
+    } catch (e) {
+      debugPrint("Fehler bei reloadData: $e");
+      // Stille Fehlerbehandlung, damit die App nicht abstürzt
+    }
   }
 
   /// Lädt alle Daten für das Dashboard: Wetter, Gebetszeiten, heutige Termine
@@ -111,12 +141,14 @@ class DashboardPageState extends State<DashboardPage> {
     final languageCode = _mapAppLanguageToCode(loc.currentLanguage);
     await initializeDateFormatting(languageCode, null);
 
+    if (!mounted) return; // Prüfung nach dem asynchronen Aufruf
+
     final prefs = await SharedPreferences.getInstance();
     _use24hFormat = prefs.getBool('use24hFormat') ?? false;
     _showPrayerSlotsInDashboard =
         prefs.getBool('showPrayerSlotsInDashboard') ?? true;
 
-    if (!mounted) return;
+    if (!mounted) return; // Prüfung nach dem asynchronen Aufruf
 
     setState(() {
       _isWeatherLoading = true;
@@ -130,8 +162,14 @@ class DashboardPageState extends State<DashboardPage> {
 
     // 1) Wetter
     await _fetchWeather(defaultCity);
+
+    if (!mounted) return; // Prüfung nach dem asynchronen Aufruf
+
     // 2) Gebetszeiten
     await _fetchPrayerTimesForToday(locationString);
+
+    if (!mounted) return; // Prüfung nach dem asynchronen Aufruf
+
     // 3) Nur heutige Termine
     await _loadTodayAppointments();
 
@@ -142,13 +180,29 @@ class DashboardPageState extends State<DashboardPage> {
 
   /// Wetter abrufen
   Future<void> _fetchWeather(String city) async {
+    if (!mounted) return; // Sicherheitsprüfung am Anfang
+
+    setState(() {
+      _isWeatherLoading = true;
+      _weatherErrorMessage = null;
+    });
+
     // Beispiel-API-Key
     const apiKey = 'ea71a51c210c3fa6760039a8b592c19c';
     try {
       final url = Uri.parse(
         'https://api.openweathermap.org/data/2.5/weather?q=$city&units=metric&appid=$apiKey',
       );
-      final response = await http.get(url);
+
+      final response = await http.get(url).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException(
+              'Netzwerk-Timeout beim Abrufen der Wetterdaten');
+        },
+      );
+
+      if (!mounted) return; // Wichtige Prüfung nach asynchronem Aufruf
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -167,23 +221,34 @@ class DashboardPageState extends State<DashboardPage> {
           _weatherSymbol = symbol;
           _weatherLocation = city;
           _weatherErrorMessage = null;
+          _isWeatherLoading = false;
         });
       } else {
         setState(() {
           _weatherErrorMessage = 'Weather error: ${response.statusCode}';
+          _isWeatherLoading = false;
         });
       }
     } catch (e) {
+      if (!mounted) return; // Wichtige Prüfung vor setState im catch-Block
+
       setState(() {
-        _weatherErrorMessage = 'Weather error: $e';
+        _weatherErrorMessage =
+            'Weather error:\nClientException with SocketException:\nFailed host lookup: \'openweathermap.org\'';
+        _isWeatherLoading = false;
       });
-    } finally {
-      _isWeatherLoading = false;
     }
   }
 
   /// Gebetszeiten nur für HEUTE
   Future<void> _fetchPrayerTimesForToday(String location) async {
+    if (!mounted) return; // Sicherheitsprüfung am Anfang
+
+    setState(() {
+      _isPrayerTimesLoading = true;
+      _prayerTimeErrorMessage = null;
+    });
+
     final now = DateTime.now();
     final loc = Provider.of<AppLocalizations>(context, listen: false);
     try {
@@ -197,6 +262,8 @@ class DashboardPageState extends State<DashboardPage> {
           now, location, PrayerTime.maghrib);
       final isha = await _prayerTimeRepo.getPrayerTimeMinutes(
           now, location, PrayerTime.isha);
+
+      if (!mounted) return; // Wichtige Prüfung nach asynchronen Aufrufen
 
       _todayPrayerTimesDisplay = {
         loc.getPrayerTimeLabel(PrayerTime.fajr):
@@ -221,18 +288,23 @@ class DashboardPageState extends State<DashboardPage> {
 
       setState(() {
         _prayerTimeErrorMessage = null;
+        _isPrayerTimesLoading = false;
       });
     } catch (e) {
+      if (!mounted) return; // Wichtige Prüfung vor setState im catch-Block
+
       setState(() {
-        _prayerTimeErrorMessage = 'Error fetching prayer times: $e';
+        _prayerTimeErrorMessage =
+            'Error fetching prayer times:\nClientException with SocketException:\nFailed host lookup: \'api.aladhan.com\'';
+        _isPrayerTimesLoading = false;
       });
-    } finally {
-      _isPrayerTimesLoading = false;
     }
   }
 
   /// **Nur** die Termine des heutigen Tages laden
   Future<void> _loadTodayAppointments() async {
+    if (!mounted) return; // Sicherheitsprüfung am Anfang
+
     setState(() {
       _isAppointmentsLoading = true;
     });
@@ -242,16 +314,24 @@ class DashboardPageState extends State<DashboardPage> {
     await initializeDateFormatting(
         _mapAppLanguageToCode(loc.currentLanguage), null);
 
+    if (!mounted) return; // Prüfung nach dem asynchronen Aufruf
+
     final now = DateTime.now();
     // Start und Ende des heutigen Tages (bis 23:59)
     final startOfDay = DateTime(now.year, now.month, now.day, 0, 0);
     final endOfDay = DateTime(now.year, now.month, now.day, 23, 59);
 
     final all = await _appointmentRepo.getAllAppointments();
+
+    if (!mounted) return; // Prüfung nach dem asynchronen Aufruf
+
     final tasks = <_DashboardTask>[];
 
     // Lade alle Kategorien einmalig
     final allCategories = await _categoryRepo.getAllCategories();
+
+    if (!mounted) return; // Prüfung nach dem asynchronen Aufruf
+
     // Map für schnelleren Zugriff nach ID
     final Map<int, Color> categoryColors = {};
     for (var category in allCategories) {
@@ -265,6 +345,8 @@ class DashboardPageState extends State<DashboardPage> {
 
     // 1) Normale Termine
     for (var ap in all) {
+      if (!mounted) return; // Regelmäßige Überprüfung in der Schleife
+
       // Überspringe Termine ohne ID oder mit leeren Titeln
       if (ap.id == null || ap.subject.trim().isEmpty) {
         continue;
@@ -275,40 +357,52 @@ class DashboardPageState extends State<DashboardPage> {
         continue;
       }
 
-      // Berechnete Start-/Endzeit (für Gebetszeitabhängige Termine)
-      final calculatedStart = await _prayerTimeService
-          .getCalculatedStartTime(ap, DateTime.now(), useAppointmentDate: true);
+      try {
+        // Berechnete Start-/Endzeit (für Gebetszeitabhängige Termine)
+        final calculatedStart = await _prayerTimeService!
+            .getCalculatedStartTime(ap, DateTime.now(),
+                useAppointmentDate: true);
 
-      final start = calculatedStart ?? (ap.startTime ?? now);
+        if (!mounted) return; // Prüfung nach dem asynchronen Aufruf
 
-      final calculatedEnd =
-          await _prayerTimeService.getCalculatedEndTime(ap, now);
-      final end = calculatedEnd ??
-          (ap.endTime ?? start.add(const Duration(minutes: 30)));
+        final start = calculatedStart ?? (ap.startTime ?? now);
 
-      // BUGFIX: Zeige nur Termine an, die tatsächlich am heutigen Tag beginnen
-      if (start.year == now.year &&
-          start.month == now.month &&
-          start.day == now.day) {
-        final diff = end.difference(start).inMinutes;
-        final desc = ap.notes ?? '';
+        final calculatedEnd =
+            await _prayerTimeService!.getCalculatedEndTime(ap, now);
 
-        tasks.add(
-          _DashboardTask(
-            appointmentId: ap.id,
-            isPrayerSlot: false,
-            title: ap.subject,
-            start: start,
-            end: end,
-            durationInMinutes: diff,
-            description: desc,
-            color: categoryColors[ap.categoryId] ?? Colors.grey,
-            isAllDay: ap.isAllDay, // WICHTIG
-          ),
-        );
+        if (!mounted) return; // Prüfung nach dem asynchronen Aufruf
 
-        // Termin als hinzugefügt markieren
-        addedAppointmentIds.add(ap.id);
+        final end = calculatedEnd ??
+            (ap.endTime ?? start.add(const Duration(minutes: 30)));
+
+        // BUGFIX: Zeige nur Termine an, die tatsächlich am heutigen Tag beginnen
+        if (start.year == now.year &&
+            start.month == now.month &&
+            start.day == now.day) {
+          final diff = end.difference(start).inMinutes;
+          final desc = ap.notes ?? '';
+
+          tasks.add(
+            _DashboardTask(
+              appointmentId: ap.id,
+              isPrayerSlot: false,
+              title: ap.subject,
+              start: start,
+              end: end,
+              durationInMinutes: diff,
+              description: desc,
+              color: categoryColors[ap.categoryId] ?? Colors.grey,
+              isAllDay: ap.isAllDay, // WICHTIG
+            ),
+          );
+
+          // Termin als hinzugefügt markieren
+          addedAppointmentIds.add(ap.id);
+        }
+      } catch (e) {
+        debugPrint("Fehler beim Laden des Termins ${ap.id}: $e");
+        // Continue with next appointment
+        continue;
       }
     }
 
@@ -354,6 +448,8 @@ class DashboardPageState extends State<DashboardPage> {
       // Falls beide allDay oder beide normal => sortiere nach Zeit
       return a.start.compareTo(b.start);
     });
+
+    if (!mounted) return; // Letzte Prüfung vor setState
 
     setState(() {
       _todayTasks = tasks;
@@ -547,9 +643,30 @@ class DashboardPageState extends State<DashboardPage> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_weatherErrorMessage != null) {
-      return Text(
-        _weatherErrorMessage!,
-        style: TextStyle(color: Colors.red.shade400),
+      return Container(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(Icons.wifi_off, color: Colors.red.shade400, size: 28),
+            const SizedBox(height: 8),
+            Text(
+              "Netzwerkfehler",
+              style: TextStyle(
+                  color: Colors.red.shade400,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "Wetter konnte nicht abgerufen werden",
+              style: TextStyle(color: Colors.red.shade300, fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       );
     }
     final theme = Theme.of(context);
@@ -602,9 +719,30 @@ class DashboardPageState extends State<DashboardPage> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_prayerTimeErrorMessage != null) {
-      return Text(
-        _prayerTimeErrorMessage!,
-        style: TextStyle(color: Colors.red.shade400),
+      return Container(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(Icons.wifi_off, color: Colors.red.shade400, size: 28),
+            const SizedBox(height: 8),
+            Text(
+              "Netzwerkfehler",
+              style: TextStyle(
+                  color: Colors.red.shade400,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "Gebetszeiten konnten nicht abgerufen werden",
+              style: TextStyle(color: Colors.red.shade300, fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       );
     }
     if (_todayPrayerTimesDisplay.isEmpty) {

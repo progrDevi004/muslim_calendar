@@ -122,9 +122,13 @@ class HomePageState extends State<HomePage> {
   List<CategoryModel> _allCategories = [];
   Set<int> _selectedCategoryIds = {};
 
-  final GlobalKey<DashboardPageState> _dashboardKey =
-      GlobalKey<DashboardPageState>();
-  late final _dashboardPage = DashboardPage(key: _dashboardKey);
+  // GlobalKey entfernen, da er das Problem verursacht
+  // final GlobalKey<DashboardPageState> _dashboardKey =
+  //     GlobalKey<DashboardPageState>();
+  // late final _dashboardPage = DashboardPage(key: _dashboardKey);
+
+  // Stattdessen einfache Referenz auf die State-Instanz
+  DashboardPageState? _dashboardPageState;
 
   bool _use24hFormat = false;
 
@@ -176,6 +180,11 @@ class HomePageState extends State<HomePage> {
     _calendarSyncService =
         Provider.of<CalendarSyncService>(context, listen: false);
 
+    // PrayerTimeService registrieren und Listener hinzufügen
+    final prayerTimeService =
+        Provider.of<PrayerTimeService>(context, listen: false);
+    prayerTimeService.addListener(_onPrayerTimesChanged);
+
     // Listener hinzufügen, um auf Kategorieänderungen zu reagieren
     _calendarSyncService.addListener(_onCategoriesChanged);
   }
@@ -184,7 +193,33 @@ class HomePageState extends State<HomePage> {
   void dispose() {
     // Listener entfernen
     _calendarSyncService.removeListener(_onCategoriesChanged);
+
+    // PrayerTimeService Listener entfernen
+    final prayerTimeService =
+        Provider.of<PrayerTimeService>(context, listen: false);
+    prayerTimeService.removeListener(_onPrayerTimesChanged);
+
     super.dispose();
+  }
+
+  // Wird aufgerufen, wenn sich Gebetszeiten ändern
+  void _onPrayerTimesChanged() {
+    if (!mounted) return;
+
+    debugPrint(
+        "🕌 HomePage: Gebetszeiten wurden geändert, lade Termine neu...");
+
+    // Gebetszeiten für das ganze Jahr neu laden, falls nötig
+    _fetchYearlyPrayerTimesIfNeeded(forceReload: true).then((_) {
+      // Termine neu laden
+      loadAllAppointments();
+
+      // Dashboard aktualisieren, falls es aktiv ist
+      if (_selectedNavIndex == 0) {
+        // _dashboardKey.currentState?.reloadData();
+        _dashboardPageState?.reloadData();
+      }
+    });
   }
 
   // Wird aufgerufen, wenn sich Kategorien ändern
@@ -200,7 +235,8 @@ class HomePageState extends State<HomePage> {
       // Termine neu laden mit den aktualisierten Kategorien
       loadAllAppointments();
       // Dashboard aktualisieren
-      _dashboardKey.currentState?.reloadData();
+      // _dashboardKey.currentState?.reloadData();
+      _dashboardPageState?.reloadData();
     });
   }
 
@@ -448,6 +484,12 @@ class HomePageState extends State<HomePage> {
     } catch (e) {
       // debugPrint('Error loading appointments: $e');
     }
+
+    // Dashboard aktualisieren, falls es aktiv ist
+    if (_selectedNavIndex == 0) {
+      // _dashboardKey.currentState?.reloadData();
+      _dashboardPageState?.reloadData();
+    }
   }
 
   Future<void> _openSettings() async {
@@ -505,7 +547,8 @@ class HomePageState extends State<HomePage> {
 
     // Dashboard aktualisieren, falls wir uns im Dashboard befinden
     if (_selectedNavIndex == 0) {
-      _dashboardKey.currentState?.reloadData();
+      // _dashboardKey.currentState?.reloadData();
+      _dashboardPageState?.reloadData();
     }
 
     // Termine neu laden mit den aktualisierten Einstellungen
@@ -589,7 +632,13 @@ class HomePageState extends State<HomePage> {
         ],
       ),
       body: _selectedNavIndex == 0
-          ? _dashboardPage
+          ? DashboardPage(
+              key:
+                  const ValueKey('dashboard'), // Konstanter Key statt UniqueKey
+              onStateCreated: (state) {
+                _dashboardPageState = state;
+              },
+            )
           : Padding(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
               child: Localizations.override(
@@ -916,7 +965,7 @@ class HomePageState extends State<HomePage> {
                                   // Cache leeren, damit die aktualisierten Kategoriefarben verwendet werden
                                   _adapter.clearCategoryCache();
                                   loadAllAppointments();
-                                  _dashboardKey.currentState?.reloadData();
+                                  // _dashboardKey.currentState?.reloadData();
                                 }
                               },
                             ),
@@ -1023,7 +1072,7 @@ class HomePageState extends State<HomePage> {
                     Navigator.of(ctx).pop();
                     await _saveSelectedCategoryIdsToPrefs();
                     loadAllAppointments();
-                    _dashboardKey.currentState?.reloadData();
+                    // _dashboardKey.currentState?.reloadData();
                   },
                   child: Text(loc.apply),
                 ),

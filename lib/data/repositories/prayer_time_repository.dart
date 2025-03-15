@@ -143,26 +143,39 @@ class PrayerTimeRepository {
 
     final url =
         'https://api.aladhan.com/v1/calendarByAddress/$year/$month?address=$encodedLoc&method=$calcMethod';
-    final response = await http.get(Uri.parse(url));
 
-    if (response.statusCode == 200) {
-      final jsonData = json.decode(response.body);
-      Map<String, Map<String, String>> prayerTimes = {};
-      for (var dayData in jsonData['data']) {
-        final date = dayData['date']['gregorian']['date']; // z.B. "18-05-2024"
-        final timings = dayData['timings'];
-        prayerTimes[date] = {
-          'fajr': timings['Fajr'],
-          'dhuhr': timings['Dhuhr'],
-          'asr': timings['Asr'],
-          'maghrib': timings['Maghrib'],
-          'isha': timings['Isha'],
-        };
+    try {
+      // Timeout hinzufügen, um endloses Warten zu vermeiden
+      final response =
+          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        Map<String, Map<String, String>> prayerTimes = {};
+        for (var dayData in jsonData['data']) {
+          final date =
+              dayData['date']['gregorian']['date']; // z.B. "18-05-2024"
+          final timings = dayData['timings'];
+          prayerTimes[date] = {
+            'fajr': timings['Fajr'],
+            'dhuhr': timings['Dhuhr'],
+            'asr': timings['Asr'],
+            'maghrib': timings['Maghrib'],
+            'isha': timings['Isha'],
+          };
+        }
+        await _savePrayerTimesToDatabase(prayerTimes, location);
+      } else {
+        debugPrint(
+            'Fehler beim Laden der Gebetszeiten: HTTP ${response.statusCode}');
+        // Keine Exception werfen, stattdessen leise fehlschlagen
+        return;
       }
-      await _savePrayerTimesToDatabase(prayerTimes, location);
-    } else {
-      throw Exception(
-          'Failed to load prayer times from API (status code: ${response.statusCode}).');
+    } catch (e) {
+      // Fehler loggen, aber keine Exception weitergeben
+      debugPrint('Netzwerkfehler beim Laden der Gebetszeiten: $e');
+      // Offline-Fehler oder Timeout - wir brechen leise ab
+      return;
     }
   }
 

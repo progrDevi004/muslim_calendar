@@ -106,109 +106,126 @@ class PrayerTimeService with ChangeNotifier {
         .where((a) => a.isRelatedToPrayerTimes && a.startTime != null)
         .toList();
 
-    if (prayerAppointments.isEmpty) {
-      debugPrint(
-          "📅 Keine gebetszeitbezogenen Termine gefunden, nichts zu tun.");
-      return;
-    }
-
     // 2) Aktuelle Standorteinstellungen laden
     final location = await _getCurrentLocation();
     if (location == null) {
+      debugPrint("📅 Kein Standort festgelegt, nichts zu tun.");
       return;
     }
     final newLocation = location;
 
-    // 3) Falls nötig: Aktualisiere die Location in den Terminen,
-    // sofern sie nicht dem neuen Standort entspricht.
-    for (final appt in prayerAppointments) {
-      if (appt.location == null ||
-          appt.location!.trim().toLowerCase() != newLocation) {
-        // Da appt.location final ist, erstellen wir ein neues AppointmentModel mit dem aktualisierten Standort.
-        final updatedAppt = AppointmentModel(
-          id: appt.id,
-          subject: appt.subject,
-          notes: appt.notes,
-          isAllDay: appt.isAllDay,
-          isRelatedToPrayerTimes: appt.isRelatedToPrayerTimes,
-          prayerTime: appt.prayerTime,
-          timeRelation: appt.timeRelation,
-          minutesBeforeAfter: appt.minutesBeforeAfter,
-          duration: appt.duration,
-          location: newLocation,
-          recurrenceRule: appt.recurrenceRule,
-          recurrenceExceptionDates: appt.recurrenceExceptionDates,
-          color: appt.color,
-          startTime: appt.startTime,
-          endTime: appt.endTime,
-          categoryId: appt.categoryId,
-          reminderMinutesBefore: appt.reminderMinutesBefore,
-          externalIdGoogle: appt.externalIdGoogle,
-          externalIdOutlook: appt.externalIdOutlook,
-          externalIdApple: appt.externalIdApple,
-          lastSyncedAt: appt.lastSyncedAt,
-        );
-        await _appointmentRepo.updateAppointment(updatedAppt);
+    // Bearbeite Termine, falls vorhanden
+    if (prayerAppointments.isNotEmpty) {
+      // 3) Falls nötig: Aktualisiere die Location in den Terminen,
+      // sofern sie nicht dem neuen Standort entspricht.
+      for (final appt in prayerAppointments) {
+        if (appt.location == null ||
+            appt.location!.trim().toLowerCase() != newLocation) {
+          // Da appt.location final ist, erstellen wir ein neues AppointmentModel mit dem aktualisierten Standort.
+          final updatedAppt = AppointmentModel(
+            id: appt.id,
+            subject: appt.subject,
+            notes: appt.notes,
+            isAllDay: appt.isAllDay,
+            isRelatedToPrayerTimes: appt.isRelatedToPrayerTimes,
+            prayerTime: appt.prayerTime,
+            timeRelation: appt.timeRelation,
+            minutesBeforeAfter: appt.minutesBeforeAfter,
+            duration: appt.duration,
+            location: newLocation,
+            recurrenceRule: appt.recurrenceRule,
+            recurrenceExceptionDates: appt.recurrenceExceptionDates,
+            color: appt.color,
+            startTime: appt.startTime,
+            endTime: appt.endTime,
+            categoryId: appt.categoryId,
+            reminderMinutesBefore: appt.reminderMinutesBefore,
+            externalIdGoogle: appt.externalIdGoogle,
+            externalIdOutlook: appt.externalIdOutlook,
+            externalIdApple: appt.externalIdApple,
+            lastSyncedAt: appt.lastSyncedAt,
+          );
+          await _appointmentRepo.updateAppointment(updatedAppt);
+        }
       }
+
+      // 3b) Jetzt holen wir die aktualisierten Termine neu aus der DB,
+      // sodass die weiteren Berechnungen den neuen Standort berücksichtigen.
+      final updatedAllAppointments =
+          await _appointmentRepo.getAllAppointments();
+      prayerAppointments = updatedAllAppointments
+          .where((a) => a.isRelatedToPrayerTimes && a.startTime != null)
+          .toList();
     }
 
-    // 3b) Jetzt holen wir die aktualisierten Termine neu aus der DB,
-    // sodass die weiteren Berechnungen den neuen Standort berücksichtigen.
-    final updatedAllAppointments = await _appointmentRepo.getAllAppointments();
-    prayerAppointments = updatedAllAppointments
-        .where((a) => a.isRelatedToPrayerTimes && a.startTime != null)
-        .toList();
-
-    // 4) Gebetszeiten löschen, damit sie neu geladen werden (nur für den aktuellen Standort)
+    // 4) Gebetszeiten für den aktuellen Standort löschen
     final db = await prayerTimeRepo.dbHelper.database;
     await db.delete('prayer_times',
         where: 'LOWER(location) = ?', whereArgs: [newLocation]);
 
-    // 5) Sammle alle relevanten Jahre aus den Terminen
-    final uniqueYears =
-        prayerAppointments.map((appt) => appt.startTime!.year).toSet().toList();
+    // 5) Jahre für das Neu-Laden der Gebetszeiten bestimmen
+    Set<int> uniqueYears = {};
+
+    // Aktuelles und nächstes Jahr immer laden
+    final currentYear = DateTime.now().year;
+    uniqueYears.add(currentYear);
+    uniqueYears.add(currentYear + 1);
+
+    // Jahre aus Terminen hinzufügen, falls vorhanden
+    if (prayerAppointments.isNotEmpty) {
+      uniqueYears.addAll(
+          prayerAppointments.map((appt) => appt.startTime!.year).toSet());
+    }
+
+    debugPrint(
+        "📅 Lade Gebetszeiten für Jahre: ${uniqueYears.toList().join(', ')}");
 
     // 6) Für jedes relevante Jahr: Lade die Gebetszeiten für den neuen Standort neu
     for (final year in uniqueYears) {
       await prayerTimeRepo.fetchAndSaveYearlyPrayerTimes(year, newLocation);
     }
 
-    // 7) Alle relevanten Termine neu berechnen und abspeichern
-    for (final appt in prayerAppointments) {
-      final baseDate = DateTime(
-        appt.startTime!.year,
-        appt.startTime!.month,
-        appt.startTime!.day,
-      );
-      final newStart = await getCalculatedStartTime(appt, baseDate);
-      final newEnd = await getCalculatedEndTime(appt, baseDate);
-
-      if (newStart != null && newEnd != null) {
-        final updated = AppointmentModel(
-          id: appt.id,
-          subject: appt.subject,
-          notes: appt.notes,
-          isAllDay: appt.isAllDay,
-          isRelatedToPrayerTimes: appt.isRelatedToPrayerTimes,
-          prayerTime: appt.prayerTime,
-          timeRelation: appt.timeRelation,
-          minutesBeforeAfter: appt.minutesBeforeAfter,
-          duration: appt.duration,
-          location: appt.location, // sollte nun den neuen Standort enthalten
-          recurrenceRule: appt.recurrenceRule,
-          recurrenceExceptionDates: appt.recurrenceExceptionDates,
-          color: appt.color,
-          startTime: newStart,
-          endTime: newEnd,
-          categoryId: appt.categoryId,
-          reminderMinutesBefore: appt.reminderMinutesBefore,
-          externalIdGoogle: appt.externalIdGoogle,
-          externalIdOutlook: appt.externalIdOutlook,
-          externalIdApple: appt.externalIdApple,
-          lastSyncedAt: appt.lastSyncedAt,
+    // 7) Alle relevanten Termine neu berechnen und abspeichern, falls vorhanden
+    if (prayerAppointments.isNotEmpty) {
+      for (final appt in prayerAppointments) {
+        final baseDate = DateTime(
+          appt.startTime!.year,
+          appt.startTime!.month,
+          appt.startTime!.day,
         );
-        await _appointmentRepo.updateAppointment(updated);
+        final newStart = await getCalculatedStartTime(appt, baseDate);
+        final newEnd = await getCalculatedEndTime(appt, baseDate);
+
+        if (newStart != null && newEnd != null) {
+          final updated = AppointmentModel(
+            id: appt.id,
+            subject: appt.subject,
+            notes: appt.notes,
+            isAllDay: appt.isAllDay,
+            isRelatedToPrayerTimes: appt.isRelatedToPrayerTimes,
+            prayerTime: appt.prayerTime,
+            timeRelation: appt.timeRelation,
+            minutesBeforeAfter: appt.minutesBeforeAfter,
+            duration: appt.duration,
+            location: appt.location, // sollte nun den neuen Standort enthalten
+            recurrenceRule: appt.recurrenceRule,
+            recurrenceExceptionDates: appt.recurrenceExceptionDates,
+            color: appt.color,
+            startTime: newStart,
+            endTime: newEnd,
+            categoryId: appt.categoryId,
+            reminderMinutesBefore: appt.reminderMinutesBefore,
+            externalIdGoogle: appt.externalIdGoogle,
+            externalIdOutlook: appt.externalIdOutlook,
+            externalIdApple: appt.externalIdApple,
+            lastSyncedAt: appt.lastSyncedAt,
+          );
+          await _appointmentRepo.updateAppointment(updated);
+        }
       }
+    } else {
+      debugPrint(
+          "📅 Keine gebetszeitbezogenen Termine gefunden, nur Gebetszeiten aktualisiert.");
     }
 
     // 8) UI informieren, damit die Änderungen überall übernommen werden

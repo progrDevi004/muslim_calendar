@@ -594,8 +594,8 @@ class _SettingsPageState extends State<SettingsPage> {
             children: [
               Text(
                 _automaticLocation
-                    ? 'Aktueller Standort (automatisch erkannt):'
-                    : 'Aktueller Standort (manuell ausgewählt):',
+                    ? loc.currentLocationAuto
+                    : loc.currentLocationManual,
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
@@ -610,9 +610,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   Expanded(
                     child: (_defaultCity != null && _defaultCountry != null)
                         ? Text('$_defaultCity, $_defaultCountry',
-                            style: TextStyle(fontSize: 16))
+                            style: const TextStyle(fontSize: 16))
                         : Text(loc.noLocationSet,
-                            style: TextStyle(fontStyle: FontStyle.italic)),
+                            style:
+                                const TextStyle(fontStyle: FontStyle.italic)),
                   ),
                 ],
               ),
@@ -777,7 +778,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Standort wurde aktualisiert'),
+                        content: Text(loc.locationUpdated),
                         duration: Duration(seconds: 2),
                       ),
                     );
@@ -785,7 +786,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 }
               : null, // Deaktivieren wenn keine Auswahl getroffen wurde
           icon: Icon(Icons.save),
-          label: Text("Standort übernehmen"),
+          label: Text(loc.applyLocation),
           style: ElevatedButton.styleFrom(
             minimumSize: const Size(double.infinity, 48),
           ),
