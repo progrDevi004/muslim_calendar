@@ -283,11 +283,7 @@ Color _getContrastingTextColor(Color background) {
 }
 
 String _formatDuration(int minutes) {
-  if (minutes >= 60) {
-    final h = minutes ~/ 60;
-    final m = minutes % 60;
-    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')} h';
-  } else {
-    return '${minutes}m';
-  }
+  final h = minutes ~/ 60;
+  final m = minutes % 60;
+  return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}h';
 }
