@@ -28,6 +28,7 @@ import 'data/services/recurrence_service.dart';
 import 'data/services/google_calendar_sync_service.dart';
 import 'data/repositories/google_event_mapping_repository.dart';
 import 'ui/widgets/prayer_time_appointment_adapter.dart';
+import 'data/services/location_service.dart';
 
 void main() async {
   // Widgets binding sicherstellen, da asynchrone Aufrufe vor runApp durchgeführt werden sollen.
@@ -92,6 +93,15 @@ void main() async {
         // ThemeNotifier-Provider
         ChangeNotifierProvider(
           create: (_) => ThemeNotifier(),
+        ),
+        // LocationService bereitstellen
+        ChangeNotifierProvider<LocationService>(
+          create: (context) {
+            final locationService = LocationService();
+            // Initialisierung starten
+            locationService.initialize();
+            return locationService;
+          },
         ),
         // PrayerTimeService als Provider
         ChangeNotifierProvider(

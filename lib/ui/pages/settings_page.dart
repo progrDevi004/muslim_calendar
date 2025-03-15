@@ -17,6 +17,7 @@ import '../../data/services/calendar_sync_service.dart';
 import '../../data/repositories/appointment_repository.dart';
 import 'package:muslim_calendar/ui/dialogs/calendar_selection_dialog.dart';
 import 'package:muslim_calendar/models/selected_calendar.dart';
+import 'package:muslim_calendar/data/services/location_service.dart';
 
 // Beispiel-Enum, kann auch global in app_language.dart liegen:
 
@@ -69,6 +70,9 @@ class _SettingsPageState extends State<SettingsPage> {
   // Speichere eine Referenz auf den CalendarSyncService
   late CalendarSyncService _calendarSyncService;
 
+  // Speichere eine Referenz auf den LocationService - nullable machen
+  LocationService? _locationService;
+
   @override
   void initState() {
     super.initState();
@@ -85,6 +89,14 @@ class _SettingsPageState extends State<SettingsPage> {
     // Sichere Methode, um auf Provider zuzugreifen - wird aufgerufen, wenn das Widget gebaut wird
     _calendarSyncService =
         Provider.of<CalendarSyncService>(context, listen: false);
+
+    // Sicherer Zugriff auf LocationService mit try-catch
+    try {
+      _locationService = Provider.of<LocationService>(context, listen: false);
+    } catch (e) {
+      debugPrint('LocationService konnte nicht geladen werden: $e');
+      // Wir erstellen keinen neuen LocationService, da das zu weiteren Problemen führen könnte
+    }
 
     // Listener für Kategorieänderungen hinzufügen
     _calendarSyncService.addListener(_onCategoriesChanged);
@@ -571,21 +583,210 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
       ),
       const SizedBox(height: 16),
+
+      // Aktueller Standort (Informationsanzeige)
+      Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Aktueller Standort für Gebetszeiten:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.location_on,
+                      color: Theme.of(context).primaryColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: (_defaultCity != null && _defaultCountry != null)
+                        ? Text('$_defaultCity, $_defaultCountry',
+                            style: TextStyle(fontSize: 16))
+                        : Text('Kein Standort festgelegt',
+                            style: TextStyle(fontStyle: FontStyle.italic)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+
+      // Automatischer Standort Switch
       SwitchListTile(
         title: Text(loc.automaticLocation),
         subtitle: _automaticLocation
-            ? (_defaultCity != null && _defaultCountry != null)
-                ? Text('$_defaultCity, $_defaultCountry')
+            ? (_locationServiceAvailable() &&
+                    _locationService!.currentCity != null &&
+                    _locationService!.currentCountry != null)
+                ? Text('Aktueller Standort wird automatisch erkannt')
                 : Text(loc.automaticLocationSubtitle)
-            : null,
+            : Text('Standort wird manuell ausgewählt'),
         value: _automaticLocation,
         onChanged: (value) async {
           setState(() => _automaticLocation = value);
+
+          if (value && _locationServiceAvailable()) {
+            // Automatische Standorterkennung aktivieren
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Standort wird ermittelt...'),
+                duration: Duration(seconds: 1),
+              ),
+            );
+
+            final success = await _locationService!.determineLocation();
+
+            if (!success) {
+              // Fehlermeldung anzeigen
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(_locationService!.errorMessage ??
+                        'Standorterkennung fehlgeschlagen'),
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+              }
+            } else if (mounted) {
+              // Erfolg melden und neugeladene Daten anzeigen
+              setState(() {
+                _defaultCity = _locationService!.currentCity;
+                _defaultCountry = _locationService!.currentCountry;
+              });
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                      'Standort erfolgreich erkannt: ${_locationService!.currentCity}, ${_locationService!.currentCountry}'),
+                  duration: Duration(seconds: 3),
+                ),
+              );
+            }
+          }
+
           await _saveSettings();
           await _updatePrayerTimes();
         },
       ),
-      if (!_automaticLocation) ..._buildManualLocationFields('Country', 'City'),
+
+      // Manuelle Standortauswahl mit leeren Dropdowns statt vorausgefüllten Werten
+      if (!_automaticLocation) ...[
+        const SizedBox(height: 8),
+        Text(
+          'Standort manuell auswählen:',
+          style: TextStyle(fontStyle: FontStyle.italic),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: null, // Immer leer starten
+          hint: Text('Land auswählen'),
+          icon: Container(),
+          decoration: InputDecoration(
+            labelText: 'Land',
+            suffixIcon: const Padding(
+              padding: EdgeInsets.only(right: 8.0),
+              child: Icon(
+                Icons.arrow_drop_down,
+                size: 24,
+              ),
+            ),
+          ),
+          onChanged: (value) async {
+            if (value != null) {
+              setState(() {
+                _defaultCountry = value;
+                _defaultCity = null;
+              });
+              await _saveSettings();
+              if (_defaultCountry != null && _defaultCountry!.isNotEmpty) {
+                await _updatePrayerTimes();
+              }
+            }
+          },
+          items: _isLoadingCountries
+              ? []
+              : _countryCityData.keys.toList().map((c) {
+                  return DropdownMenuItem<String>(
+                    value: c,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(c),
+                    ),
+                  );
+                }).toList(),
+        ),
+
+        const SizedBox(height: 16),
+
+        if (_defaultCountry != null &&
+            _countryCityData.containsKey(_defaultCountry))
+          DropdownButtonFormField<String>(
+            value: null, // Immer leer starten
+            hint: Text('Stadt auswählen'),
+            icon: Container(),
+            decoration: InputDecoration(
+              labelText: 'Stadt',
+              suffixIcon: const Padding(
+                padding: EdgeInsets.only(right: 8.0),
+                child: Icon(
+                  Icons.arrow_drop_down,
+                  size: 24,
+                ),
+              ),
+            ),
+            onChanged: (value) async {
+              if (value != null) {
+                setState(() {
+                  _defaultCity = value;
+                });
+                await _saveSettings();
+                if (_defaultCity != null && _defaultCity!.isNotEmpty) {
+                  await _updatePrayerTimes();
+                }
+              }
+            },
+            items: _countryCityData[_defaultCountry]!.map((c) {
+              return DropdownMenuItem<String>(
+                value: c,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(c),
+                ),
+              );
+            }).toList(),
+          ),
+
+        // Button zum Übernehmen
+        const SizedBox(height: 16),
+        ElevatedButton.icon(
+          onPressed: _defaultCountry != null && _defaultCity != null
+              ? () async {
+                  await _saveSettings();
+                  await _updatePrayerTimes();
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Standort wurde aktualisiert'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                }
+              : null, // Deaktivieren wenn keine Auswahl getroffen wurde
+          icon: Icon(Icons.save),
+          label: Text("Standort übernehmen"),
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 48),
+          ),
+        ),
+      ],
+
       const Divider(height: 32),
 
       // Prayer Time Calculation Method
@@ -672,96 +873,6 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
       ],
-    ];
-  }
-
-  List<Widget> _buildManualLocationFields(String? country, String? city) {
-    if (_isLoadingCountries) {
-      return [
-        const SizedBox(height: 16),
-        const Center(child: CircularProgressIndicator()),
-      ];
-    }
-    if (_loadError != null) {
-      return [
-        const SizedBox(height: 16),
-        Text(
-          _loadError!,
-          style: const TextStyle(color: Colors.red),
-        ),
-      ];
-    }
-    final countries = _countryCityData.keys.toList()..sort();
-    return [
-      const SizedBox(height: 8),
-      DropdownButtonFormField<String>(
-        value: _defaultCountry,
-        icon: Container(),
-        decoration: InputDecoration(
-          labelText: country,
-          suffixIcon: const Padding(
-            padding: EdgeInsets.only(right: 8.0),
-            child: Icon(
-              Icons.arrow_drop_down,
-              size: 24,
-            ),
-          ),
-        ),
-        onChanged: (value) async {
-          setState(() {
-            _defaultCountry = value;
-            _defaultCity = null;
-          });
-          await _saveSettings();
-          if (_defaultCountry != null && _defaultCountry!.isNotEmpty) {
-            await _updatePrayerTimes();
-          }
-        },
-        items: countries.map((c) {
-          return DropdownMenuItem<String>(
-            value: c,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(c),
-            ),
-          );
-        }).toList(),
-      ),
-      const SizedBox(height: 16),
-      if (_defaultCountry != null &&
-          _countryCityData.containsKey(_defaultCountry))
-        DropdownButtonFormField<String>(
-          value: _defaultCity,
-          icon: Container(),
-          decoration: InputDecoration(
-            labelText: city,
-            suffixIcon: const Padding(
-              padding: EdgeInsets.only(right: 8.0),
-              child: Icon(
-                Icons.arrow_drop_down,
-                size: 24,
-              ),
-            ),
-          ),
-          onChanged: (value) async {
-            setState(() {
-              _defaultCity = value;
-            });
-            await _saveSettings();
-            if (_defaultCity != null && _defaultCity!.isNotEmpty) {
-              await _updatePrayerTimes();
-            }
-          },
-          items: _countryCityData[_defaultCountry]!.map((c) {
-            return DropdownMenuItem<String>(
-              value: c,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(c),
-              ),
-            );
-          }).toList(),
-        ),
     ];
   }
 
@@ -1487,6 +1598,15 @@ class _SettingsPageState extends State<SettingsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(loc.syncError(e.toString()))),
       );
+    }
+  }
+
+  // Hilfsmethode hinzufügen, um zu prüfen, ob der LocationService verfügbar ist
+  bool _locationServiceAvailable() {
+    try {
+      return _locationService != null;
+    } catch (e) {
+      return false;
     }
   }
 }

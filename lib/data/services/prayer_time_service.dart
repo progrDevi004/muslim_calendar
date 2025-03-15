@@ -79,36 +79,45 @@ class PrayerTimeService with ChangeNotifier {
     return appointment.endTime;
   }
 
-  /// Diese Methode wird aufgerufen, wenn der User entweder die Berechnungsmethode ändert
-  /// oder manuell den Standort anpasst.
-  /// Vorgehen:
-  /// 1) Es werden zunächst alle gebetszeitabhängigen Termine geladen.
-  /// 2) Dann wird der aktuelle Standort (defaultCountry und defaultCity) aus den SharedPreferences
-  ///    ausgelesen und als neuer Standort (in Kleinbuchstaben) ermittelt.
-  /// 3) Falls in einem Termin die gespeicherte Location nicht dem neuen Standort entspricht,
-  ///    wird ein neues AppointmentModel mit dem aktualisierten Standort erstellt und in der DB gespeichert.
-  /// 4) Anschließend laden wir alle Gebetszeiten in der DB für den aktuellen Standort neu,
-  ///    indem wir diese zunächst löschen und dann für alle relevanten Jahre neu abrufen.
-  /// 5) Zuletzt werden alle betroffenen Termine anhand der neuen Gebetszeiten neu kalkuliert und aktualisiert.
+  /// Die Funktion lädt die aktuellen Standorteinstellungen aus den SharedPreferences.
+  Future<String?> _getCurrentLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    final automaticLocation = prefs.getBool('automaticLocation') ?? false;
+    final defaultCountry = prefs.getString('defaultCountry');
+    final defaultCity = prefs.getString('defaultCity');
+
+    if (defaultCountry == null ||
+        defaultCity == null ||
+        defaultCountry.isEmpty ||
+        defaultCity.isEmpty) {
+      return null;
+    }
+
+    return '${defaultCity.trim()},${defaultCountry.trim()}'.toLowerCase();
+  }
+
+  /// Lädt alle Gebetszeiten neu herunter und aktualisiert Termine
   Future<void> reDownloadAndRecalcAll() async {
-    // 1) Alle gebetszeitabhängigen Termine ermitteln
+    debugPrint("📅 PrayerTimeService: Starte reDownloadAndRecalcAll()");
+
+    // 1) Hole alle gebetszeitbezogenen Termine
     final allAppointments = await _appointmentRepo.getAllAppointments();
-    var prayerAppointments = allAppointments
+    List<AppointmentModel> prayerAppointments = allAppointments
         .where((a) => a.isRelatedToPrayerTimes && a.startTime != null)
         .toList();
+
     if (prayerAppointments.isEmpty) {
+      debugPrint(
+          "📅 Keine gebetszeitbezogenen Termine gefunden, nichts zu tun.");
       return;
     }
 
     // 2) Aktuelle Standorteinstellungen laden
-    final prefs = await SharedPreferences.getInstance();
-    final defaultCountry = prefs.getString('defaultCountry');
-    final defaultCity = prefs.getString('defaultCity');
-    if (defaultCountry == null || defaultCity == null) {
+    final location = await _getCurrentLocation();
+    if (location == null) {
       return;
     }
-    final newLocation =
-        '${defaultCity.trim()},${defaultCountry.trim()}'.toLowerCase();
+    final newLocation = location;
 
     // 3) Falls nötig: Aktualisiere die Location in den Terminen,
     // sofern sie nicht dem neuen Standort entspricht.
