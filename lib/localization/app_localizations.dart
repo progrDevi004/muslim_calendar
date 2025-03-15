@@ -930,7 +930,7 @@ class AppLocalizations extends ChangeNotifier {
         return 'انتخاب شهر';
       case AppLanguage.english:
       default:
-        return 'Select City';
+        return 'Select city';
     }
   }
 
@@ -4682,6 +4682,207 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.english:
       default:
         return 'Exception dates selected';
+    }
+  }
+
+  // Neue Übersetzungen für die Standortanzeige
+  String get currentLocationAuto {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Aktueller Standort (automatisch erkannt):";
+      case AppLanguage.turkish:
+        return "Mevcut konum (otomatik algılanan):";
+      case AppLanguage.arabic:
+        return "الموقع الحالي (تم الكشف تلقائيًا):";
+      case AppLanguage.bosnian:
+        return "Trenutna lokacija (automatski otkrivena):";
+      case AppLanguage.spanish:
+        return "Ubicación actual (detectada automáticamente):";
+      case AppLanguage.persian:
+        return "مکان فعلی (به طور خودکار شناسایی شده):";
+      case AppLanguage.english:
+      default:
+        return "Current location (automatically detected):";
+    }
+  }
+
+  String get currentLocationManual {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Aktueller Standort (manuell ausgewählt):";
+      case AppLanguage.turkish:
+        return "Mevcut konum (manuel olarak seçildi):";
+      case AppLanguage.arabic:
+        return "الموقع الحالي (محدد يدويًا):";
+      case AppLanguage.bosnian:
+        return "Trenutna lokacija (ručno odabrana):";
+      case AppLanguage.spanish:
+        return "Ubicación actual (seleccionada manualmente):";
+      case AppLanguage.persian:
+        return "مکان فعلی (به صورت دستی انتخاب شده):";
+      case AppLanguage.english:
+      default:
+        return "Current location (manually selected):";
+    }
+  }
+
+  String get automaticLocationActive {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Aktueller Standort wird automatisch erkannt";
+      case AppLanguage.turkish:
+        return "Mevcut konum otomatik olarak algılanıyor";
+      case AppLanguage.arabic:
+        return "يتم اكتشاف الموقع الحالي تلقائيًا";
+      case AppLanguage.bosnian:
+        return "Trenutna lokacija se automatski otkriva";
+      case AppLanguage.spanish:
+        return "La ubicación actual se detecta automáticamente";
+      case AppLanguage.persian:
+        return "مکان فعلی به طور خودکار شناسایی می‌شود";
+      case AppLanguage.english:
+      default:
+        return "Current location is automatically detected";
+    }
+  }
+
+  String get manualLocationActive {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Standort wird manuell ausgewählt";
+      case AppLanguage.turkish:
+        return "Konum manuel olarak seçiliyor";
+      case AppLanguage.arabic:
+        return "يتم تحديد الموقع يدويًا";
+      case AppLanguage.bosnian:
+        return "Lokacija se bira ručno";
+      case AppLanguage.spanish:
+        return "La ubicación se selecciona manualmente";
+      case AppLanguage.persian:
+        return "مکان به صورت دستی انتخاب می‌شود";
+      case AppLanguage.english:
+      default:
+        return "Location is selected manually";
+    }
+  }
+
+  String get chooseLocationManually {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Standort manuell auswählen:";
+      case AppLanguage.turkish:
+        return "Konumu manuel olarak seçin:";
+      case AppLanguage.arabic:
+        return "اختيار الموقع يدويًا:";
+      case AppLanguage.bosnian:
+        return "Ručno odaberite lokaciju:";
+      case AppLanguage.spanish:
+        return "Seleccionar ubicación manualmente:";
+      case AppLanguage.persian:
+        return "انتخاب دستی مکان:";
+      case AppLanguage.english:
+      default:
+        return "Choose location manually:";
+    }
+  }
+
+  String get applyLocation {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Standort übernehmen";
+      case AppLanguage.turkish:
+        return "Konumu uygula";
+      case AppLanguage.arabic:
+        return "تطبيق الموقع";
+      case AppLanguage.bosnian:
+        return "Primijeni lokaciju";
+      case AppLanguage.spanish:
+        return "Aplicar ubicación";
+      case AppLanguage.persian:
+        return "اعمال مکان";
+      case AppLanguage.english:
+      default:
+        return "Apply location";
+    }
+  }
+
+  String get locationUpdated {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Standort wurde aktualisiert";
+      case AppLanguage.turkish:
+        return "Konum güncellendi";
+      case AppLanguage.arabic:
+        return "تم تحديث الموقع";
+      case AppLanguage.bosnian:
+        return "Lokacija je ažurirana";
+      case AppLanguage.spanish:
+        return "Ubicación actualizada";
+      case AppLanguage.persian:
+        return "مکان به‌روزرسانی شد";
+      case AppLanguage.english:
+      default:
+        return "Location has been updated";
+    }
+  }
+
+  String get noLocationSet {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Kein Standort festgelegt";
+      case AppLanguage.turkish:
+        return "Konum ayarlanmadı";
+      case AppLanguage.arabic:
+        return "لم يتم تحديد موقع";
+      case AppLanguage.bosnian:
+        return "Lokacija nije postavljena";
+      case AppLanguage.spanish:
+        return "Ubicación no establecida";
+      case AppLanguage.persian:
+        return "مکانی تنظیم نشده است";
+      case AppLanguage.english:
+      default:
+        return "No location set";
+    }
+  }
+
+  String get locationDetecting {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Standort wird ermittelt...";
+      case AppLanguage.turkish:
+        return "Konum belirleniyor...";
+      case AppLanguage.arabic:
+        return "جاري تحديد الموقع...";
+      case AppLanguage.bosnian:
+        return "Lokacija se određuje...";
+      case AppLanguage.spanish:
+        return "Detectando ubicación...";
+      case AppLanguage.persian:
+        return "در حال تشخیص مکان...";
+      case AppLanguage.english:
+      default:
+        return "Detecting location...";
+    }
+  }
+
+  String get locationDetectionFailed {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Standorterkennung fehlgeschlagen";
+      case AppLanguage.turkish:
+        return "Konum algılama başarısız oldu";
+      case AppLanguage.arabic:
+        return "فشل اكتشاف الموقع";
+      case AppLanguage.bosnian:
+        return "Otkrivanje lokacije nije uspjelo";
+      case AppLanguage.spanish:
+        return "Falló la detección de ubicación";
+      case AppLanguage.persian:
+        return "تشخیص مکان ناموفق بود";
+      case AppLanguage.english:
+      default:
+        return "Location detection failed";
     }
   }
 }

@@ -584,7 +584,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       const SizedBox(height: 16),
 
-      // Aktueller Standort (Informationsanzeige)
+      // Aktueller Standort (Informationsanzeige) - je nach Modus unterschiedlich
       Card(
         margin: const EdgeInsets.only(bottom: 16),
         child: Padding(
@@ -593,20 +593,25 @@ class _SettingsPageState extends State<SettingsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Aktueller Standort für Gebetszeiten:',
+                _automaticLocation
+                    ? 'Aktueller Standort (automatisch erkannt):'
+                    : 'Aktueller Standort (manuell ausgewählt):',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(Icons.location_on,
+                  Icon(
+                      _automaticLocation
+                          ? Icons.my_location
+                          : Icons.location_on,
                       color: Theme.of(context).primaryColor),
                   const SizedBox(width: 8),
                   Expanded(
                     child: (_defaultCity != null && _defaultCountry != null)
                         ? Text('$_defaultCity, $_defaultCountry',
                             style: TextStyle(fontSize: 16))
-                        : Text('Kein Standort festgelegt',
+                        : Text(loc.noLocationSet,
                             style: TextStyle(fontStyle: FontStyle.italic)),
                   ),
                 ],
@@ -623,9 +628,9 @@ class _SettingsPageState extends State<SettingsPage> {
             ? (_locationServiceAvailable() &&
                     _locationService!.currentCity != null &&
                     _locationService!.currentCountry != null)
-                ? Text('Aktueller Standort wird automatisch erkannt')
+                ? Text(loc.automaticLocationActive)
                 : Text(loc.automaticLocationSubtitle)
-            : Text('Standort wird manuell ausgewählt'),
+            : Text(loc.manualLocationActive),
         value: _automaticLocation,
         onChanged: (value) async {
           setState(() => _automaticLocation = value);
@@ -634,7 +639,7 @@ class _SettingsPageState extends State<SettingsPage> {
             // Automatische Standorterkennung aktivieren
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Standort wird ermittelt...'),
+                content: Text(loc.locationDetecting),
                 duration: Duration(seconds: 1),
               ),
             );
@@ -647,7 +652,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(_locationService!.errorMessage ??
-                        'Standorterkennung fehlgeschlagen'),
+                        loc.locationDetectionFailed),
                     duration: Duration(seconds: 3),
                   ),
                 );
@@ -661,8 +666,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(
-                      'Standort erfolgreich erkannt: ${_locationService!.currentCity}, ${_locationService!.currentCountry}'),
+                  content: Text(loc.locationUpdated +
+                      ': ${_locationService!.currentCity}, ${_locationService!.currentCountry}'),
                   duration: Duration(seconds: 3),
                 ),
               );
@@ -678,16 +683,16 @@ class _SettingsPageState extends State<SettingsPage> {
       if (!_automaticLocation) ...[
         const SizedBox(height: 8),
         Text(
-          'Standort manuell auswählen:',
+          loc.chooseLocationManually,
           style: TextStyle(fontStyle: FontStyle.italic),
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           value: null, // Immer leer starten
-          hint: Text('Land auswählen'),
+          hint: Text(loc.selectCountry),
           icon: Container(),
           decoration: InputDecoration(
-            labelText: 'Land',
+            labelText: loc.country,
             suffixIcon: const Padding(
               padding: EdgeInsets.only(right: 8.0),
               child: Icon(
@@ -727,10 +732,10 @@ class _SettingsPageState extends State<SettingsPage> {
             _countryCityData.containsKey(_defaultCountry))
           DropdownButtonFormField<String>(
             value: null, // Immer leer starten
-            hint: Text('Stadt auswählen'),
+            hint: Text(loc.selectCity),
             icon: Container(),
             decoration: InputDecoration(
-              labelText: 'Stadt',
+              labelText: loc.city,
               suffixIcon: const Padding(
                 padding: EdgeInsets.only(right: 8.0),
                 child: Icon(
