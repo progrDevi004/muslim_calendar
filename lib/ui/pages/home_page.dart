@@ -22,6 +22,13 @@ import 'package:muslim_calendar/models/enums.dart';
 import 'package:muslim_calendar/ui/widgets/create_events.dart';
 import 'package:muslim_calendar/ui/widgets/prayer_time_appointment_adapter.dart';
 
+// Ausgelagerte Widgets
+import 'package:muslim_calendar/ui/widgets/home/calendar_view_widget.dart';
+import 'package:muslim_calendar/ui/widgets/home/category_filter_dialog.dart';
+import 'package:muslim_calendar/ui/widgets/home/navigation_bar_widget.dart';
+import 'package:muslim_calendar/ui/widgets/home/home_app_bar_widget.dart';
+import 'package:muslim_calendar/ui/widgets/home/add_appointment_fab.dart';
+
 // Pages
 import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
 import 'package:muslim_calendar/ui/pages/settings_page.dart';
@@ -93,6 +100,13 @@ extension AppointmentModelExtension on AppointmentModel {
 // Logo-Farbe für die Konsistenz der App
 const Color logoColor = Color(0xFF468178);
 
+// EventDataSource Klasse, falls nicht in create_events.dart definiert
+class EventDataSource extends CalendarDataSource {
+  EventDataSource(List<Appointment> source) {
+    appointments = source;
+  }
+}
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -107,7 +121,7 @@ class HomePageState extends State<HomePage> {
 
   CalendarView _selectedView = CalendarView.month;
   late CalendarController _calendarController;
-  EventDataSource? _dataSource;
+  CalendarDataSource? _dataSource;
 
   final AppointmentRepository _appointmentRepo = AppointmentRepository();
   final PrayerTimeRepository _prayerTimeRepo = PrayerTimeRepository();
@@ -122,12 +136,6 @@ class HomePageState extends State<HomePage> {
   List<CategoryModel> _allCategories = [];
   Set<int> _selectedCategoryIds = {};
 
-  // GlobalKey entfernen, da er das Problem verursacht
-  // final GlobalKey<DashboardPageState> _dashboardKey =
-  //     GlobalKey<DashboardPageState>();
-  // late final _dashboardPage = DashboardPage(key: _dashboardKey);
-
-  // Stattdessen einfache Referenz auf die State-Instanz
   DashboardPageState? _dashboardPageState;
 
   bool _use24hFormat = false;
@@ -143,6 +151,9 @@ class HomePageState extends State<HomePage> {
   bool _showPrayerTimesInDayView = true;
   bool _showPrayerTimesInWeekView = true;
   bool _showPrayerTimesInMonthView = false;
+
+  // Variablen am Anfang der HomePageState-Klasse hinzufügen
+  bool _isLoadingAppointments = false;
 
   @override
   void initState() {
@@ -216,7 +227,6 @@ class HomePageState extends State<HomePage> {
 
       // Dashboard aktualisieren, falls es aktiv ist
       if (_selectedNavIndex == 0) {
-        // _dashboardKey.currentState?.reloadData();
         _dashboardPageState?.reloadData();
       }
     });
@@ -235,7 +245,6 @@ class HomePageState extends State<HomePage> {
       // Termine neu laden mit den aktualisierten Kategorien
       loadAllAppointments();
       // Dashboard aktualisieren
-      // _dashboardKey.currentState?.reloadData();
       _dashboardPageState?.reloadData();
     });
   }
@@ -312,8 +321,11 @@ class HomePageState extends State<HomePage> {
     setState(() {});
 
     if (_selectedNavIndex != 0) {
-      // Nach dem Aktualisieren der Ansicht laden wir die Termine neu
-      loadAllAppointments();
+      // Nach dem Aktualisieren der Ansicht laden wir die Termine neu,
+      // aber verzögert, um nicht während des Build-Prozesses den State zu ändern
+      Future.microtask(() {
+        loadAllAppointments();
+      });
     }
   }
 
@@ -335,6 +347,10 @@ class HomePageState extends State<HomePage> {
 
   /// Lädt alle normalen Appointments plus Gebetszeiten (falls aktiviert)
   Future<void> loadAllAppointments() async {
+    // Verhindere mehrfache gleichzeitige Aufrufe
+    if (_isLoadingAppointments) return;
+    _isLoadingAppointments = true;
+
     try {
       List<Appointment> allAppointments = [];
 
@@ -363,8 +379,8 @@ class HomePageState extends State<HomePage> {
       } else if (_selectedView == CalendarView.week) {
         // In Wochenansicht nur anzeigen, wenn die entsprechende Einstellung aktiviert ist
         addPrayers = _showPrayerTimesInWeekView;
-      } else {
-        // In anderen Ansichten (z.B. Monatsansicht) keine Gebetszeiten anzeigen
+      } else if (_selectedView == CalendarView.month) {
+        // In Monatsansicht explizit keine Gebetszeiten anzeigen
         addPrayers = false;
       }
 
@@ -402,6 +418,7 @@ class HomePageState extends State<HomePage> {
 
           // Einstellungen öffnen, damit der Benutzer die Standorteinstellungen setzen kann
           await _openSettings();
+          _isLoadingAppointments = false;
           return; // Keine Termine laden, bis die Einstellungen gesetzt sind
         }
 
@@ -478,17 +495,20 @@ class HomePageState extends State<HomePage> {
         }
       }
 
-      setState(() {
-        _dataSource = EventDataSource(allAppointments);
-      });
+      if (mounted) {
+        setState(() {
+          _dataSource = EventDataSource(allAppointments);
+        });
+      }
     } catch (e) {
       // debugPrint('Error loading appointments: $e');
+    } finally {
+      _isLoadingAppointments = false;
     }
 
     // Dashboard aktualisieren, falls es aktiv ist
-    if (_selectedNavIndex == 0) {
-      // _dashboardKey.currentState?.reloadData();
-      _dashboardPageState?.reloadData();
+    if (_selectedNavIndex == 0 && _dashboardPageState != null) {
+      _dashboardPageState!.reloadData();
     }
   }
 
@@ -547,7 +567,6 @@ class HomePageState extends State<HomePage> {
 
     // Dashboard aktualisieren, falls wir uns im Dashboard befinden
     if (_selectedNavIndex == 0) {
-      // _dashboardKey.currentState?.reloadData();
       _dashboardPageState?.reloadData();
     }
 
@@ -556,23 +575,6 @@ class HomePageState extends State<HomePage> {
 
     // UI aktualisieren
     setState(() {});
-
-    // debugPrint("✅ Daten nach Einstellungsänderung neu geladen");
-    if (_dataSource != null) {
-      // debugPrint(
-      //     " - Anzahl Termine im DataSource: ${_dataSource!.appointments!.length}");
-
-      // Zähle Gebetszeiteinträge
-      int prayerTimeCount = 0;
-      for (var appointment in _dataSource!.appointments!) {
-        if (appointment.notes == 'prayerTime') {
-          prayerTimeCount++;
-        }
-      }
-      // debugPrint(" - Davon Gebetszeiten: $prayerTimeCount");
-    } else {
-      // debugPrint(" - DataSource ist null!");
-    }
   }
 
   Future<void> _openQiblaCompass() async {
@@ -604,314 +606,29 @@ class HomePageState extends State<HomePage> {
     return DateFormat(pattern, languageCode).format(dt);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final loc = Provider.of<AppLocalizations>(context);
-    final languageCode = _mapAppLanguageToCode(loc.currentLanguage);
-    final bool showFab = (_selectedNavIndex >= 1);
-
-    return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.explore),
-            onPressed: _openQiblaCompass,
-            tooltip: 'Qibla Compass',
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: _openSettings,
-            tooltip: loc.settings,
-          ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: _showCategoryFilterDialog,
-            tooltip: loc.filterCategories,
-          ),
-        ],
-      ),
-      body: _selectedNavIndex == 0
-          ? DashboardPage(
-              key:
-                  const ValueKey('dashboard'), // Konstanter Key statt UniqueKey
-              onStateCreated: (state) {
-                _dashboardPageState = state;
-              },
-            )
-          : Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
-              child: Localizations.override(
-                context: context,
-                locale: Locale(languageCode),
-                child: SfCalendar(
-                  headerStyle: const CalendarHeaderStyle(
-                    backgroundColor: Colors.transparent,
-                    textAlign: TextAlign.center,
-                    textStyle: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
-                  ),
-                  view: _selectedView,
-                  controller: _calendarController,
-                  dataSource: _dataSource,
-                  allowAppointmentResize: true,
-                  showDatePickerButton: true,
-                  monthViewSettings: const MonthViewSettings(
-                    appointmentDisplayMode:
-                        MonthAppointmentDisplayMode.indicator,
-                    showAgenda: true,
-                    agendaItemHeight: 50,
-                    monthCellStyle: MonthCellStyle(
-                      trailingDatesBackgroundColor:
-                          Color.fromARGB(0, 165, 165, 165),
-                    ),
-                  ),
-                  // Hier wird timeSlotViewSettings dynamisch erstellt,
-                  // sodass das 24-Stunden-Format berücksichtigt wird.
-                  timeSlotViewSettings: TimeSlotViewSettings(
-                    timeIntervalHeight: 80,
-                    timeFormat: _use24hFormat ? 'HH' : 'h a',
-                  ),
-                  appointmentBuilder: (BuildContext context,
-                      CalendarAppointmentDetails details) {
-                    if (details.appointments.isEmpty) {
-                      return const SizedBox.shrink();
-                    }
-                    final Appointment appointment = details.appointments.first;
-
-                    // Für Gebetszeiten spezielles Styling
-                    final bool isPrayerTime = appointment.notes == 'prayerTime';
-
-                    // In jedem Fall überprüfen wir die aktuelle Ansicht und die entsprechenden Einstellungen
-                    bool shouldShowPrayerTime = false;
-
-                    if (isPrayerTime) {
-                      if (_selectedView == CalendarView.day) {
-                        shouldShowPrayerTime = _showPrayerTimesInDayView;
-                      } else if (_selectedView == CalendarView.week) {
-                        shouldShowPrayerTime = _showPrayerTimesInWeekView;
-                      } else {
-                        // In anderen Ansichten keine Gebetszeiten anzeigen
-                        shouldShowPrayerTime = false;
-                      }
-
-                      // Wenn Gebetszeit nicht angezeigt werden soll, leeres Widget zurückgeben
-                      if (!shouldShowPrayerTime) {
-                        return const SizedBox.shrink();
-                      }
-                    }
-
-                    // Spezielles Styling für Gebetszeiten, wenn sie angezeigt werden sollen
-                    if (isPrayerTime) {
-                      return Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[
-                              400], // Dunkleres Grau für bessere Sichtbarkeit
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                            color: Colors
-                                .black26, // Dunklere Ränder für besseren Kontrast
-                            width: 1,
-                          ),
-                        ),
-                        child: Align(
-                          alignment: Alignment.center,
-                          child: Text(
-                            appointment.subject,
-                            style: TextStyle(
-                              color: Colors
-                                  .black87, // Sehr dunkles Grau für gute Lesbarkeit
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      );
-                    }
-
-                    // Für die Monatsansicht
-                    if (_selectedView == CalendarView.month) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: appointment.color,
-                          shape: BoxShape.rectangle,
-                          borderRadius: const BorderRadius.all(
-                            Radius.circular(4),
-                          ),
-                        ),
-                        alignment: Alignment.centerLeft,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: appointment.isAllDay
-                            ? Text(
-                                appointment.subject,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                ),
-                              )
-                            : Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    appointment.subject,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${_formatTime(appointment.startTime)} - ${_formatTime(appointment.endTime)}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                      );
-                    }
-
-                    // Für normale Termine in Tag- und Wochenansicht
-                    return Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: appointment.color,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          appointment.subject,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      ),
-                    );
-                  },
-                  onSelectionChanged: (details) {
-                    _selectedDate = details.date;
-                  },
-                  onViewChanged: (ViewChangedDetails details) {
-                    // Wenn sich die Ansicht ändert, aktualisieren wir die Variablen
-                    // und laden die Termine neu
-                    if (_calendarController.view != null) {
-                      CalendarView newView = _calendarController.view!;
-
-                      // Nur wenn sich die Ansicht tatsächlich geändert hat
-                      if (newView != _selectedView) {
-                        _selectedView = newView;
-
-                        // Synchronisiere _selectedNavIndex mit der neuen Ansicht
-                        if (newView == CalendarView.day) {
-                          _selectedNavIndex = 1;
-                        } else if (newView == CalendarView.week) {
-                          _selectedNavIndex = 2;
-                        } else if (newView == CalendarView.month) {
-                          _selectedNavIndex = 3;
-                        }
-
-                        // UI aktualisieren und Termine neu laden
-                        setState(() {});
-                        loadAllAppointments();
-                      }
-                    }
-                  },
-                  onTap: (calendarTapDetails) async {
-                    if (calendarTapDetails.targetElement ==
-                        CalendarElement.appointment) {
-                      final app = calendarTapDetails.appointments?.first;
-                      if (app == null) return;
-                      if (app.notes == 'prayerTime') return;
-                      if (app.id is int) {
-                        final appointmentId = app.id as int;
-                        await Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (ctx) => AppointmentDetailsPage(
-                              appointmentId: appointmentId,
-                            ),
-                          ),
-                        );
-                        loadAllAppointments();
-                      }
-                    } else if (calendarTapDetails.targetElement ==
-                        CalendarElement.calendarCell) {
-                      if (calendarTapDetails.date == _selectedDate) {
-                        setState(() {
-                          _selectedNavIndex = 1;
-                          _updateCalendarViewFromNavIndex();
-                        });
-                      }
-                    }
-                  },
-                ),
-              ),
-            ),
-      floatingActionButton: showFab
-          ? FloatingActionButton(
-              tooltip: loc.addNewAppointment,
-              backgroundColor: logoColor,
-              foregroundColor: Colors.white,
-              onPressed: () async {
-                final result = await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => AppointmentCreationPage(
-                      selectedDate: _selectedDate,
-                    ),
-                  ),
-                );
-                if (result == true) {
-                  loadAllAppointments();
-                }
-              },
-              child: const Icon(Icons.add),
-            )
-          : null,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedNavIndex,
-        onDestinationSelected: (int index) {
-          // debugPrint("⏭️ Navigation: Wechsel zu Index $index");
-          setState(() {
-            _selectedNavIndex = index;
-          });
-          _updateCalendarViewFromNavIndex();
-        },
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.dashboard),
-            label: loc.dashboard,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.view_day),
-            label: loc.day,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.view_week),
-            label: loc.week,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.calendar_month),
-            label: loc.month,
-          ),
-        ],
-      ),
+  void _showCategoryFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return CategoryFilterDialog(
+          categories: _allCategories,
+          selectedCategoryIds: _selectedCategoryIds,
+          onCategoriesSelected: (selectedIds) {
+            setState(() {
+              _selectedCategoryIds = selectedIds;
+            });
+            _saveSelectedCategoryIdsToPrefs();
+            loadAllAppointments();
+          },
+          onCategoriesChanged: () {
+            _loadAllCategories();
+            // Cache leeren, damit die aktualisierten Kategoriefarben verwendet werden
+            _adapter.clearCategoryCache();
+            loadAllAppointments();
+          },
+        );
+      },
     );
-  }
-
-  String _formatDate(DateTime dt) {
-    final pattern = _use24hFormat ? 'HH:mm' : 'h:mm a';
-    final languageCode = _mapAppLanguageToCode(
-        Provider.of<AppLocalizations>(context, listen: false).currentLanguage);
-    return DateFormat(pattern, languageCode).format(dt);
   }
 
   /// Speichert die ausgewählten Kategorien in SharedPreferences.
@@ -921,398 +638,98 @@ class HomePageState extends State<HomePage> {
     await prefs.setStringList('selectedCategoryIds', catList);
   }
 
-  void _showCategoryFilterDialog() {
-    final loc = Provider.of<AppLocalizations>(context, listen: false);
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: Text(loc.filterCategories),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (var cat in _allCategories)
-                      CheckboxListTile(
-                        title: Row(
-                          children: [
-                            Container(
-                              width: 16,
-                              height: 16,
-                              margin: const EdgeInsets.only(right: 8),
-                              decoration: BoxDecoration(
-                                color: cat.color,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            Expanded(child: Text(cat.name)),
-                            IconButton(
-                              icon: const Icon(Icons.edit, size: 20),
-                              tooltip: 'Bearbeiten',
-                              onPressed: () async {
-                                Navigator.of(context).pop();
+  void _handleNavigationChange(int index) {
+    if (_selectedNavIndex == index) return; // Keine Änderung nötig, wenn gleich
 
-                                final result = await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) =>
-                                      CategoryEditDialog(category: cat),
-                                );
+    setState(() {
+      _selectedNavIndex = index;
+    });
 
-                                if (result == true) {
-                                  await _loadAllCategories();
-                                  // Cache leeren, damit die aktualisierten Kategoriefarben verwendet werden
-                                  _adapter.clearCategoryCache();
-                                  loadAllAppointments();
-                                  // _dashboardKey.currentState?.reloadData();
-                                }
-                              },
-                            ),
-                            if (!cat.isDefault)
-                              IconButton(
-                                icon: const Icon(Icons.delete, size: 20),
-                                onPressed: () async {
-                                  // Bestätigungsdialog anzeigen
-                                  final confirmDelete = await showDialog<bool>(
-                                    context: context,
-                                    builder: (ctx) => AlertDialog(
-                                      title: Text('Kategorie löschen'),
-                                      content: Text(
-                                          'Möchten Sie die Kategorie "${cat.name}" wirklich löschen?'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(ctx).pop(false),
-                                          child: Text('Abbrechen'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(ctx).pop(true),
-                                          child: Text('Löschen',
-                                              style:
-                                                  TextStyle(color: Colors.red)),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-
-                                  if (confirmDelete == true) {
-                                    try {
-                                      await _categoryRepo
-                                          .deleteCategory(cat.id!);
-
-                                      // Cache leeren
-                                      _adapter.clearCategoryCache();
-
-                                      // UI aktualisieren
-                                      await _loadAllCategories();
-                                      if (mounted) {
-                                        setStateDialog(
-                                            () {}); // Dialog aktualisieren
-
-                                        // Snackbar anzeigen
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                                'Kategorie "${cat.name}" gelöscht'),
-                                            duration:
-                                                const Duration(seconds: 2),
-                                          ),
-                                        );
-                                      }
-                                    } catch (e) {
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content:
-                                                Text('Fehler: ${e.toString()}'),
-                                            duration:
-                                                const Duration(seconds: 3),
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  }
-                                },
-                              ),
-                          ],
-                        ),
-                        value: _selectedCategoryIds.contains(cat.id),
-                        onChanged: (val) {
-                          setStateDialog(() {
-                            if (val == true) {
-                              _selectedCategoryIds.add(cat.id!);
-                            } else {
-                              _selectedCategoryIds.remove(cat.id!);
-                            }
-                          });
-                        },
-                      ),
-                    const Divider(),
-                    FilledButton(
-                      onPressed: () {
-                        Navigator.of(ctx).pop();
-                        _showAddCategoryDialog();
-                      },
-                      child: Text(loc.addNewCategory),
-                    )
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text(loc.cancel),
-                ),
-                FilledButton(
-                  onPressed: () async {
-                    Navigator.of(ctx).pop();
-                    await _saveSelectedCategoryIdsToPrefs();
-                    loadAllAppointments();
-                    // _dashboardKey.currentState?.reloadData();
-                  },
-                  child: Text(loc.apply),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+    _updateCalendarViewFromNavIndex();
   }
 
-  void _showAddCategoryDialog() {
-    final loc = Provider.of<AppLocalizations>(context, listen: false);
-    final TextEditingController nameController = TextEditingController();
-    Color selectedColor = Colors.blue;
+  void _handleViewChanged(CalendarView newView) {
+    if (_selectedView == newView) return; // Keine Änderung nötig, wenn gleich
 
-    // Vorschlag verschiedener Farben zur Auswahl
-    final List<Color> colorOptions = [
-      Colors.red,
-      Colors.pink,
-      Colors.purple,
-      Colors.deepPurple,
-      Colors.indigo,
-      Colors.blue,
-      Colors.lightBlue,
-      Colors.cyan,
-      Colors.teal,
-      Colors.green,
-      Colors.lightGreen,
-      Colors.lime,
-      Colors.yellow,
-      Colors.amber,
-      Colors.orange,
-      Colors.deepOrange,
-      Colors.brown,
-      Colors.grey,
-      Colors.blueGrey,
-    ];
+    // Zuerst merken wir uns die alte Ansicht, um Änderungen zu erkennen
+    final oldView = _selectedView;
 
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(builder: (context, setState) {
-          return AlertDialog(
-            title: Text(loc.addNewCategory),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    labelText: loc.titleLabel,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text('Farbe auswählen:',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
-                Container(
-                  height: 200,
-                  width: double.maxFinite,
-                  child: GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 5,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                    ),
-                    itemCount: colorOptions.length,
-                    itemBuilder: (context, index) {
-                      final color = colorOptions[index];
-                      final isSelected = color.value == selectedColor.value;
+    setState(() {
+      _selectedView = newView;
 
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            selectedColor = color;
-                          });
-                        },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isSelected
-                                  ? Colors.white
-                                  : Colors.transparent,
-                              width: 3,
-                            ),
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                        color: Colors.black.withOpacity(0.3),
-                                        blurRadius: 4)
-                                  ]
-                                : null,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text(loc.cancel),
-              ),
-              FilledButton(
-                onPressed: () async {
-                  final name = nameController.text.trim();
-                  if (name.isNotEmpty) {
-                    // debugPrint(
-                    //     "Erstelle Kategorie: $name mit Farbe: $selectedColor");
+      // Synchronisiere _selectedNavIndex mit der neuen Ansicht
+      if (newView == CalendarView.day) {
+        _selectedNavIndex = 1;
+      } else if (newView == CalendarView.week) {
+        _selectedNavIndex = 2;
+      } else if (newView == CalendarView.month) {
+        _selectedNavIndex = 3;
+      }
+    });
 
-                    final newCategory = CategoryModel.newCategory(
-                      name: name,
-                      color: selectedColor,
-                    );
-                    await _categoryRepo.insertCategory(newCategory);
-                    await _loadAllCategories();
-                    Navigator.of(ctx).pop();
-                    loadAllAppointments();
+    // Spezielles Handling für den Wechsel zur Monatsansicht
+    // Wenn wir zur Monatsansicht wechseln, stellen wir sicher, dass keine Gebetszeiten angezeigt werden
+    if (newView == CalendarView.month) {
+      debugPrint("Wechsel zur Monatsansicht: Keine Gebetszeiten anzeigen");
+      _showPrayerTimesInMonthView = false;
+    }
 
-                    // Zeige Bestätigung an
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Kategorie "$name" erstellt'),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                },
-                child: Text(loc.save),
-              ),
-            ],
-          );
-        });
-      },
-    );
-  }
-
-  // Öffnet die Kategorieverwaltungsseite
-  void _openCategoryManagement() {
-    Navigator.of(context)
-        .push(
-      MaterialPageRoute(
-        builder: (context) => const CategoryManagementPage(),
-      ),
-    )
-        .then((_) {
-      // Aktualisiere den Kalender, wenn wir zurückkehren
-      setState(() {
-        // Kalender neu laden
-        if (_dataSource != null) {
-          loadAllAppointments();
-        }
-      });
+    // UI aktualisieren und Termine neu laden - mit Verzögerung
+    Future.microtask(() {
+      loadAllAppointments();
     });
   }
 
-  // Drawer (Menü) der App
-  Widget _buildDrawer() {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
+  @override
+  Widget build(BuildContext context) {
+    final loc = Provider.of<AppLocalizations>(context);
+    final languageCode = _mapAppLanguageToCode(loc.currentLanguage);
+    final bool showFab = (_selectedNavIndex >= 1);
+
+    return Scaffold(
+      appBar: HomeAppBar(
+        onQiblaCompassPressed: _openQiblaCompass,
+        onSettingsPressed: _openSettings,
+        onCategoryFilterPressed: _showCategoryFilterDialog,
+        localizations: loc,
+      ),
+      body: _selectedNavIndex == 0
+          ? DashboardPage(
+              key: const ValueKey('dashboard'),
+              onStateCreated: (state) {
+                _dashboardPageState = state;
+              },
+            )
+          : CalendarViewWidget(
+              selectedView: _selectedView,
+              calendarController: _calendarController,
+              dataSource: _dataSource,
+              selectedDate: _selectedDate,
+              use24hFormat: _use24hFormat,
+              showPrayerTimesInDayView: _showPrayerTimesInDayView,
+              showPrayerTimesInWeekView: _showPrayerTimesInWeekView,
+              showPrayerTimesInMonthView: _showPrayerTimesInMonthView,
+              languageCode: languageCode,
+              onViewChanged: _handleViewChanged,
+              onSelectedDateChanged: (date) {
+                setState(() {
+                  _selectedDate = date;
+                });
+              },
+              onAppointmentsChanged: loadAllAppointments,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Muslim Calendar',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                  ),
-                ),
-                SizedBox(height: 10),
-                Text(
-                  'Kategorien-Verwaltung',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.calendar_today),
-            title: const Text('Kalender'),
-            onTap: () {
-              Navigator.pop(context);
-              // Bereits auf der Kalenderseite, nichts tun
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.category),
-            title: const Text('Kategorien verwalten'),
-            onTap: () {
-              Navigator.pop(context);
-              _openCategoryManagement();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.explore),
-            title: const Text('Qibla Kompass'),
-            onTap: () {
-              Navigator.pop(context);
-              _openQiblaCompass();
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Einstellungen'),
-            onTap: () {
-              Navigator.pop(context);
-              _openSettings();
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.info),
-            title: const Text('Über'),
-            onTap: () {
-              Navigator.pop(context);
-              showAboutDialog(
-                context: context,
-                applicationName: 'Muslim Calendar',
-                applicationVersion: '1.0.0',
-                applicationLegalese: '© 2023 Muslim Calendar',
-              );
-            },
-          ),
-        ],
+      floatingActionButton: showFab
+          ? AddAppointmentFAB(
+              selectedDate: _selectedDate,
+              onAppointmentAdded: loadAllAppointments,
+              logoColor: logoColor,
+              localizations: loc,
+            )
+          : null,
+      bottomNavigationBar: HomeNavigationBar(
+        selectedIndex: _selectedNavIndex,
+        onIndexSelected: _handleNavigationChange,
+        localizations: loc,
       ),
     );
   }
