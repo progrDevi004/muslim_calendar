@@ -1,7 +1,5 @@
 // lib/data/services/automatic_category_service.dart
 
-import 'package:muslim_calendar/models/category_model.dart';
-
 /// Einfache regelbasierte Logik, um eine Kategorie anhand von Text zu ermitteln.
 /// In einer echten KI-Lösung würde man ggf. ML-Modelle, NLP und Training einsetzen.
 class AutomaticCategoryService {

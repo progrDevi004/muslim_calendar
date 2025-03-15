@@ -1,6 +1,5 @@
 // lib/data/services/google_calendar_service.dart
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -13,7 +12,6 @@ import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:syncfusion_flutter_calendar/src/calendar/common/enums.dart'
     as sf;
-import 'package:muslim_calendar/models/enums.dart';
 import 'package:muslim_calendar/utils/recurrence_rule_converter.dart';
 
 /// GoogleCalendarService - Low-Level API-Schnittstelle
@@ -159,7 +157,6 @@ class GoogleCalendarService {
       // Filtern von ungültigen Events
       final validEvents = events.items
               ?.where((event) =>
-                  event != null &&
                   event.id != null &&
                   event.summary != null &&
                   event.summary!.trim().isNotEmpty &&
@@ -537,6 +534,7 @@ class GoogleCalendarService {
         return await addEventToGoogleCalendar(appointmentToSync);
       }
     }
+    return null;
   }
 
   // Hilfsmethode: Berechnet Wiederholungsdaten für einen Termin
@@ -548,7 +546,7 @@ class GoogleCalendarService {
   ) {
     List<DateTime> dates = [];
 
-    int count = recurrenceProperties.recurrenceCount ?? 0;
+    int count = recurrenceProperties.recurrenceCount;
     DateTime? endDate = recurrenceProperties.endDate;
 
     DateTime currentDate = patternStartDate;

@@ -61,7 +61,7 @@ class RecurrenceService {
       if (recurrenceRule.endsWith(';') || recurrenceRule.endsWith(',')) {
         recurrenceRule = '${recurrenceRule}BYDAY=$weekday';
       } else {
-        recurrenceRule = '${recurrenceRule};BYDAY=$weekday';
+        recurrenceRule = '$recurrenceRule;BYDAY=$weekday';
       }
     }
 
@@ -113,20 +113,13 @@ class RecurrenceService {
     return fixedRule.toUpperCase();
   }
 
-  // Tarihe göre BYDAY bilgisini çıkaran yardımcı fonksiyon
-  String _getByDayFromDate(DateTime date) {
-    List<String> weekdays = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
-    return weekdays[date.weekday -
-        1]; // Date.weekday 1-7 arasıdır, haftanın gününe göre döner.
-  }
-
   String adjustRecurrenceRuleForMondayStart(String recurrenceRule) {
     // Eğer recurrenceRule varsa
     if (!recurrenceRule.contains("BYDAY")) {
       // 'WKST' değerini alıp 'BYDAY' parametresini ekliyoruz
       if (recurrenceRule.contains("WKST")) {
         String wkstValue = recurrenceRule.split("WKST=")[1].split(";")[0];
-        recurrenceRule = recurrenceRule + ";BYDAY=" + wkstValue;
+        recurrenceRule = "$recurrenceRule;BYDAY=$wkstValue";
       }
     }
 
@@ -138,7 +131,7 @@ class RecurrenceService {
 
     // Eğer 'INTERVAL' parametresi yoksa, bunu 'INTERVAL=1' olarak ekleyelim
     if (!recurrenceRule.contains("INTERVAL")) {
-      recurrenceRule = recurrenceRule + ";INTERVAL=1";
+      recurrenceRule = "$recurrenceRule;INTERVAL=1";
     }
     return recurrenceRule;
   }

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:googleapis/calendar/v3.dart' as gCal;
 import 'package:http/http.dart' as http;
@@ -389,7 +388,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
               'Authentifizierungsfehler: Bitte erneut anmelden. Details: $e');
         } else {
           debugPrint('Google API-Fehler beim Synchronisieren: $e');
-          throw e; // Fehler weitergeben für allgemeine Fehlerbehandlung
+          rethrow; // Fehler weitergeben für allgemeine Fehlerbehandlung
         }
       }
 
@@ -523,7 +522,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
         final existing = existingMappingsByDate[originalDate];
 
         // Debug-Ausgabe für jede Instanz
-        debugPrint('Verarbeite Instanz für ${originalDate}:');
+        debugPrint('Verarbeite Instanz für $originalDate:');
         debugPrint('- Start: ${instance.startTime}');
         debugPrint('- Ende: ${instance.endTime}');
 
@@ -539,7 +538,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
             // Keine Wiederholungsregel bei Einzelinstanzen
           );
 
-          debugPrint('Aktualisiere bestehende Instanz für ${originalDate}');
+          debugPrint('Aktualisiere bestehende Instanz für $originalDate');
           final operation = _calendarApi!.events
               .update(
             event,
@@ -558,7 +557,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
             );
           }).catchError((e) {
             debugPrint(
-                'Fehler beim Aktualisieren der Instanz ${originalDate}: $e');
+                'Fehler beim Aktualisieren der Instanz $originalDate: $e');
           });
 
           batchOperations.add(operation);
@@ -574,7 +573,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
             // Keine Wiederholungsregel bei Einzelinstanzen
           );
 
-          debugPrint('Erstelle neue Instanz für ${originalDate}');
+          debugPrint('Erstelle neue Instanz für $originalDate');
           final operation = _calendarApi!.events
               .insert(
             event,
@@ -590,7 +589,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
               ),
             );
           }).catchError((e) {
-            debugPrint('Fehler beim Erstellen der Instanz ${originalDate}: $e');
+            debugPrint('Fehler beim Erstellen der Instanz $originalDate: $e');
           });
 
           batchOperations.add(operation);
@@ -716,11 +715,11 @@ class GoogleCalendarSyncService with ChangeNotifier {
       );
 
       // Debug-Ausgabe für Zeitzonenprobleme
-      debugPrint('Event Zeitzone für ${subject}:');
+      debugPrint('Event Zeitzone für $subject:');
       debugPrint('- Originale Startzeit: ${startTime.toString()}');
       debugPrint(
           '- Angepasste Startzeit: ${adjustedStartTime.toString()} (-1h)');
-      debugPrint('- Verwendete Zeitzone: ${localTimeZone}');
+      debugPrint('- Verwendete Zeitzone: $localTimeZone');
     }
 
     // Wiederholungsregel

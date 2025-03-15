@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:muslim_calendar/models/enums.dart';
-import 'package:syncfusion_flutter_calendar/calendar.dart';
 
 enum AppLanguage { english, german, turkish, arabic, bosnian, spanish, persian }
 

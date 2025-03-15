@@ -55,11 +55,6 @@ class NotificationService {
         _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
             IOSFlutterLocalNotificationsPlugin>();
     if (iosPlugin != null) {
-      final granted = await iosPlugin.requestPermissions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
       if (kDebugMode) {
         //print("[NotificationService] iOS Permission granted? $granted");
       }

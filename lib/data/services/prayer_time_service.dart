@@ -6,7 +6,6 @@ import 'package:muslim_calendar/models/appointment_model.dart';
 import '../repositories/prayer_time_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
-import 'package:sqflite/sqflite.dart';
 
 class PrayerTimeService with ChangeNotifier {
   final PrayerTimeRepository prayerTimeRepo;
@@ -82,7 +81,6 @@ class PrayerTimeService with ChangeNotifier {
   /// Die Funktion lädt die aktuellen Standorteinstellungen aus den SharedPreferences.
   Future<String?> _getCurrentLocation() async {
     final prefs = await SharedPreferences.getInstance();
-    final automaticLocation = prefs.getBool('automaticLocation') ?? false;
     final defaultCountry = prefs.getString('defaultCountry');
     final defaultCity = prefs.getString('defaultCity');
 

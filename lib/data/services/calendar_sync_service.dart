@@ -1,9 +1,7 @@
 // lib/data/services/calendar_sync_service.dart
-import 'dart:ffi';
 
 import 'package:flutter/cupertino.dart';
 import 'package:googleapis/calendar/v3.dart';
-import 'package:intl/intl.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
 import 'package:muslim_calendar/models/category_model.dart';
 import 'package:muslim_calendar/models/enums.dart';
@@ -486,9 +484,6 @@ class CalendarSyncService extends ChangeNotifier {
     //debugPrint("📊 ${appointments.length} Termine zum Export gefunden");
     //debugPrint("📅 Export in Kalender: $exportCalendarId");
 
-    int exportCount = 0;
-    int updateCount = 0;
-
     for (var appointment in appointments) {
       if (appointment.isRelatedToPrayerTimes) {
         // Für prayer-related Termine: Berechnung der wiederkehrenden Tage mit RecurrenceService.
@@ -515,7 +510,6 @@ class CalendarSyncService extends ChangeNotifier {
             prayerRelated: true,
             calendarId: exportCalendarId,
           );
-          exportCount++;
         }
         // Events, die außerhalb der gültigen Wiederholungstermine liegen, werden gelöscht.
         await calendarProvider.deleteEventsNotInDates(
@@ -544,10 +538,6 @@ class CalendarSyncService extends ChangeNotifier {
           AppointmentModel updatedAppointment =
               appointment.copyWith(externalIdGoogle: event.id);
           await appointmentRepository.updateAppointment(updatedAppointment);
-          exportCount++;
-        } else {
-          //debugPrint("🔄 Termin in Google aktualisiert: ${event.id}");
-          updateCount++;
         }
       }
     }
@@ -562,7 +552,6 @@ class CalendarSyncService extends ChangeNotifier {
     // Alle Termine aus der Datenbank laden
     List<AppointmentModel> appointments =
         await appointmentRepository.getAllAppointments();
-    int fixedCount = 0;
 
     for (var appointment in appointments) {
       if (appointment.recurrenceRule != null) {
@@ -577,7 +566,6 @@ class CalendarSyncService extends ChangeNotifier {
               appointment.copyWith(recurrenceRule: correctedRule);
 
           await appointmentRepository.updateAppointment(updatedAppointment);
-          fixedCount++;
 
           debugPrint(
               "🛠️ Wiederholungsregel korrigiert für Termin ${appointment.id} (${appointment.subject}): $correctedRule");
@@ -664,13 +652,11 @@ class CalendarSyncService extends ChangeNotifier {
     // Alle lokalen Termine aus der Datenbank laden
     List<AppointmentModel> allAppointments =
         await appointmentRepository.getAllAppointments();
-    int deleteCount = 0;
 
     // Termine löschen
     for (var appointment in allAppointments) {
       if (appointment.id != null) {
         await appointmentRepository.deleteAppointment(appointment.id!);
-        deleteCount++;
       }
     }
 

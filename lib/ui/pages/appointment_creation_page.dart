@@ -453,51 +453,6 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     }
   }
 
-  /// Termin löschen (angepasst!)
-  Future<void> _deleteAppointment() async {
-    final loc = Provider.of<AppLocalizations>(context, listen: false);
-    if (_currentAppointmentId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(loc.noAppointmentToDelete)),
-      );
-      return;
-    }
-
-    bool confirmDelete = await _showAdaptiveDialog(
-      context: context,
-      title: loc.deleteAppointmentTitle,
-      content: loc.deleteAppointmentConfirmation,
-      confirmText: loc.delete,
-      cancelText: loc.cancel,
-    );
-
-    if (confirmDelete) {
-      try {
-        // 1) Termin in DB löschen
-        await _appointmentRepo.deleteAppointment(_currentAppointmentId!);
-
-        // 2) Notification stornieren
-        try {
-          await NotificationService()
-              .cancelNotification(_currentAppointmentId!);
-        } catch (notifErr) {
-          debugPrint('iOS-Knackpunkt (CreationPage): $notifErr');
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(loc.appointmentDeletedSuccessfully)),
-        );
-
-        if (!mounted) return;
-        Navigator.of(context).pop(true);
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(loc.errorDeletingAppointment)),
-        );
-      }
-    }
-  }
-
   /// Termin speichern (Neu oder Update)
   Future<void> _saveAppointment() async {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
