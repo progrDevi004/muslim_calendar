@@ -26,14 +26,14 @@ class CategoryRepository {
       try {
         await db.query('categories', columns: ['color'], limit: 1);
         colorColumnExists = true;
-        debugPrint("Spalte 'color' existiert bereits.");
+        //debugPrint("Spalte 'color' existiert bereits.");
       } catch (e) {
-        debugPrint("Spalte 'color' fehlt: $e");
+        //debugPrint("Spalte 'color' fehlt: $e");
       }
 
       // Wenn die Spalte 'color' nicht existiert, füge sie hinzu
       if (!colorColumnExists) {
-        debugPrint("Füge Spalte 'color' hinzu...");
+        //debugPrint("Füge Spalte 'color' hinzu...");
         try {
           // ignore: deprecated_member_use
           await db.execute(
@@ -57,7 +57,7 @@ class CategoryRepository {
       // Prüfen, ob die Spalte 'isDefault' existiert
       try {
         await db.query('categories', columns: ['isDefault'], limit: 1);
-        debugPrint("Spalte 'isDefault' existiert bereits.");
+        //debugPrint("Spalte 'isDefault' existiert bereits.");
       } catch (e) {
         // Spalte 'isDefault' existiert nicht, füge sie hinzu
         debugPrint("Spalte 'isDefault' existiert nicht. Füge sie hinzu...");
@@ -208,8 +208,7 @@ class CategoryRepository {
         where: 'categoryId = ?',
         whereArgs: [id],
       );
-      debugPrint(
-          "Termine mit Kategorie $id wurden zur Standard-Kategorie verschoben.");
+      //debugPrint("Termine mit Kategorie $id wurden zur Standard-Kategorie verschoben.");
     } catch (e) {
       debugPrint("Fehler beim Aktualisieren von Terminen: $e");
       // Wir machen weiter, auch wenn das Aktualisieren fehlschlägt
@@ -250,11 +249,8 @@ class CategoryRepository {
 
     final List<Map<String, dynamic>> maps = await db.query('categories');
 
-    debugPrint("Geladene Kategorien: ${maps.length}");
-    for (final map in maps) {
-      debugPrint(
-          "Kategorie: id=${map['id']}, name=${map['name']}, color=${map['color']}");
-    }
+    //debugPrint("Geladene Kategorien: ${maps.length}");
+    //maps.forEach((map) => debugPrint("Kategorie: id=${map['id']}, name=${map['name']}, color=${map['color']}"));
 
     return maps.map((m) => CategoryModel.fromMap(m)).toList();
   }

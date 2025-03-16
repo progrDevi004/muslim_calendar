@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>Die App benötigt die Erlaubnis, Benachrichtigungen anzuzeigen, um Sie über bevorstehende Termine zu informieren.</string>
 </dict>
 </plist>

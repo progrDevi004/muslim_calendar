@@ -349,6 +349,15 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             // Setze den Reminder-Wert
             _selectedReminderMinutes = appointment.reminderMinutesBefore;
 
+            // Rücksetzen der Reminder-Liste
+            _remindersList = [];
+
+            // Wenn eine Erinnerung vorhanden ist, füge sie der Liste hinzu
+            if (appointment.reminderMinutesBefore != null &&
+                appointment.reminderMinutesBefore! > 0) {
+              _remindersList.add(appointment.reminderMinutesBefore!);
+            }
+
             // Standort
             _location = appointment.location ?? '';
             if (appointment.location != null) {
@@ -1352,7 +1361,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   color: Colors.transparent,
                   child: ListTile(
                     leading: const Icon(Icons.notifications_none),
-                    title: Text("Add notification"),
+                    title: Text(loc.addNotifications),
                     onTap: () {
                       _showReminderSelectionDialog(loc);
                     },

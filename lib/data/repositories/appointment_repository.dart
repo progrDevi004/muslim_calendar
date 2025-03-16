@@ -100,7 +100,7 @@ class AppointmentRepository {
     final db = await dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query('appointments');
 
-    debugPrint("Geladene Termine: ${maps.length}");
+    //debugPrint("Geladene Termine: ${maps.length}");
 
     // Alle Kategorien laden
     List<CategoryModel> allCategories = [];
@@ -110,7 +110,7 @@ class AppointmentRepository {
       allCategories =
           categoryMaps.map((m) => CategoryModel.fromMap(m)).toList();
 
-      debugPrint("Geladene Kategorien für Termine: ${allCategories.length}");
+      //debugPrint("Geladene Kategorien für Termine: ${allCategories.length}");
     } catch (e) {
       debugPrint("Fehler beim Laden der Kategorien: $e");
       // Standard-Kategorie als Fallback

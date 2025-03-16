@@ -2540,20 +2540,40 @@ class AppLocalizations extends ChangeNotifier {
   String get upcomingTasksLabel {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return "Anstehende Aufgaben";
+        return "Anstehende Termine";
       case AppLanguage.turkish:
-        return "Yaklaşan Görevler";
+        return "Yaklaşan Randevular";
       case AppLanguage.arabic:
-        return "المهام القادمة";
+        return "المواعيد القادمة";
       case AppLanguage.bosnian:
-        return "Nadolazeći zadaci";
+        return "Nadolazeći termini";
       case AppLanguage.spanish:
-        return "Próximas tareas";
+        return "Próximas citas";
       case AppLanguage.persian:
-        return "وظایف پیش رو";
+        return "قرارهای پیش رو";
       case AppLanguage.english:
       default:
-        return "Upcoming Tasks";
+        return "Upcoming Appointments";
+    }
+  }
+
+  String get addNotifications {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Benachrichtigungen hinzufügen";
+      case AppLanguage.turkish:
+        return "Bildirimleri Ekle";
+      case AppLanguage.arabic:
+        return "إضافة الإشعارات";
+      case AppLanguage.bosnian:
+        return "Dodaj obavještenja";
+      case AppLanguage.spanish:
+        return "Añadir notificaciones";
+      case AppLanguage.persian:
+        return "اضافه کردن اعلان‌ها";
+      case AppLanguage.english:
+      default:
+        return "Add notifications";
     }
   }
 
