@@ -867,7 +867,7 @@ class GoogleCalendarService {
       debugPrint('Event Zeitzone für ${appointment.subject}:');
       debugPrint('- Originale Startzeit: ${start.toString()}');
       debugPrint('- Angepasste Startzeit: ${adjustedStart.toString()} (-1h)');
-      debugPrint('- Verwendete Zeitzone: ${timeZone}');
+      debugPrint('- Verwendete Zeitzone: $timeZone');
     }
 
     // Wiederholungsregel verarbeiten
@@ -904,11 +904,11 @@ class GoogleCalendarService {
   String? _getGoogleCalendarColorId(Color color) {
     // Google Calendar hat begrenzte Farboptionen (1-11)
     // Hier eine vereinfachte Zuordnung
-    if (color.value == Colors.red.value) return "4"; // Rot
-    if (color.value == Colors.blue.value) return "1"; // Blau
-    if (color.value == Colors.green.value) return "2"; // Grün
-    if (color.value == Colors.orange.value) return "6"; // Orange
-    if (color.value == Colors.purple.value) return "3"; // Lila
+    if (color == Colors.red) return "4"; // Rot
+    if (color == Colors.blue) return "1"; // Blau
+    if (color == Colors.green) return "2"; // Grün
+    if (color == Colors.orange) return "6"; // Orange
+    if (color == Colors.purple) return "3"; // Lila
     // Standardwert
     return "1"; // Blau
   }

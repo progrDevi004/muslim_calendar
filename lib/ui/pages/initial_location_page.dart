@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart'
     show AppLanguage, AppLocalizations;
 import 'package:muslim_calendar/ui/pages/home_page.dart';
+import 'package:muslim_calendar/data/services/location_service.dart';
 
 // Logo-Farbe für die Konsistenz der App
 const Color logoColor = Color(0xFF468178);
@@ -52,6 +53,9 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
   // Standort
   String? _selectedCountry;
   String? _selectedCity;
+  bool _useAutomaticLocation = false;
+  bool _isDetectingLocation = false;
+  LocationService? _locationService;
 
   // Map für Berechnungsmethoden
   final Map<int, String> _calcMethodMap = {
@@ -73,6 +77,19 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
   void initState() {
     super.initState();
     _loadCountryCityData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Initialisiere LocationService, falls noch nicht geschehen
+    if (_locationService == null) {
+      try {
+        _locationService = Provider.of<LocationService>(context, listen: false);
+      } catch (e) {
+        debugPrint('LocationService konnte nicht initialisiert werden: $e');
+      }
+    }
   }
 
   /// Lädt das JSON aus assets/country_city_<lang>.json und füllt `_countryCityData`
@@ -120,7 +137,68 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     }
   }
 
-  /// Speichert Daten und wechselt zur HomePage
+  /// Versucht, den Standort automatisch zu ermitteln
+  Future<void> _detectLocation() async {
+    if (_locationService == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Standortdienst nicht verfügbar'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isDetectingLocation = true;
+    });
+
+    try {
+      final success = await _locationService!.determineLocation();
+
+      if (success) {
+        setState(() {
+          _selectedCountry = _locationService!.currentCountry;
+          _selectedCity = _locationService!.currentCity;
+          _useAutomaticLocation = true;
+          _isDetectingLocation = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('Standort erkannt: $_selectedCity, $_selectedCountry'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        setState(() {
+          _isDetectingLocation = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_locationService!.errorMessage ??
+                'Standorterkennung fehlgeschlagen'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isDetectingLocation = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Fehler bei der Standorterkennung: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  /// Speichert Einstellungen und fährt fort
   Future<void> _saveAndContinue() async {
     // Sicherheitsprüfung: Stelle sicher, dass Land und Stadt ausgewählt wurden
     if (_selectedCountry == null || _selectedCity == null) {
@@ -147,6 +225,9 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     // Standort - Wir haben bereits geprüft, dass die Werte nicht null sind
     await prefs.setString('defaultCountry', _selectedCountry!);
     await prefs.setString('defaultCity', _selectedCity!);
+
+    // Automatische Standorterkennung speichern
+    await prefs.setBool('automaticLocation', _useAutomaticLocation);
 
     // Markiere, dass die Einstellungen bereits erfasst wurden
     await prefs.setBool('wasLocationAsked', true);
@@ -319,6 +400,85 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 16),
+
+                      // Option für automatische Standorterkennung
+                      Card(
+                        elevation: 2,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Automatische Standorterkennung",
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Lassen Sie die App Ihren aktuellen Standort automatisch erkennen. Dafür werden Standortberechtigungen benötigt.",
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 16),
+                              _isDetectingLocation
+                                  ? const Center(
+                                      child: CircularProgressIndicator())
+                                  : ElevatedButton.icon(
+                                      onPressed: _detectLocation,
+                                      icon: const Icon(Icons.my_location),
+                                      label: const Text(
+                                          "Standort automatisch erkennen"),
+                                      style: ElevatedButton.styleFrom(
+                                        minimumSize:
+                                            const Size(double.infinity, 48),
+                                        backgroundColor: logoColor,
+                                      ),
+                                    ),
+                              if (_useAutomaticLocation &&
+                                  _selectedCity != null &&
+                                  _selectedCountry != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 16.0),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.check_circle,
+                                          color: Colors.green),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          "Erkannter Standort: $_selectedCity, $_selectedCountry",
+                                          style: const TextStyle(
+                                              color: Colors.green),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+                      Text(
+                        "ODER",
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        "Wählen Sie Ihren Standort manuell aus:",
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 16),
+
                       // Land
                       Row(
                         children: [
