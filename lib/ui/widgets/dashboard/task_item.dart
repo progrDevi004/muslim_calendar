@@ -234,7 +234,7 @@ class PrayerSlotItem extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 8),
       decoration: BoxDecoration(
         color: Colors.grey.shade200.withOpacity(0.2),
         borderRadius: BorderRadius.circular(16),
