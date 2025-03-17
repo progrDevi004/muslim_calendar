@@ -345,32 +345,28 @@ class CalendarSyncService extends ChangeNotifier {
         }
       }
 
-      // Zeitanpassung: Bei Ereignissen mit Zeitangabe eine Stunde hinzufügen,
-      // um die Zeitverschiebung zu kompensieren
-      DateTime? adjustedStartTime;
-      DateTime? adjustedEndTime;
+      // VERBESSERTE Zeithandhabung: Korrekte Konvertierung zwischen Zeitzonen
+      DateTime? finalStartTime;
+      DateTime? finalEndTime;
 
       if (event.start?.dateTime != null) {
-        // Für Termine mit Zeitangabe: Eine Stunde hinzufügen
-        adjustedStartTime =
-            event.start!.dateTime!.toLocal().add(const Duration(hours: 1));
+        // Für Termine mit Zeitangabe: Zeitzone korrekt übernehmen
+        // Wir nehmen die UTC-Zeit und konvertieren sie in lokale Zeit
+        finalStartTime = event.start!.dateTime!.toLocal();
         debugPrint(
-            'Google Import - Original Startzeit: ${event.start!.dateTime!.toLocal()}');
-        debugPrint(
-            'Google Import - Angepasste Startzeit: $adjustedStartTime (+1h)');
+            'Google Import - Original Startzeit (UTC): ${event.start!.dateTime}');
+        debugPrint('Google Import - Konvertierte lokale Zeit: $finalStartTime');
       } else {
-        // Für ganztägige Termine: Keine Änderung
-        adjustedStartTime =
-            event.start?.date != null ? event.start!.date! : null;
+        // Für ganztägige Termine: Keine Zeitanpassung notwendig
+        finalStartTime = event.start?.date != null ? event.start!.date! : null;
       }
 
       if (event.end?.dateTime != null) {
-        // Für Termine mit Zeitangabe: Eine Stunde hinzufügen
-        adjustedEndTime =
-            event.end!.dateTime!.toLocal().add(const Duration(hours: 1));
+        // Für Termine mit Zeitangabe: Zeitzone korrekt übernehmen
+        finalEndTime = event.end!.dateTime!.toLocal();
       } else {
-        // Für ganztägige Termine: Keine Änderung oder +1 Minute für die App
-        adjustedEndTime = event.end?.date != null
+        // Für ganztägige Termine: Keine Zeitanpassung oder +1 Minute für die App
+        finalEndTime = event.end?.date != null
             ? event.start!.date!.add(const Duration(minutes: 1))
             : null;
       }
@@ -392,8 +388,8 @@ class CalendarSyncService extends ChangeNotifier {
             event.recurrence != null ? event.recurrence!.join(',') : null,
         recurrenceExceptionDates: null,
         color: const Color(0xFF2196F3),
-        startTime: adjustedStartTime,
-        endTime: adjustedEndTime,
+        startTime: finalStartTime,
+        endTime: finalEndTime,
         categoryId: appointmentCategoryId,
         reminderMinutesBefore: null,
         lastSyncedAt: DateTime.now(),

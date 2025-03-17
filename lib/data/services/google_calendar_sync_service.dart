@@ -757,27 +757,20 @@ class GoogleCalendarSyncService with ChangeNotifier {
         date: DateTime(endTime.year, endTime.month, endTime.day),
       );
     } else {
-      // Korrektur: Stunde subtrahieren, um die Zeitverschiebung zu kompensieren
-      final adjustedStartTime = startTime.subtract(const Duration(hours: 1));
-      final adjustedEndTime = endTime.subtract(const Duration(hours: 1));
-
       // Event mit Start- und Endzeit
       event.start = gCal.EventDateTime(
-        dateTime: adjustedStartTime,
+        dateTime: startTime,
         timeZone: localTimeZone,
       );
 
       event.end = gCal.EventDateTime(
-        dateTime: adjustedEndTime,
+        dateTime: endTime,
         timeZone: localTimeZone,
       );
 
       // Debug-Ausgabe für Zeitzonenprobleme
-      debugPrint('Event Zeitzone für $subject:');
-      debugPrint('- Originale Startzeit: ${startTime.toString()}');
-      debugPrint(
-          '- Angepasste Startzeit: ${adjustedStartTime.toString()} (-1h)');
-      debugPrint('- Verwendete Zeitzone: $localTimeZone');
+      // debugPrint('Event Zeitzone für $subject:');
+      // debugPrint('- Verwendete Zeitzone: $localTimeZone');
     }
 
     // Wiederholungsregel
