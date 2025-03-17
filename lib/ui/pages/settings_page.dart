@@ -1050,7 +1050,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             child: _buildCalendarButton(
                               context: context,
                               icon: Icons.download_outlined,
-                              label: 'Nur importieren',
+                              label: loc.importButtonLabel,
                               onPressed: () async {
                                 // Dialog anzeigen
                                 final confirmed = await showDialog<bool>(
@@ -1087,7 +1087,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
                                     // Nur importieren mit gewählter Kategorie-Option
                                     await calendarSyncService
-                                        .importAppointments(
+                                        .importFromGoogleCalendarOnly(
                                             categoryOption: categoryOption);
 
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1107,7 +1107,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             child: _buildCalendarButton(
                               context: context,
                               icon: Icons.upload_outlined,
-                              label: 'Nur exportieren',
+                              label: loc.exportButtonLabel,
                               onPressed: () async {
                                 // Dialog anzeigen
                                 final confirmed = await showDialog<bool>(
@@ -1142,7 +1142,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                       .fixInvalidRecurrenceRules();
                                   // Nur exportieren
                                   await calendarSyncService
-                                      .exportAppointments();
+                                      .exportToGoogleCalendarOnly();
 
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(

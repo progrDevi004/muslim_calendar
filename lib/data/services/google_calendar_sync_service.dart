@@ -208,8 +208,22 @@ class GoogleCalendarSyncService with ChangeNotifier {
 
       // 3. Alle Termine laden, die mit Google synchronisiert werden sollen
       final allAppointments = await _appointmentRepo.getAllAppointments();
-      final toSyncAppointments =
+
+      // Debug-Ausgabe: Wie viele Termine haben syncWithGoogleCalendar=true?
+      final markedForSync =
           allAppointments.where((a) => a.syncWithGoogleCalendar).toList();
+      debugPrint(
+          "Termine markiert für Synchronisierung: ${markedForSync.length} von ${allAppointments.length}");
+
+      // Wenn keine Termine für Synchronisierung markiert sind, verwenden wir alle Termine
+      List<AppointmentModel> toSyncAppointments;
+      if (markedForSync.isEmpty) {
+        debugPrint(
+            "⚠️ Keine Termine für Synchronisierung markiert! Verwende alle Termine.");
+        toSyncAppointments = allAppointments;
+      } else {
+        toSyncAppointments = markedForSync;
+      }
 
       // 4. Priorisierung: Termine nach Datum sortieren (nahe Termine zuerst)
       toSyncAppointments.sort((a, b) {
@@ -480,11 +494,8 @@ class GoogleCalendarSyncService with ChangeNotifier {
       }
 
       debugPrint(
-          'Synchronisiere gebetszeitabhängigen wiederkehrenden Termin: ${appointment.subject}');
-      debugPrint('- Gebetszeit: ${appointment.prayerTime}');
-      debugPrint('- Relation: ${appointment.timeRelation}');
-      debugPrint('- Minuten vorher/nachher: ${appointment.minutesBeforeAfter}');
-      debugPrint('- Wiederholungsregel: ${appointment.recurrenceRule}');
+          "🕌 Synchronisiere gebetszeitabhängigen Termin mit Wiederholung: ${appointment.subject}");
+      debugPrint("🔄 Wiederholungsregel: ${appointment.recurrenceRule}");
 
       // 1. Alle Vorkommen innerhalb des Synchronisierungszeitraums ermitteln
       final instances = await _appointmentAdapter.getAppointmentsForRange(
@@ -493,18 +504,20 @@ class GoogleCalendarSyncService with ChangeNotifier {
         syncRange.end,
       );
 
-      debugPrint('Anzahl Termininstanzen im Zeitraum: ${instances.length}');
+      debugPrint(
+          "📅 ${instances.length} Instanzen im Zeitfenster ${syncRange.start.toIso8601String()} bis ${syncRange.end.toIso8601String()}");
+
+      if (instances.isEmpty) {
+        debugPrint(
+            "⚠️ Keine Instanzen gefunden - überspringe Synchronisierung");
+        return true; // Erfolgreich, da nichts zu synchronisieren
+      }
 
       // 2. Limitierung der Anzahl der Instanzen
       final limitedInstances = instances.length >
               GoogleCalendarSyncConfig.maxEventsPerSeries
           ? instances.sublist(0, GoogleCalendarSyncConfig.maxEventsPerSeries)
           : instances;
-
-      if (instances.length > GoogleCalendarSyncConfig.maxEventsPerSeries) {
-        debugPrint(
-            'Anzahl der Instanzen wurde begrenzt auf: ${GoogleCalendarSyncConfig.maxEventsPerSeries}');
-      }
 
       // 3. Bestehende Mappings für diesen Termin laden
       final existingMappings =
@@ -535,7 +548,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
             notes: instance.notes,
             location: instance.location,
             isAllDay: instance.isAllDay,
-            // Keine Wiederholungsregel bei Einzelinstanzen
+            // WICHTIG: Keine Wiederholungsregel bei Einzelinstanzen
           );
 
           debugPrint('Aktualisiere bestehende Instanz für $originalDate');
@@ -567,11 +580,29 @@ class GoogleCalendarSyncService with ChangeNotifier {
             instance.subject,
             instance.startTime,
             instance.endTime,
-            notes: instance.notes,
+            notes: instance.notes != null
+                ? "${instance.notes}\n\n(Wiederkehrender Termin vom ${appointment.startTime != null ? appointment.startTime!.toIso8601String().split('T')[0] : 'unbekannt'})"
+                : "(Wiederkehrender Termin vom ${appointment.startTime != null ? appointment.startTime!.toIso8601String().split('T')[0] : 'unbekannt'})",
             location: instance.location,
             isAllDay: instance.isAllDay,
-            // Keine Wiederholungsregel bei Einzelinstanzen
+            // WICHTIG: Keine Wiederholungsregel bei Einzelinstanzen
           );
+
+          // Private Eigenschaft hinzufügen für die Zuordnung zum Haupttermin
+          if (event.extendedProperties == null) {
+            event.extendedProperties = gCal.EventExtendedProperties(
+              private: {
+                'muslimcalendarID': appointment.id.toString(),
+                'instanceDate': originalDate,
+              },
+            );
+          } else {
+            event.extendedProperties!.private ??= {};
+            event.extendedProperties!.private!
+                .addAll({'muslimcalendarID': appointment.id.toString()});
+            event.extendedProperties!.private!
+                .addAll({'instanceDate': originalDate});
+          }
 
           debugPrint('Erstelle neue Instanz für $originalDate');
           final operation = _calendarApi!.events
@@ -580,6 +611,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
             _selectedCalendarId!,
           )
               .then((createdEvent) {
+            debugPrint('Event für $originalDate erstellt: ${createdEvent.id}');
             return _mappingRepo.saveMapping(
               GoogleEventMapping(
                 localAppointmentId: appointment.id!,
@@ -595,9 +627,8 @@ class GoogleCalendarSyncService with ChangeNotifier {
           batchOperations.add(operation);
         }
 
+        // Batch-Verarbeitung nach konstanter Größe
         batchCount++;
-
-        // Batch-Verarbeitung, wenn maximale Größe erreicht ist
         if (batchCount >= GoogleCalendarSyncConfig.maxBatchSize) {
           await Future.wait(batchOperations);
           batchOperations = [];
@@ -605,15 +636,42 @@ class GoogleCalendarSyncService with ChangeNotifier {
         }
       }
 
-      // Restliche Batch-Operationen ausführen
+      // Restliche Operationen verarbeiten
       if (batchOperations.isNotEmpty) {
         await Future.wait(batchOperations);
+      }
+
+      // Verwende die bestehende Methode zum Löschen veralteter Mappings
+      for (final mapping in existingMappings) {
+        final isStillValid = limitedInstances.any((instance) =>
+            instance.startTime.toIso8601String().split('T')[0] ==
+            mapping.originalDate);
+
+        if (!isStillValid) {
+          // Mapping und Event löschen
+          if (mapping.googleEventId.isNotEmpty) {
+            try {
+              await _calendarApi!.events
+                  .delete(_selectedCalendarId!, mapping.googleEventId);
+              debugPrint('Veraltetes Event gelöscht: ${mapping.googleEventId}');
+            } catch (e) {
+              debugPrint(
+                  'Fehler beim Löschen des Events ${mapping.googleEventId}: $e');
+            }
+          }
+
+          // Mapping aus der Datenbank löschen
+          if (mapping.id != null) {
+            await _mappingRepo.deleteMapping(mapping.id!);
+            debugPrint('Veraltetes Mapping gelöscht: ID ${mapping.id}');
+          }
+        }
       }
 
       return true;
     } catch (e) {
       debugPrint(
-          'Fehler beim Synchronisieren des gebetszeitabhängigen Termins: $e');
+          'Fehler bei der Synchronisation des Termins ${appointment.subject}: $e');
       return false;
     }
   }

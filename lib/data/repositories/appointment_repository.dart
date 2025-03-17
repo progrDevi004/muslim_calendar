@@ -283,4 +283,27 @@ class AppointmentRepository {
     final allAppointments = await getAllAppointments();
     return allAppointments.where((a) => a.syncWithGoogleCalendar).toList();
   }
+
+  /// Setzt das syncWithGoogleCalendar-Flag für alle Termine auf true
+  Future<int> enableSyncForAllAppointments() async {
+    final db = await dbHelper.database;
+
+    // SQL-UPDATE-Statement, das alle Termine aktualisiert
+    final count = await db.rawUpdate(
+        'UPDATE appointments SET syncWithGoogleCalendar = 1 WHERE 1=1');
+
+    debugPrint("🔄 Synchronisierung für $count Termine aktiviert");
+    return count;
+  }
+
+  // Liste aller Appointment-IDs abrufen
+  Future<List<int>> getAllAppointmentIds() async {
+    final db = await dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'appointments',
+      columns: ['id'],
+    );
+
+    return maps.map((map) => map['id'] as int).toList();
+  }
 }
