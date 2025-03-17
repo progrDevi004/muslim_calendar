@@ -148,6 +148,7 @@ class CalendarSyncService extends ChangeNotifier {
     int importCount = 0;
     int updateCount = 0;
     int skippedCount = 0;
+    int skippedAppExportedCount = 0;
     int newCategoryCount = 0;
 
     // Kategorie-Option 0: Standard-Kategorie (1)
@@ -200,6 +201,18 @@ class CalendarSyncService extends ChangeNotifier {
       // Wenn Event gültig ist, zur Liste der verarbeiteten IDs hinzufügen
       if (event.id != null) {
         processedEventIds.add(event.id!);
+      }
+
+      // Prüfe, ob das Event von unserer App exportiert wurde
+      // Diese Events haben extendedProperties.private mit 'localAppID'
+      if (event.extendedProperties?.private != null) {
+        final localAppId = event.extendedProperties?.private?['localAppID'];
+        if (localAppId != null) {
+          debugPrint(
+              "🔄 Event übersprungen: Von der App exportiert (LocalAppID: $localAppId)");
+          skippedAppExportedCount++;
+          continue;
+        }
       }
 
       // Filtern wir automatisch generierte Events wie Geburtstage.
@@ -460,7 +473,7 @@ class CalendarSyncService extends ChangeNotifier {
     }
 
     debugPrint(
-        "✅ Import abgeschlossen: $importCount neue Termine, $updateCount aktualisiert, $deleteCount gelöscht, $skippedCount übersprungen, $newCategoryCount neue Kategorien erstellt");
+        "✅ Import abgeschlossen: $importCount neue Termine, $updateCount aktualisiert, $deleteCount gelöscht, $skippedCount übersprungen, $skippedAppExportedCount von App exportierte übersprungen, $newCategoryCount neue Kategorien erstellt");
   }
 
   /// Gemeinsame Export-Funktion: Überträgt Termine aus der lokalen Datenbank zum Provider (Google).

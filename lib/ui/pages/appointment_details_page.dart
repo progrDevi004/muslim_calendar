@@ -766,7 +766,17 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
   // Helper-Methode, um die Wiederholungsregel in lesbaren Text umzuwandeln
   String _getRecurrenceTypeText(String recurrenceRule, AppLocalizations loc) {
-    if (recurrenceRule.contains("FREQ=DAILY")) {
+    // Prüfen auf benutzerdefinierte Parameter (COUNT, UNTIL, BYDAY mit mehreren Tagen)
+    bool isCustom = recurrenceRule.contains("COUNT=") ||
+        recurrenceRule.contains("UNTIL=") ||
+        (recurrenceRule.contains("BYDAY=") &&
+            (recurrenceRule.contains(",") ||
+                !recurrenceRule
+                    .contains("BYDAY=" + _getDayOfWeekCode(DateTime.now()))));
+
+    if (isCustom) {
+      return loc.getRecurrenceTypeLabel("custom");
+    } else if (recurrenceRule.contains("FREQ=DAILY")) {
       return loc.getRecurrenceTypeLabel("daily");
     } else if (recurrenceRule.contains("FREQ=WEEKLY")) {
       return loc.getRecurrenceTypeLabel("weekly");
@@ -777,6 +787,13 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
     } else {
       return loc.getRecurrenceTypeLabel("custom");
     }
+  }
+
+  // Hilfsmethod zum Bestimmen des Wochentagscodes
+  String _getDayOfWeekCode(DateTime date) {
+    final weekDays = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+    return weekDays[
+        date.weekday - 1]; // weekday gibt 1-7 zurück, wobei 1=Montag
   }
 
   // Aktualisiere den Termin mit berechneten Gebetszeiten

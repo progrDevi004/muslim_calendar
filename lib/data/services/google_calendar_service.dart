@@ -689,13 +689,15 @@ class GoogleCalendarService {
     await autoSignIn();
 
     // Korrektur: Stunde subtrahieren, um die Zeitverschiebung zu kompensieren
-    final adjustedStartTime = startTime.subtract(const Duration(hours: 1));
-    final adjustedEndTime = endTime.subtract(const Duration(hours: 1));
+    final adjustedStartTime = startTime;
+    final adjustedEndTime = endTime;
 
     if (prayerRelated) {
       // Für gebetszeitbezogene Termine
       Map<String, String> extendedProps = {
-        'muslimcalendarID': appointment.id.toString()
+        'muslimcalendarID': appointment.id.toString(),
+        'localAppID': appointment.id
+            .toString(), // Hinzugefügt: Kennzeichnung als App-exportierter Termin
       };
 
       // Prüfen, ob bereits ein Event für diesen Termin und dieses Datum existiert
@@ -723,6 +725,16 @@ class GoogleCalendarService {
           dateTime: adjustedEndTime,
           timeZone: timeZone,
         );
+
+        // Extended Properties aktualisieren
+        if (existingEvent.extendedProperties == null) {
+          existingEvent.extendedProperties = calendar.EventExtendedProperties(
+            private: extendedProps,
+          );
+        } else {
+          existingEvent.extendedProperties!.private ??= {};
+          existingEvent.extendedProperties!.private!.addAll(extendedProps);
+        }
 
         result = await _calendarApi!.events.update(
           existingEvent,
@@ -758,6 +770,18 @@ class GoogleCalendarService {
       if (appointment.externalIdGoogle != null) {
         // Aktualisiere existierendes Event
         calendar.Event event = await _createGoogleEvent(appointment);
+
+        // Stelle sicher, dass localAppID gesetzt ist
+        if (event.extendedProperties == null) {
+          event.extendedProperties = calendar.EventExtendedProperties(
+            private: {'localAppID': appointment.id.toString()},
+          );
+        } else {
+          event.extendedProperties!.private ??= {};
+          event.extendedProperties!.private!['localAppID'] =
+              appointment.id.toString();
+        }
+
         return await _calendarApi!.events.update(
           event,
           calendarId,
@@ -766,6 +790,18 @@ class GoogleCalendarService {
       } else {
         // Erstelle neues Event
         calendar.Event event = await _createGoogleEvent(appointment);
+
+        // Stelle sicher, dass localAppID gesetzt ist
+        if (event.extendedProperties == null) {
+          event.extendedProperties = calendar.EventExtendedProperties(
+            private: {'localAppID': appointment.id.toString()},
+          );
+        } else {
+          event.extendedProperties!.private ??= {};
+          event.extendedProperties!.private!['localAppID'] =
+              appointment.id.toString();
+        }
+
         return await _calendarApi!.events.insert(event, calendarId);
       }
     }
@@ -822,35 +858,32 @@ class GoogleCalendarService {
     }
   }
 
-  // Wandelt einen Muslim Calendar Termin in ein Google Calendar Event um
+  // Erstellt ein Google Calendar Event aus den Daten des AppointmentModels
   Future<calendar.Event> _createGoogleEvent(
       AppointmentModel appointment) async {
-    // Zeitformatierung
-    final start = appointment.startTime;
-    final end = appointment.endTime;
+    // Lokale Zeitzone ermitteln
     final timeZone = await _getLocalTimeZone();
 
+    // Start- und Endzeit mit korrekter Formatierung erstellen
     calendar.EventDateTime? startEventDateTime;
     calendar.EventDateTime? endEventDateTime;
 
+    final start = appointment.startTime ?? DateTime.now();
+    final end = appointment.endTime ?? start.add(const Duration(minutes: 30));
+
     if (appointment.isAllDay) {
-      // Ganztägige Termine
+      // Ganztägige Events
       startEventDateTime = calendar.EventDateTime(
-        date: DateTime(start!.year, start.month, start.day),
+        date: DateTime(start.year, start.month, start.day),
       );
-
-      // Bei ganztägigen Terminen muss das Enddatum +1 Tag sein in Google Calendar
-      final endDate = end?.add(const Duration(days: 1)) ??
-          start.add(const Duration(days: 1));
-
       endEventDateTime = calendar.EventDateTime(
-        date: DateTime(endDate.year, endDate.month, endDate.day),
+        date: DateTime(end.year, end.month, end.day),
       );
     } else {
-      // Termine mit Zeitangabe
-      // Korrektur: Stunde subtrahieren, um die Zeitverschiebung zu kompensieren
-      final adjustedStart = start?.subtract(const Duration(hours: 1));
-      final adjustedEnd = end?.subtract(const Duration(hours: 1));
+      // Events mit Zeitangabe
+      // Zeitprobleme umgehen: -1 Stunde für die Zeitverschiebung
+      final adjustedStart = start;
+      final adjustedEnd = end;
 
       startEventDateTime = calendar.EventDateTime(
         dateTime: adjustedStart,
@@ -858,15 +891,14 @@ class GoogleCalendarService {
       );
 
       endEventDateTime = calendar.EventDateTime(
-        dateTime:
-            adjustedEnd ?? adjustedStart?.add(const Duration(minutes: 30)),
+        dateTime: adjustedEnd,
         timeZone: timeZone,
       );
 
       // Debug-Ausgabe für Zeitzonenprobleme
       debugPrint('Event Zeitzone für ${appointment.subject}:');
       debugPrint('- Originale Startzeit: ${start.toString()}');
-      debugPrint('- Angepasste Startzeit: ${adjustedStart.toString()} (-1h)');
+      debugPrint('- Angepasste Startzeit: ${adjustedStart.toString()}');
       debugPrint('- Verwendete Zeitzone: $timeZone');
     }
 
@@ -895,7 +927,11 @@ class GoogleCalendarService {
       colorId: _getGoogleCalendarColorId(appointment.color),
       // Speichere die Muslim Calendar Termin-ID als benutzerdefinierte Eigenschaft
       extendedProperties: calendar.EventExtendedProperties(
-        private: {'muslimcalendarID': appointment.id?.toString() ?? 'new'},
+        private: {
+          'muslimcalendarID': appointment.id?.toString() ?? 'new',
+          'localAppID': appointment.id?.toString() ??
+              'new', // Kennzeichnung als App-exportierter Termin
+        },
       ),
     );
   }
