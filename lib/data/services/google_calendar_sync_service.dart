@@ -216,14 +216,26 @@ class GoogleCalendarSyncService with ChangeNotifier {
           "Termine markiert für Synchronisierung: ${markedForSync.length} von ${allAppointments.length}");
 
       // Wenn keine Termine für Synchronisierung markiert sind, verwenden wir alle Termine
-      List<AppointmentModel> toSyncAppointments;
+      List<AppointmentModel> appointmentsToSync;
       if (markedForSync.isEmpty) {
         debugPrint(
             "⚠️ Keine Termine für Synchronisierung markiert! Verwende alle Termine.");
-        toSyncAppointments = allAppointments;
+        appointmentsToSync = allAppointments;
       } else {
-        toSyncAppointments = markedForSync;
+        appointmentsToSync = markedForSync;
       }
+
+      // Filtere Termine, die bereits von Google importiert wurden
+      final toSyncAppointments = appointmentsToSync
+          .where(
+              (a) => a.externalIdGoogle == null || a.externalIdGoogle!.isEmpty)
+          .toList();
+
+      debugPrint("📊 ${appointmentsToSync.length} Termine für Sync markiert");
+      debugPrint(
+          "📊 ${toSyncAppointments.length} Termine zum Export (ohne von Google importierte)");
+      debugPrint(
+          "📊 ${appointmentsToSync.length - toSyncAppointments.length} Termine übersprungen (von Google importiert)");
 
       // 4. Priorisierung: Termine nach Datum sortieren (nahe Termine zuerst)
       toSyncAppointments.sort((a, b) {
@@ -344,6 +356,8 @@ class GoogleCalendarSyncService with ChangeNotifier {
         location: appointment.location,
         isAllDay: appointment.isAllDay,
         reminderMinutes: appointment.reminderMinutesBefore,
+        appointmentId: appointment.id,
+        isRecurringInstance: false,
       );
 
       try {
@@ -446,6 +460,8 @@ class GoogleCalendarSyncService with ChangeNotifier {
         isAllDay: appointment.isAllDay,
         reminderMinutes: appointment.reminderMinutesBefore,
         recurrenceRule: appointment.recurrenceRule,
+        appointmentId: appointment.id,
+        isRecurringInstance: true,
       );
 
       if (googleEventId != null) {
@@ -548,7 +564,8 @@ class GoogleCalendarSyncService with ChangeNotifier {
             notes: instance.notes,
             location: instance.location,
             isAllDay: instance.isAllDay,
-            // WICHTIG: Keine Wiederholungsregel bei Einzelinstanzen
+            appointmentId: appointment.id,
+            isRecurringInstance: true,
           );
 
           debugPrint('Aktualisiere bestehende Instanz für $originalDate');
@@ -585,10 +602,11 @@ class GoogleCalendarSyncService with ChangeNotifier {
                 : "(Wiederkehrender Termin vom ${appointment.startTime != null ? appointment.startTime!.toIso8601String().split('T')[0] : 'unbekannt'})",
             location: instance.location,
             isAllDay: instance.isAllDay,
-            // WICHTIG: Keine Wiederholungsregel bei Einzelinstanzen
+            appointmentId: appointment.id,
+            isRecurringInstance: true,
           );
 
-          // Private Eigenschaft hinzufügen für die Zuordnung zum Haupttermin
+          // Private Eigenschaften hinzufügen für die Zuordnung zum Haupttermin
           if (event.extendedProperties == null) {
             event.extendedProperties = gCal.EventExtendedProperties(
               private: {
@@ -737,6 +755,8 @@ class GoogleCalendarSyncService with ChangeNotifier {
     bool isAllDay = false,
     int? reminderMinutes,
     String? recurrenceRule,
+    int? appointmentId,
+    bool isRecurringInstance = false,
   }) async {
     // Zeitformatierung
     final event = gCal.Event();
@@ -791,7 +811,53 @@ class GoogleCalendarSyncService with ChangeNotifier {
       );
     }
 
+    // Erweiterte Eigenschaften für die Synchronisierung
+    if (appointmentId != null) {
+      // Berechne einen Hash aus relevanten Eigenschaften
+      final appointmentHash = _calculateAppointmentHash(subject, startTime,
+          endTime, notes ?? '', location ?? '', recurrenceRule ?? '');
+
+      // Aktueller Zeitstempel für die letzte Synchronisierung
+      final now = DateTime.now().toIso8601String();
+
+      // Extended Properties setzen oder aktualisieren
+      if (event.extendedProperties == null) {
+        event.extendedProperties = gCal.EventExtendedProperties(
+          private: {
+            'localAppID': appointmentId.toString(),
+            'isRecurringInstance': isRecurringInstance.toString(),
+            'lastExported': now,
+            'appointmentHash': appointmentHash,
+          },
+        );
+      } else {
+        event.extendedProperties!.private ??= {};
+        event.extendedProperties!.private!.addAll({
+          'localAppID': appointmentId.toString(),
+          'isRecurringInstance': isRecurringInstance.toString(),
+          'lastExported': now,
+          'appointmentHash': appointmentHash,
+        });
+      }
+    }
+
     return event;
+  }
+
+  // Hilfsmethode: Berechnet einen Hash der Appointment-Eigenschaften
+  String _calculateAppointmentHash(String subject, DateTime startTime,
+      DateTime endTime, String notes, String location, String recurrenceRule) {
+    final hashInput =
+        '$subject|${startTime.toIso8601String()}|${endTime.toIso8601String()}|$notes|$location|$recurrenceRule';
+
+    // Einfacher Hash-Algorithmus (für komplexere Anwendungen könnte man crypto verwenden)
+    int hash = 0;
+    for (int i = 0; i < hashInput.length; i++) {
+      hash = ((hash << 5) - hash) + hashInput.codeUnitAt(i);
+      hash &= 0xFFFFFFFF; // 32-bit Integer Begrenzung
+    }
+
+    return hash.toRadixString(16); // Hexadezimale Darstellung
   }
 
   // Ermittelt die lokale Zeitzone
@@ -822,5 +888,99 @@ class GoogleCalendarSyncService with ChangeNotifier {
         await syncAllAppointments();
       }
     });
+  }
+
+  // Diese Methode kann verwendet werden, um Termine, die in Google existieren, aber lokal entfernt wurden, zu löschen
+  Future<bool> deleteMissingLocalAppointments() async {
+    try {
+      if (_calendarApi == null || _selectedCalendarId == null) {
+        debugPrint('Google API nicht initialisiert');
+        return false;
+      }
+
+      debugPrint('Suche nach Terminen in Google, die lokal gelöscht wurden...');
+
+      // 1. Zeitspanne für die Synchronisierung festlegen
+      final syncRange = GoogleCalendarSyncConfig.calculateSyncRange();
+      final startDateTime = syncRange.start.toIso8601String();
+      final endDateTime = syncRange.end.toIso8601String();
+
+      // 2. Alle lokalen Appointment-IDs laden
+      final localAppointmentIds = await _appointmentRepo.getAllAppointmentIds();
+      final localIdsSet = Set<int>.from(localAppointmentIds);
+
+      debugPrint('Lokale Termin-IDs: $localIdsSet');
+
+      // 3. Google Events im Zeitraum abrufen
+      final events = await _calendarApi!.events.list(
+        _selectedCalendarId!,
+        timeMin: DateTime.parse(startDateTime),
+        timeMax: DateTime.parse(endDateTime),
+        singleEvents: true,
+        maxResults: 2500, // Etwas höher als standardmäßig
+      );
+
+      // Zähler für die Statistik
+      int deletedCount = 0;
+      List<Future> batchOperations = [];
+      int batchCount = 0;
+
+      // 4. Für jedes Google Event prüfen, ob es eine lokale Entsprechung hat
+      if (events.items != null) {
+        debugPrint(
+            '${events.items!.length} Events in Google Calendar gefunden');
+
+        for (final event in events.items!) {
+          // Prüfen, ob das Event die localAppID-Eigenschaft hat
+          final localAppIdStr =
+              event.extendedProperties?.private?['localAppID'];
+
+          if (localAppIdStr != null) {
+            final localAppId = int.tryParse(localAppIdStr);
+
+            // Wenn die ID gültig ist und lokal nicht mehr existiert
+            if (localAppId != null && !localIdsSet.contains(localAppId)) {
+              debugPrint(
+                  'Lokal gelöschter Termin in Google gefunden: ${event.summary} (ID: $localAppId)');
+
+              // Löschoperation in Batch-Queue einreihen
+              final operation = _calendarApi!.events
+                  .delete(
+                _selectedCalendarId!,
+                event.id!,
+              )
+                  .then((_) {
+                debugPrint('Google Event gelöscht: ${event.id}');
+                deletedCount++;
+              }).catchError((e) {
+                debugPrint('Fehler beim Löschen des Events ${event.id}: $e');
+              });
+
+              batchOperations.add(operation);
+              batchCount++;
+
+              // Batch-Operationen ausführen, wenn maximale Größe erreicht ist
+              if (batchCount >= GoogleCalendarSyncConfig.maxBatchSize) {
+                await Future.wait(batchOperations);
+                batchOperations = [];
+                batchCount = 0;
+              }
+            }
+          }
+        }
+
+        // Restliche Batch-Operationen ausführen
+        if (batchOperations.isNotEmpty) {
+          await Future.wait(batchOperations);
+        }
+      }
+
+      debugPrint(
+          'Bereinigung abgeschlossen: $deletedCount Termine in Google Calendar gelöscht');
+      return true;
+    } catch (e) {
+      debugPrint('Fehler bei der Bereinigung gelöschter Termine: $e');
+      return false;
+    }
   }
 }

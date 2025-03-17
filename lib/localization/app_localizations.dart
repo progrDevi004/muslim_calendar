@@ -836,20 +836,20 @@ class AppLocalizations extends ChangeNotifier {
   String get minutesBeforeAfter {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return 'Minuten Vor/Nachher';
+        return 'Minuten';
       case AppLanguage.turkish:
-        return 'Önce/Sonra Dakika';
+        return 'Dakika';
       case AppLanguage.arabic:
-        return 'دقائق قبل/بعد';
+        return 'دقائق';
       case AppLanguage.bosnian:
-        return 'Minute prije/nakon';
+        return 'Minute';
       case AppLanguage.spanish:
-        return 'Minutos antes/después';
+        return 'Minutos';
       case AppLanguage.persian:
-        return 'دقیقه قبل/بعد';
+        return 'دقیقه';
       case AppLanguage.english:
       default:
-        return 'Minutes Before/After';
+        return 'Minutes';
     }
   }
 

@@ -244,18 +244,33 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
   void _onStepContinue() {
     // Wenn wir im letzten Schritt sind und auf "Fertig" klicken
     if (_currentStep == _buildSteps().length - 1) {
-      // Überprüfen, ob Land und Stadt ausgewählt wurden
-      if (_selectedCountry == null || _selectedCity == null) {
-        // Zeige einen Fehler an, wenn Land oder Stadt nicht ausgewählt wurden
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Bitte wählen Sie sowohl ein Land als auch eine Stadt aus'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
-          ),
-        );
-        return; // Nicht fortfahren
+      // Überprüfen, ob ein Standort ausgewählt wurde (automatisch oder manuell)
+      if (_useAutomaticLocation) {
+        // Bei automatischer Standortwahl: Prüfen, ob ein Standort erkannt wurde
+        if (_selectedCountry == null || _selectedCity == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Bitte führen Sie zuerst die automatische Standorterkennung durch'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          return;
+        }
+      } else {
+        // Bei manueller Standortwahl: Beide Felder prüfen
+        if (_selectedCountry == null || _selectedCity == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Bitte wählen Sie sowohl ein Land als auch eine Stadt aus'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+          return;
+        }
       }
 
       // Alles in Ordnung, Daten speichern und fortfahren
@@ -380,7 +395,7 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
         ),
       ),
 
-      // Step 3: Standort (Land & Stadt)
+      // Step 3: Standort (überarbeitete Version)
       Step(
         title: Text(loc.locationSettings),
         state: StepState.indexed,
@@ -395,149 +410,110 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Info-Text (minimalistischer)
                       Text(
                         loc.locationInstructions,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 16),
 
-                      // Option für automatische Standorterkennung
-                      Card(
-                        elevation: 2,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Automatische Standorterkennung",
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                "Lassen Sie die App Ihren aktuellen Standort automatisch erkennen. Dafür werden Standortberechtigungen benötigt.",
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                              const SizedBox(height: 16),
-                              _isDetectingLocation
-                                  ? const Center(
-                                      child: CircularProgressIndicator())
-                                  : ElevatedButton.icon(
-                                      onPressed: _detectLocation,
-                                      icon: const Icon(Icons.my_location),
-                                      label: const Text(
-                                          "Standort automatisch erkennen"),
-                                      style: ElevatedButton.styleFrom(
-                                        minimumSize:
-                                            const Size(double.infinity, 48),
-                                        backgroundColor: logoColor,
-                                      ),
-                                    ),
-                              if (_useAutomaticLocation &&
-                                  _selectedCity != null &&
-                                  _selectedCountry != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 16.0),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.check_circle,
-                                          color: Colors.green),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          "Erkannter Standort: $_selectedCity, $_selectedCountry",
-                                          style: const TextStyle(
-                                              color: Colors.green),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-                      Text(
-                        "ODER",
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        "Wählen Sie Ihren Standort manuell aus:",
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Land
-                      Row(
-                        children: [
-                          Text(loc.country),
-                          const SizedBox(width: 8),
-                          Text(
-                            "* (Pflichtfeld)",
-                            style: TextStyle(color: Colors.red, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      DropdownSearch<String>(
-                        items: _countryCityData.keys.toList()..sort(),
-                        selectedItem: _selectedCountry,
+                      // Switch für Standort-Modus
+                      SwitchListTile.adaptive(
+                        title: Text("Automatische Standorterkennung"),
+                        subtitle: Text(_useAutomaticLocation
+                            ? "Standort automatisch erkennen"
+                            : "Standort manuell auswählen"),
+                        value: _useAutomaticLocation,
+                        activeColor: logoColor,
+                        contentPadding: EdgeInsets.zero,
                         onChanged: (value) {
                           setState(() {
-                            _selectedCountry = value;
-                            _selectedCity = null;
+                            _useAutomaticLocation = value;
                           });
                         },
-                        popupProps: const PopupProps.menu(
-                          showSearchBox: true,
-                        ),
-                        dropdownDecoratorProps: DropDownDecoratorProps(
-                          dropdownSearchDecoration: InputDecoration(
-                            labelText: loc.country,
-                            border: const OutlineInputBorder(),
-                            errorText:
-                                _currentStep == 2 && _selectedCountry == null
-                                    ? 'Bitte Land auswählen'
-                                    : null,
-                          ),
-                        ),
                       ),
+
                       const SizedBox(height: 16),
-                      // Stadt
-                      if (_selectedCountry != null)
+
+                      // Automatischer Standortmodus
+                      if (_useAutomaticLocation)
+                        Column(
+                          children: [
+                            // Button zur automatischen Erkennung
+                            _isDetectingLocation
+                                ? const Center(
+                                    child: CircularProgressIndicator())
+                                : ElevatedButton.icon(
+                                    onPressed: _detectLocation,
+                                    icon: const Icon(Icons.my_location),
+                                    label: const Text("Standort ermitteln"),
+                                    style: ElevatedButton.styleFrom(
+                                      minimumSize:
+                                          const Size(double.infinity, 48),
+                                      backgroundColor: logoColor,
+                                    ),
+                                  ),
+
+                            // Anzeige des erkannten Standorts
+                            if (_selectedCity != null &&
+                                _selectedCountry != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 16.0),
+                                child: Card(
+                                  elevation: 1,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12.0),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.check_circle,
+                                            color: Colors.green),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                "Erkannter Standort:",
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall,
+                                              ),
+                                              Text(
+                                                "$_selectedCity, $_selectedCountry",
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleMedium,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+
+                      // Manueller Standortmodus
+                      if (!_useAutomaticLocation)
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Text(loc.city),
-                                const SizedBox(width: 8),
-                                Text(
-                                  "* (Pflichtfeld)",
-                                  style: TextStyle(
-                                      color: Colors.red, fontSize: 12),
-                                ),
-                              ],
+                            // Land auswählen
+                            Text(
+                              "Land",
+                              style: Theme.of(context).textTheme.titleMedium,
                             ),
                             const SizedBox(height: 8),
                             DropdownSearch<String>(
-                              items: _countryCityData[_selectedCountry!] ?? [],
-                              selectedItem: _selectedCity,
+                              items: _countryCityData.keys.toList()..sort(),
+                              selectedItem: _selectedCountry,
                               onChanged: (value) {
                                 setState(() {
-                                  _selectedCity = value;
+                                  _selectedCountry = value;
+                                  _selectedCity = null;
                                 });
                               },
                               popupProps: const PopupProps.menu(
@@ -545,44 +521,55 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                               ),
                               dropdownDecoratorProps: DropDownDecoratorProps(
                                 dropdownSearchDecoration: InputDecoration(
-                                  labelText: loc.city,
+                                  hintText: "Land auswählen",
                                   border: const OutlineInputBorder(),
-                                  errorText:
-                                      _currentStep == 2 && _selectedCity == null
-                                          ? 'Bitte Stadt auswählen'
-                                          : null,
                                 ),
                               ),
                             ),
-                          ],
-                        ),
-                      if (_selectedCountry == null)
-                        Text(
-                          "Bitte wählen Sie erst ein Land aus",
-                          style: TextStyle(color: Colors.orange),
-                        ),
-                      const SizedBox(height: 16),
-                      // Hinweis
-                      if (_currentStep == 2 &&
-                          (_selectedCountry == null || _selectedCity == null))
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.yellow[100],
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.info_outline, color: Colors.orange),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  "Bitte wählen Sie sowohl ein Land als auch eine Stadt aus, um fortzufahren.",
-                                  style: TextStyle(color: Colors.orange[800]),
-                                ),
+
+                            const SizedBox(height: 16),
+
+                            // Stadt auswählen
+                            if (_selectedCountry != null)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Stadt",
+                                    style:
+                                        Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  DropdownSearch<String>(
+                                    items:
+                                        _countryCityData[_selectedCountry!] ??
+                                            [],
+                                    selectedItem: _selectedCity,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedCity = value;
+                                      });
+                                    },
+                                    popupProps: const PopupProps.menu(
+                                      showSearchBox: true,
+                                    ),
+                                    dropdownDecoratorProps:
+                                        DropDownDecoratorProps(
+                                      dropdownSearchDecoration: InputDecoration(
+                                        hintText: "Stadt auswählen",
+                                        border: const OutlineInputBorder(),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+
+                            if (_selectedCountry == null)
+                              Text(
+                                "Bitte wählen Sie erst ein Land aus",
+                                style: TextStyle(color: Colors.orange),
+                              ),
+                          ],
                         ),
                     ],
                   ),
@@ -636,11 +623,12 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
 
   Widget _buildMainContent(AppLocalizations loc) {
     return SafeArea(
-      child: _isIos
-          ? CupertinoScrollbar(
-              child:
-                  SingleChildScrollView(child: _buildAdaptiveStepper(context)))
-          : SingleChildScrollView(child: _buildAdaptiveStepper(context)),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: _buildAdaptiveStepper(context),
+        ),
+      ),
     );
   }
 }

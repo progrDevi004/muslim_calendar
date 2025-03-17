@@ -465,7 +465,7 @@ class CalendarSyncService extends ChangeNotifier {
 
   /// Gemeinsame Export-Funktion: Überträgt Termine aus der lokalen Datenbank zum Provider (Google).
   Future<void> exportAppointments() async {
-    // debugPrint("🔄 Exportiere Termine zu Google Calendar");
+    debugPrint("🔄 Exportiere Termine zu Google Calendar");
     await calendarProvider.autoSignIn();
 
     // Lade ausgewählten Hauptkalender für den Export (standardmäßig 'primary')
@@ -475,14 +475,24 @@ class CalendarSyncService extends ChangeNotifier {
     final exportCalendarId =
         selectedCalendarIds.isNotEmpty ? selectedCalendarIds.first : 'primary';
 
-    List<AppointmentModel> appointments =
+    // Alle Termine laden
+    List<AppointmentModel> allAppointments =
         await appointmentRepository.getAllAppointments();
-    // debugPrint("📊 ${appointments.length} Termine zum Export gefunden");
-    // debugPrint("📅 Export in Kalender: $exportCalendarId");
+
+    // Filtere Termine, die bereits von Google importiert wurden
+    List<AppointmentModel> appointments = allAppointments
+        .where((appointment) =>
+            appointment.externalIdGoogle == null ||
+            appointment.externalIdGoogle!.isEmpty)
+        .toList();
+
+    debugPrint("📊 ${allAppointments.length} Termine insgesamt gefunden");
+    debugPrint(
+        "📊 ${appointments.length} Termine zum Export (ohne von Google importierte)");
+    debugPrint("📅 Export in Kalender: $exportCalendarId");
 
     for (var appointment in appointments) {
       if (appointment.isRelatedToPrayerTimes) {
-        //TODO Aziz
         // Für prayer-related Termine: Berechnung der wiederkehrenden Tage mit RecurrenceService.
         DateTime startRange = DateTime.now();
         DateTime endRange =
@@ -490,8 +500,8 @@ class CalendarSyncService extends ChangeNotifier {
         List<DateTime> recurrenceDates = recurrenceService.getRecurrenceDates(
             appointment, startRange, endRange);
 
-        // debugPrint(
-        //     "🕌 Prayer-related Termin: ${appointment.subject} mit ${recurrenceDates.length} Terminen");
+        debugPrint(
+            "🕌 Prayer-related Termin: ${appointment.subject} mit ${recurrenceDates.length} Terminen");
 
         for (var date in recurrenceDates) {
           DateTime? calculatedStart =
@@ -635,6 +645,13 @@ class CalendarSyncService extends ChangeNotifier {
       }
 
       debugPrint("Export zu Google Calendar abgeschlossen");
+
+      // 3. Lokal gelöschte Termine auch in Google löschen
+      if (googleCalendarSyncService != null) {
+        debugPrint("Bereinige lokal gelöschte Termine in Google Calendar...");
+        await googleCalendarSyncService!.deleteMissingLocalAppointments();
+        debugPrint("Bereinigung abgeschlossen");
+      }
     } catch (e) {
       debugPrint("Fehler bei der Synchronisierung: $e");
     }
@@ -684,6 +701,13 @@ class CalendarSyncService extends ChangeNotifier {
       } else {
         // Standard-Export-Methode verwenden
         await exportAppointments();
+      }
+
+      // Lokal gelöschte Termine auch in Google löschen
+      if (googleCalendarSyncService != null) {
+        debugPrint("Bereinige lokal gelöschte Termine in Google Calendar...");
+        await googleCalendarSyncService!.deleteMissingLocalAppointments();
+        debugPrint("Bereinigung abgeschlossen");
       }
 
       debugPrint("Export zu Google Calendar abgeschlossen");
