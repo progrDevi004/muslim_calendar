@@ -2459,47 +2459,41 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   // NEU: Hilfsmethode zur Google Kalender Synchronisierung
   Future<void> _syncWithGoogle(AppointmentModel appointment) async {
     try {
-      // PrayerTimeService für die Berechnung der Gebetszeiten
-      final prayerTimeService = PrayerTimeService(PrayerTimeRepository());
-
-      // Den GoogleCalendarService mit PrayerTimeService initialisieren
-      final googleService =
-          GoogleCalendarService.withPrayerTimeService(prayerTimeService);
+      // CalendarSyncService verwenden
       final loc = Provider.of<AppLocalizations>(context, listen: false);
 
-      // Lokalisierung setzen
-      googleService.setLocalizations(loc);
-
-      // Prüfen, ob Benutzer angemeldet ist
-      if (!googleService.isSignedIn) {
-        bool success = await googleService.signIn();
-        if (!success) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Bitte zuerst bei Google anmelden')),
-            );
-          }
-          return;
-        }
+      // Fortschrittsanzeige anzeigen
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Starte Synchronisierung mit Google...')),
+        );
       }
 
-      // Termin synchronisieren
-      String? googleEventId =
-          await googleService.syncAppointmentWithGoogleCalendar(appointment);
+      debugPrint(
+          "🔄 Verbesserte Google-Synchronisierung mit CalendarSyncService");
+
+      // SyncWithGoogleCalendar-Flag aktivieren, falls noch nicht geschehen
+      if (!appointment.syncWithGoogleCalendar) {
+        debugPrint("Aktiviere syncWithGoogleCalendar Flag");
+        appointment = appointment.copyWith(syncWithGoogleCalendar: true);
+        await _appointmentRepo.updateAppointment(appointment);
+        debugPrint("Flag in Datenbank aktualisiert");
+      }
+
+      // 1. Alle Wiederholungsregeln korrigieren
+      await _calendarSyncService.fixInvalidRecurrenceRules();
+
+      // 2. Sync-Flag für diesen Termin aktivieren (damit er sicher exportiert wird)
+      await _appointmentRepo.setGoogleSyncStatus(appointment.id!, true);
+
+      // 3. Export durchführen - nutzt optimierten GoogleCalendarSyncService oder Fallback
+      await _calendarSyncService.exportToGoogleCalendarOnly();
 
       // Feedback anzeigen
       if (mounted) {
-        if (googleEventId != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Mit Google Kalender synchronisiert')),
-          );
-        } else if (googleService.lastError != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(
-                    'Synchronisierungsfehler: ${googleService.lastError}')),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Mit Google Kalender synchronisiert')),
+        );
       }
     } catch (e) {
       if (mounted) {

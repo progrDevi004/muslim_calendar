@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
 import 'package:muslim_calendar/data/services/notification_service.dart';
 import 'package:muslim_calendar/data/services/google_calendar_service.dart';
+import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
@@ -208,27 +209,10 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         );
       }
 
-      // Den GoogleCalendarService mit PrayerTimeService initialisieren
-      final googleService =
-          GoogleCalendarService.withPrayerTimeService(_prayerTimeService);
-      googleService.setLocalizations(loc);
-      debugPrint("GoogleCalendarService mit PrayerTimeService initialisiert");
-
-      // Prüfen, ob Benutzer angemeldet ist
-      debugPrint("Prüfe Google-Anmeldestatus: ${googleService.isSignedIn}");
-      if (!googleService.isSignedIn) {
-        debugPrint("Benutzer nicht angemeldet, starte Sign-In Prozess");
-        bool success = await googleService.signIn();
-        debugPrint("Sign-In Ergebnis: $success");
-        if (!success) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Bitte zuerst bei Google anmelden')),
-            );
-          }
-          return;
-        }
-      }
+      // CalendarSyncService aus dem Provider holen
+      final calendarSyncService =
+          Provider.of<CalendarSyncService>(context, listen: false);
+      debugPrint("CalendarSyncService aus Provider geladen");
 
       // SyncWithGoogleCalendar-Flag aktivieren, falls noch nicht geschehen
       AppointmentModel updatedAppointment = _appointment!;
@@ -242,49 +226,46 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         debugPrint("Flag in Datenbank aktualisiert");
       }
 
-      // Termin synchronisieren
-      debugPrint("Starte Synchronisierung mit Google Calendar");
-      final externalId = await googleService
-          .syncAppointmentWithGoogleCalendar(updatedAppointment);
-      debugPrint("Synchronisierung abgeschlossen, externe ID: $externalId");
+      // Termin einzeln synchronisieren
+      debugPrint(
+          "Starte verbesserte Synchronisierung mit verbesserten exportToGoogleCalendarOnly");
 
-      if (externalId != null) {
-        // Erfolgreich synchronisiert, ID in der Datenbank aktualisieren
-        debugPrint("Aktualisiere Termin mit externer ID");
-        final finalAppointment = updatedAppointment.copyWith(
-          externalIdGoogle: externalId,
-          lastSyncedAt: DateTime.now(),
-        );
-        await _appointmentRepo.updateAppointment(finalAppointment);
-        debugPrint("Termin in Datenbank aktualisiert");
+      // 1. Alle Wiederholungsregeln korrigieren
+      await calendarSyncService.fixInvalidRecurrenceRules();
+      debugPrint("✅ Wiederholungsregeln korrigiert");
 
-        // Aktualisiere die Ansicht
-        _loadAppointment();
-        debugPrint("UI aktualisiert");
+      // 2. Sync-Flag für alle Termine aktivieren (damit dieser einzelne Termin sicher exportiert wird)
+      await _appointmentRepo.setGoogleSyncStatus(updatedAppointment.id!, true);
+      debugPrint(
+          "✅ Sync-Flag für Termin ID ${updatedAppointment.id} aktiviert");
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content:
-                    Text('Erfolgreich mit Google Kalender synchronisiert')),
-          );
-        }
-      } else if (googleService.lastError != null) {
-        // Fehler bei der Synchronisierung
-        debugPrint("Synchronisierungsfehler: ${googleService.lastError}");
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(
-                    'Synchronisierungsfehler: ${googleService.lastError}')),
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('❌ Fehler bei der Google-Synchronisierung: $e');
+      // 3. Export durchführen - nutzt optimierten GoogleCalendarSyncService oder Fallback
+      debugPrint("🔄 Starte Export mit exportToGoogleCalendarOnly()");
+      await calendarSyncService.exportToGoogleCalendarOnly();
+      debugPrint("✅ Export abgeschlossen");
+
+      // Laden des aktualisierten Termins
+      await _loadAppointment();
+      debugPrint("✅ Termin neu geladen");
+
+      // Erfolgsanzeige
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google Sync Fehler: $e')),
+          SnackBar(
+            content: Text('Mit Google Kalender synchronisiert'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("❌ Fehler bei der Google-Synchronisierung: $e");
+      // Fehlermeldung anzeigen
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Fehler bei der Synchronisierung: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
