@@ -891,174 +891,132 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildGoogleCalendarSection(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
     final googleService = Provider.of<GoogleCalendarService>(context);
-    final calendarSyncService = _calendarSyncService;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final theme = Theme.of(context);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
-          width: 1,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Padding(
+          padding:
+              const EdgeInsets.only(left: 16, right: 16, bottom: 8, top: 16),
+          child: Text(
+            'Google Calendar',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
+
+        // Google account status
+        FutureBuilder<bool>(
+          future: _checkGoogleCalendarState(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16.0),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            final isConnected = snapshot.data ?? false;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.calendar_month,
-                  color: isDarkMode ? Colors.tealAccent.shade400 : Colors.teal,
-                  size: 28,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Google Calendar',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : Colors.black87,
+                // Connection status
+                ListTile(
+                  leading: Icon(
+                    isConnected
+                        ? Icons.check_circle
+                        : Icons.account_circle_outlined,
+                    color: isConnected
+                        ? (isDarkMode
+                            ? Colors.greenAccent
+                            : Colors.green.shade700)
+                        : null,
                   ),
+                  title: Text(
+                    isConnected
+                        ? loc.googleCalendarConnected
+                        : loc.googleCalendarDisconnected,
+                    style: TextStyle(
+                      color: isConnected
+                          ? (isDarkMode
+                              ? Colors.greenAccent
+                              : Colors.green.shade700)
+                          : null,
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
                 ),
-              ],
-            ),
-            const Divider(height: 24),
-            // State anzeigen
-            FutureBuilder<bool>(
-              future: _checkGoogleCalendarState(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: CircularProgressIndicator(),
-                    ),
-                  );
-                }
-                final isConnected = snapshot.data ?? false;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 10,
-                        horizontal: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isConnected
-                            ? (isDarkMode
-                                ? Colors.green.shade900.withOpacity(0.3)
-                                : Colors.green.shade100)
-                            : (isDarkMode
-                                ? Colors.grey.shade800
-                                : Colors.grey.shade200),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isConnected
-                                ? Icons.check_circle
-                                : Icons.cancel_outlined,
-                            color: isConnected
-                                ? (isDarkMode
-                                    ? Colors.greenAccent
-                                    : Colors.green.shade700)
-                                : (isDarkMode
-                                    ? Colors.grey.shade400
-                                    : Colors.grey.shade700),
-                            size: 24,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              isConnected
-                                  ? loc.googleCalendarConnected
-                                  : loc.googleCalendarDisconnected,
-                              style: TextStyle(
-                                color: isConnected
-                                    ? (isDarkMode
-                                        ? Colors.greenAccent
-                                        : Colors.green.shade700)
-                                    : (isDarkMode
-                                        ? Colors.grey.shade300
-                                        : Colors.grey.shade700),
-                                fontWeight: FontWeight.w500,
-                                fontSize: 15,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    if (isConnected) ...[
-                      // Kalenderliste verwalten
-                      _buildCalendarButton(
-                        context: context,
-                        icon: Icons.calendar_month,
-                        label: loc.selectWhichCalendarsToSync,
-                        onPressed: _showCalendarSelectionDialog,
-                        isDarkMode: isDarkMode,
-                        isPrimary: true,
-                      ),
-                      const SizedBox(height: 12),
-                      const SizedBox(height: 16),
-                      const Divider(
-                        height: 8,
-                        thickness: 0.5,
-                      ),
-                      const SizedBox(height: 16),
-                      // Verbindung trennen
-                      _buildCalendarButton(
-                        context: context,
-                        icon: Icons.logout,
-                        label: loc.disconnect,
-                        onPressed: () async {
-                          await googleService.signOut();
+
+                if (isConnected)
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+
+                // Manage calendars button
+                if (isConnected)
+                  ListTile(
+                    leading: const Icon(Icons.calendar_month_outlined),
+                    title: Text(loc.selectWhichCalendarsToSync),
+                    onTap: _showCalendarSelectionDialog,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16.0),
+                  ),
+
+                // Divider before disconnect button
+                if (isConnected)
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+
+                // Disconnect button
+                if (isConnected)
+                  ListTile(
+                    leading: const Icon(Icons.logout),
+                    title: Text(loc.disconnect),
+                    onTap: () async {
+                      await googleService.signOut();
+                      setState(() {});
+                    },
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16.0),
+                  ),
+
+                // Connect button
+                if (!isConnected)
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: TextButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: Text(loc.connectWithGoogleCalendar),
+                      onPressed: () async {
+                        try {
+                          await googleService.signIn();
                           setState(() {});
-                        },
-                        isDarkMode: isDarkMode,
-                        isPrimary: false,
-                        isDestructive: true,
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  '${loc.googleSignInError}: ${e.toString()}'),
+                            ),
+                          );
+                        }
+                      },
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
                       ),
-                    ] else ...[
-                      // Verbinden
-                      _buildCalendarButton(
-                        context: context,
-                        icon: Icons.login,
-                        label: loc.connectWithGoogleCalendar,
-                        onPressed: () async {
-                          try {
-                            await googleService.signIn();
-                            setState(() {});
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                    '${loc.googleSignInError}: ${e.toString()}'),
-                              ),
-                            );
-                          }
-                        },
-                        isDarkMode: isDarkMode,
-                        isPrimary: true,
-                      ),
-                    ],
-                  ],
-                );
-              },
-            ),
-          ],
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
-      ),
+        const Divider(height: 1),
+      ],
     );
   }
 
@@ -1067,216 +1025,70 @@ class _SettingsPageState extends State<SettingsPage> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final theme = Theme.of(context);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
-          width: 1,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_today,
-                  color: isDarkMode ? Colors.blueAccent.shade400 : Colors.blue,
-                  size: 28,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Outlook Calendar',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                vertical: 10,
-                horizontal: 16,
-              ),
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.cancel_outlined,
-                    color: isDarkMode
-                        ? Colors.grey.shade400
-                        : Colors.grey.shade700,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Not connected to Outlook Calendar',
-                      style: TextStyle(
-                        color: isDarkMode
-                            ? Colors.grey.shade300
-                            : Colors.grey.shade700,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 15,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            _buildCalendarButton(
-              context: context,
-              icon: Icons.login,
-              label: loc.connectWithOutlookCalendar,
-              onPressed: () async {
-                try {
-                  // Placeholder für Outlook-Verbindungsimplementierung
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Outlook Integration coming soon!')),
-                  );
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text('Connection error: ${e.toString()}')),
-                  );
-                }
-              },
-              isDarkMode: isDarkMode,
-              isPrimary: true,
-              useBlueColorScheme: true,
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  'Integration kommt in Kürze',
-                  style: TextStyle(
-                    fontStyle: FontStyle.italic,
-                    color: isDarkMode
-                        ? Colors.grey.shade400
-                        : Colors.grey.shade600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Hilfsmethode für konsistentes Button-Design
-  Widget _buildCalendarButton({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required Function() onPressed,
-    required bool isDarkMode,
-    required bool isPrimary,
-    bool isDestructive = false,
-    bool useBlueColorScheme = false,
-  }) {
-    Color getButtonColor() {
-      if (isDestructive) {
-        return isDarkMode ? Colors.red.shade900 : Colors.red.shade100;
-      }
-      if (isPrimary) {
-        if (useBlueColorScheme) {
-          return isDarkMode ? Colors.blue.shade800 : Colors.blue.shade100;
-        }
-        return isDarkMode ? Colors.teal.shade800 : Colors.teal.shade100;
-      }
-      return isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200;
-    }
-
-    Color getTextColor() {
-      if (isDestructive) {
-        return isDarkMode ? Colors.red.shade300 : Colors.red.shade900;
-      }
-      if (isPrimary) {
-        if (useBlueColorScheme) {
-          return isDarkMode ? Colors.blue.shade300 : Colors.blue.shade900;
-        }
-        return isDarkMode ? Colors.teal.shade300 : Colors.teal.shade900;
-      }
-      return isDarkMode ? Colors.grey.shade200 : Colors.grey.shade800;
-    }
-
-    Color getIconColor() {
-      if (isDestructive) {
-        return isDarkMode ? Colors.red.shade300 : Colors.red.shade700;
-      }
-      if (isPrimary) {
-        if (useBlueColorScheme) {
-          return isDarkMode ? Colors.blue.shade300 : Colors.blue.shade700;
-        }
-        return isDarkMode ? Colors.teal.shade300 : Colors.teal.shade700;
-      }
-      return isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700;
-    }
-
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: getButtonColor(),
-        foregroundColor: getTextColor(),
-        elevation: isPrimary ? 1 : 0,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: BorderSide(
-            color: isDestructive
-                ? (isDarkMode ? Colors.red.shade800 : Colors.red.shade300)
-                : (isPrimary
-                    ? (useBlueColorScheme
-                        ? (isDarkMode
-                            ? Colors.blue.shade700
-                            : Colors.blue.shade300)
-                        : (isDarkMode
-                            ? Colors.teal.shade700
-                            : Colors.teal.shade300))
-                    : (isDarkMode
-                        ? Colors.grey.shade700
-                        : Colors.grey.shade400)),
-            width: 1,
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 20,
-            color: getIconColor(),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isPrimary ? FontWeight.w600 : FontWeight.normal,
-                color: getTextColor(),
-              ),
-              overflow: TextOverflow.ellipsis,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Padding(
+          padding:
+              const EdgeInsets.only(left: 16, right: 16, bottom: 8, top: 16),
+          child: Text(
+            'Outlook Calendar',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ],
-      ),
+        ),
+
+        // Outlook account status
+        ListTile(
+          leading: const Icon(Icons.account_circle_outlined),
+          title: Text('Not connected to Outlook Calendar'),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
+        ),
+
+        // Connect button
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: TextButton.icon(
+            icon: const Icon(Icons.add),
+            label: Text(loc.connectWithOutlookCalendar),
+            onPressed: () async {
+              try {
+                // Placeholder für Outlook-Verbindungsimplementierung
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Outlook Integration coming soon!')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Connection error: ${e.toString()}')),
+                );
+              }
+            },
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+          ),
+        ),
+
+        // Coming soon text
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Text(
+            'Integration kommt in Kürze',
+            style: TextStyle(
+              fontStyle: FontStyle.italic,
+              color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+              fontSize: 12,
+            ),
+          ),
+        ),
+
+        const Divider(height: 1),
+      ],
     );
   }
 
