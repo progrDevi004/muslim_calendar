@@ -606,7 +606,7 @@ class HomePageState extends State<HomePage> {
     return DateFormat(pattern, languageCode).format(dt);
   }
 
-  void _showCategoryFilterDialog() {
+  void _showCategoryFilterDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (ctx) {
@@ -680,19 +680,263 @@ class HomePageState extends State<HomePage> {
     });
   }
 
+  /// Zeigt ein Popup-Menü mit Synchronisationsoptionen an
+  void _showSyncOptionsMenu(BuildContext context, RenderBox button) {
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(button.size.bottomRight(Offset.zero),
+            ancestor: overlay),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    final localizations = Provider.of<AppLocalizations>(context, listen: false);
+
+    showMenu(
+      context: context,
+      position: position,
+      items: [
+        PopupMenuItem(
+          child: ListTile(
+            leading: const Icon(Icons.calendar_today),
+            title: Text(localizations.syncGoogleCalendar ??
+                localizations.googleCalendar),
+            subtitle: Text(localizations.syncImportExport),
+            onTap: () {
+              Navigator.pop(context); // Menü schließen
+              _showGoogleSyncDialog(context);
+            },
+          ),
+        ),
+        PopupMenuItem(
+          enabled: false, // Deaktiviert, da noch nicht implementiert
+          child: ListTile(
+            leading: const Icon(Icons.calendar_month),
+            title: Text(localizations.syncOutlookCalendar ??
+                localizations.outlookCalendar),
+            subtitle: Text(localizations.comingSoon),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Zeigt einen Dialog mit Google Calendar Synchronisationsoptionen
+  void _showGoogleSyncDialog(BuildContext context) {
+    final localizations = Provider.of<AppLocalizations>(context, listen: false);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(localizations.googleCalendar),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.sync),
+              title: Text(localizations.fullSync),
+              subtitle: Text(localizations.importAndExport),
+              onTap: () {
+                Navigator.pop(context);
+                _performGoogleSync(context);
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.download),
+              title: Text(localizations.importOnly),
+              subtitle: Text(localizations.importFromGoogleCalendar),
+              onTap: () {
+                Navigator.pop(context);
+                _showImportOptionsDialog(context);
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.upload),
+              title: Text(localizations.exportOnly),
+              subtitle: Text(localizations.exportToGoogleCalendar),
+              onTap: () {
+                Navigator.pop(context);
+                _performGoogleExport(context);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(localizations.cancel),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Führt eine vollständige Synchronisation mit Google Calendar durch
+  void _performGoogleSync(BuildContext context) async {
+    try {
+      final scaffold = ScaffoldMessenger.of(context);
+      scaffold.showSnackBar(
+        SnackBar(
+            content: Text(Provider.of<AppLocalizations>(context, listen: false)
+                .syncingWithGoogleCalendar)),
+      );
+
+      // Vollständige Synchronisation durchführen
+      await _calendarSyncService.importAppointments(categoryOption: 0);
+      await _calendarSyncService.exportAppointments();
+
+      // Nach erfolgreicher Synchronisation Termine neu laden
+      await loadAllAppointments();
+
+      scaffold.showSnackBar(
+        SnackBar(
+            content: Text(Provider.of<AppLocalizations>(context, listen: false)
+                .syncCompleted)),
+      );
+    } catch (e) {
+      debugPrint('🔄 Sync-Fehler: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(Provider.of<AppLocalizations>(context, listen: false)
+                .syncSyncError(e.toString()))),
+      );
+    }
+  }
+
+  /// Zeigt einen Dialog für Import-Optionen an
+  void _showImportOptionsDialog(BuildContext context) {
+    final localizations = Provider.of<AppLocalizations>(context, listen: false);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(localizations.importOptions),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(localizations.howToHandleCategories),
+            ),
+            const Divider(),
+            ListTile(
+              title: Text(localizations.useExistingCategories),
+              subtitle: Text(localizations.searchForMatchingCategories),
+              onTap: () {
+                Navigator.pop(context);
+                _performGoogleImport(context, categoryOption: 0);
+              },
+            ),
+            const Divider(),
+            ListTile(
+              title: Text(localizations.createNewCategories),
+              subtitle: Text(localizations.forEachNewAppointment),
+              onTap: () {
+                Navigator.pop(context);
+                _performGoogleImport(context, categoryOption: 1);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(localizations.cancel),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Führt einen Import von Google Calendar durch
+  void _performGoogleImport(BuildContext context,
+      {required int categoryOption}) async {
+    try {
+      final scaffold = ScaffoldMessenger.of(context);
+      scaffold.showSnackBar(
+        SnackBar(
+            content: Text(Provider.of<AppLocalizations>(context, listen: false)
+                .importingFromGoogleCalendar)),
+      );
+
+      // Import durchführen
+      await _calendarSyncService.importAppointments(
+          categoryOption: categoryOption);
+
+      // Nach erfolgreichem Import Termine neu laden
+      await loadAllAppointments();
+
+      scaffold.showSnackBar(
+        SnackBar(
+            content: Text(Provider.of<AppLocalizations>(context, listen: false)
+                    .syncImportCompleted ??
+                Provider.of<AppLocalizations>(context, listen: false)
+                    .importCompleted)),
+      );
+    } catch (e) {
+      debugPrint('🔄 Import-Fehler: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(Provider.of<AppLocalizations>(context, listen: false)
+                .importError(e.toString()))),
+      );
+    }
+  }
+
+  /// Führt einen Export nach Google Calendar durch
+  void _performGoogleExport(BuildContext context) async {
+    try {
+      final scaffold = ScaffoldMessenger.of(context);
+      scaffold.showSnackBar(
+        SnackBar(
+            content: Text(Provider.of<AppLocalizations>(context, listen: false)
+                .exportingToGoogleCalendar)),
+      );
+
+      // Export durchführen
+      await _calendarSyncService.exportAppointments();
+
+      scaffold.showSnackBar(
+        SnackBar(
+            content: Text(Provider.of<AppLocalizations>(context, listen: false)
+                    .syncExportCompleted ??
+                Provider.of<AppLocalizations>(context, listen: false)
+                    .exportCompleted)),
+      );
+    } catch (e) {
+      debugPrint('🔄 Export-Fehler: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(Provider.of<AppLocalizations>(context, listen: false)
+                .exportError(e.toString()))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final loc = Provider.of<AppLocalizations>(context);
-    final languageCode = _mapAppLanguageToCode(loc.currentLanguage);
-    final bool showFab = (_selectedNavIndex >= 1);
+    final localizations = Provider.of<AppLocalizations>(context);
+    final MediaQueryData mediaQuery = MediaQuery.of(context);
+    final bool isLandscape = mediaQuery.orientation == Orientation.landscape;
 
     return Scaffold(
-      appBar: HomeAppBar(
-        onQiblaCompassPressed: _openQiblaCompass,
-        onSettingsPressed: _openSettings,
-        onCategoryFilterPressed: _showCategoryFilterDialog,
-        localizations: loc,
-      ),
+      appBar: _selectedNavIndex != 0
+          ? HomeAppBar(
+              onQiblaCompassPressed: () => _openQiblaCompass(),
+              onSettingsPressed: () => _openSettings(),
+              onCategoryFilterPressed: () => _showCategoryFilterDialog(context),
+              onSyncPressed: () {
+                final RenderBox button =
+                    context.findRenderObject() as RenderBox;
+                _showSyncOptionsMenu(context, button);
+              },
+              localizations: localizations,
+            )
+          : null,
       body: _selectedNavIndex == 0
           ? DashboardPage(
               key: const ValueKey('dashboard'),
@@ -709,7 +953,8 @@ class HomePageState extends State<HomePage> {
               showPrayerTimesInDayView: _showPrayerTimesInDayView,
               showPrayerTimesInWeekView: _showPrayerTimesInWeekView,
               showPrayerTimesInMonthView: _showPrayerTimesInMonthView,
-              languageCode: languageCode,
+              languageCode:
+                  _mapAppLanguageToCode(localizations.currentLanguage),
               onViewChanged: _handleViewChanged,
               onSelectedDateChanged: (date) {
                 setState(() {
@@ -718,18 +963,18 @@ class HomePageState extends State<HomePage> {
               },
               onAppointmentsChanged: loadAllAppointments,
             ),
-      floatingActionButton: showFab
+      floatingActionButton: _selectedNavIndex >= 1
           ? AddAppointmentFAB(
               selectedDate: _selectedDate,
               onAppointmentAdded: loadAllAppointments,
               logoColor: logoColor,
-              localizations: loc,
+              localizations: localizations,
             )
           : null,
       bottomNavigationBar: HomeNavigationBar(
         selectedIndex: _selectedNavIndex,
         onIndexSelected: _handleNavigationChange,
-        localizations: loc,
+        localizations: localizations,
       ),
     );
   }

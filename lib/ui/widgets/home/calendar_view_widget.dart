@@ -117,7 +117,7 @@ class CalendarViewWidget extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     appointment.subject,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors
                           .black87, // Sehr dunkles Grau für gute Lesbarkeit
                       fontSize: 12,

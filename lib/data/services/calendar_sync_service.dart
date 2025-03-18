@@ -499,9 +499,9 @@ class CalendarSyncService extends ChangeNotifier {
             appointment.externalIdGoogle!.isEmpty)
         .toList();
 
-    debugPrint("📊 ${allAppointments.length} Termine insgesamt gefunden");
-    debugPrint(
-        "📊 ${appointments.length} Termine zum Export (ohne von Google importierte)");
+    // debugPrint("📊 ${allAppointments.length} Termine insgesamt gefunden");
+    // debugPrint(
+    //     "📊 ${appointments.length} Termine zum Export (ohne von Google importierte)");
     debugPrint("📅 Export in Kalender: $exportCalendarId");
 
     for (var appointment in appointments) {
@@ -513,8 +513,8 @@ class CalendarSyncService extends ChangeNotifier {
         List<DateTime> recurrenceDates = recurrenceService.getRecurrenceDates(
             appointment, startRange, endRange);
 
-        debugPrint(
-            "🕌 Prayer-related Termin: ${appointment.subject} mit ${recurrenceDates.length} Terminen");
+        // debugPrint(
+        //     "🕌 Prayer-related Termin: ${appointment.subject} mit ${recurrenceDates.length} Terminen");
 
         for (var date in recurrenceDates) {
           DateTime? calculatedStart =
@@ -522,8 +522,8 @@ class CalendarSyncService extends ChangeNotifier {
           DateTime? calculatedEnd =
               await prayerTimeService.getCalculatedEndTime(appointment, date);
           if (calculatedStart == null || calculatedEnd == null) {
-            debugPrint(
-                "⚠️ Konnte Start/End-Zeit nicht berechnen für Datum: $date");
+            // debugPrint(
+            //     "⚠️ Konnte Start/End-Zeit nicht berechnen für Datum: $date");
             continue;
           }
 
@@ -533,8 +533,8 @@ class CalendarSyncService extends ChangeNotifier {
               "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
           final uniqueId = "prayer_${appointment.id}_$formattedDate";
 
-          debugPrint(
-              "📅 Exportiere Einzeltermin für Datum $formattedDate: ${calculatedStart.toIso8601String()}");
+          // debugPrint(
+          //     "📅 Exportiere Einzeltermin für Datum $formattedDate: ${calculatedStart.toIso8601String()}");
 
           await calendarProvider.syncAppointmentEvent(
             appointment: appointment.copyWith(
@@ -561,13 +561,13 @@ class CalendarSyncService extends ChangeNotifier {
       } else {
         // Für normale Termine ohne Gebetszeitenbezug
         if (appointment.startTime == null || appointment.endTime == null) {
-          debugPrint(
-              "⚠️ Termin ohne Start/End-Zeit übersprungen: ${appointment.subject}");
+          // debugPrint(
+          //     "⚠️ Termin ohne Start/End-Zeit übersprungen: ${appointment.subject}");
           continue;
         }
 
-        debugPrint(
-            "📆 Exportiere Termin: ${appointment.subject} (${appointment.startTime} - ${appointment.endTime})");
+        // debugPrint(
+        //     "📆 Exportiere Termin: ${appointment.subject} (${appointment.startTime} - ${appointment.endTime})");
         Event event = await calendarProvider.syncAppointmentEvent(
           appointment: appointment,
           startTime: appointment.startTime!,
@@ -577,7 +577,7 @@ class CalendarSyncService extends ChangeNotifier {
         );
 
         if (appointment.externalIdGoogle == null) {
-          debugPrint("🆕 Neuer Termin in Google erstellt: ${event.id}");
+          // debugPrint("🆕 Neuer Termin in Google erstellt: ${event.id}");
           // Hier muss ein copyWith verwendet werden, da wir nur ein Feld ändern wollen
           AppointmentModel updatedAppointment =
               appointment.copyWith(externalIdGoogle: event.id);
@@ -611,8 +611,8 @@ class CalendarSyncService extends ChangeNotifier {
 
           await appointmentRepository.updateAppointment(updatedAppointment);
 
-          debugPrint(
-              "🛠️ Wiederholungsregel korrigiert für Termin ${appointment.id} (${appointment.subject}): $correctedRule");
+          // debugPrint(
+          //     "🛠️ Wiederholungsregel korrigiert für Termin ${appointment.id} (${appointment.subject}): $correctedRule");
         }
       }
     }

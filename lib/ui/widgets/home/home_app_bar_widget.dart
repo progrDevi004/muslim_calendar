@@ -5,6 +5,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onQiblaCompassPressed;
   final VoidCallback onSettingsPressed;
   final VoidCallback onCategoryFilterPressed;
+  final VoidCallback onSyncPressed;
   final AppLocalizations localizations;
 
   const HomeAppBar({
@@ -12,6 +13,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.onQiblaCompassPressed,
     required this.onSettingsPressed,
     required this.onCategoryFilterPressed,
+    required this.onSyncPressed,
     required this.localizations,
   }) : super(key: key);
 
@@ -24,6 +26,11 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           icon: const Icon(Icons.explore),
           onPressed: onQiblaCompassPressed,
           tooltip: 'Qibla Compass',
+        ),
+        IconButton(
+          icon: const Icon(Icons.sync),
+          onPressed: onSyncPressed,
+          tooltip: 'Synchronisation',
         ),
         IconButton(
           icon: const Icon(Icons.settings),
