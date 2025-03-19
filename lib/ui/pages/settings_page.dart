@@ -965,6 +965,17 @@ class _SettingsPageState extends State<SettingsPage> {
                         const EdgeInsets.symmetric(horizontal: 16.0),
                   ),
 
+                // Import options button
+                if (isConnected)
+                  ListTile(
+                    leading: const Icon(Icons.download_outlined),
+                    title: Text(loc.importOptions),
+                    subtitle: Text(loc.importFromGoogleCalendar),
+                    onTap: () => _showImportOptionsDialog(context),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 16.0),
+                  ),
+
                 // Divider before disconnect button
                 if (isConnected)
                   const Divider(height: 1, indent: 16, endIndent: 16),
@@ -1291,6 +1302,96 @@ class _SettingsPageState extends State<SettingsPage> {
       return _locationService != null;
     } catch (e) {
       return false;
+    }
+  }
+
+  /// Zeigt einen Dialog für Import-Optionen an
+  void _showImportOptionsDialog(BuildContext context) {
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(loc.importOptions),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(loc.howToHandleCategories),
+            ),
+            const Divider(),
+            ListTile(
+              title: Text("Kategorien von Google Kalender übernehmen"),
+              subtitle: Text(loc.searchForMatchingCategories),
+              onTap: () {
+                Navigator.pop(context);
+                _performGoogleImport(context, categoryOption: 0);
+              },
+            ),
+            const Divider(),
+            ListTile(
+              title: Text("In die Standardkategorie einfügen"),
+              subtitle: Text(
+                  "Alle importierten Termine werden der Standardkategorie zugewiesen"),
+              onTap: () {
+                Navigator.pop(context);
+                _performGoogleImport(context, categoryOption: 2);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(loc.cancel),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Führt einen Import von Google Calendar durch
+  void _performGoogleImport(BuildContext context,
+      {required int categoryOption}) async {
+    // Referenzen speichern, bevor asynchrone Operationen beginnen
+    final scaffold = ScaffoldMessenger.of(context);
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
+    final currentMounted = mounted;
+
+    try {
+      if (currentMounted) {
+        scaffold.showSnackBar(
+          SnackBar(content: Text(loc.importingFromGoogleCalendar)),
+        );
+      }
+
+      // Import durchführen
+      await _calendarSyncService.importAppointments(
+          categoryOption: categoryOption);
+
+      if (currentMounted) {
+        scaffold.clearSnackBars(); // Bestehende Snackbars löschen
+        scaffold.showSnackBar(
+          SnackBar(
+            content: Text(loc.syncImportCompleted ?? loc.importCompleted),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('🔄 Import-Fehler: $e');
+
+      if (currentMounted) {
+        scaffold.clearSnackBars(); // Bestehende Snackbars löschen
+        scaffold.showSnackBar(
+          SnackBar(
+            content: Text(loc.importError(e.toString())),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 }
