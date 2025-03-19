@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:googleapis/calendar/v3.dart' as gCal;
+import 'package:googleapis/calendar/v3.dart' as calendar;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
@@ -10,6 +12,8 @@ import 'package:muslim_calendar/ui/widgets/prayer_time_appointment_adapter.dart'
 import 'package:muslim_calendar/data/repositories/google_event_mapping_repository.dart';
 import 'package:muslim_calendar/data/services/google_calendar_service.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:muslim_calendar/data/repositories/category_repository.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 // Wir verwenden die GoogleHttpClient-Klasse direkt aus GoogleCalendarService
 
@@ -67,6 +71,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
   final PrayerTimeService _prayerTimeService;
   final GoogleEventMappingRepository _mappingRepo;
   final PrayerTimeAppointmentAdapter _appointmentAdapter;
+  final CategoryRepository _categoryRepo;
 
   // Google API Client
   gCal.CalendarApi? _calendarApi;
@@ -82,10 +87,12 @@ class GoogleCalendarSyncService with ChangeNotifier {
     required PrayerTimeService prayerTimeService,
     required GoogleEventMappingRepository mappingRepo,
     required PrayerTimeAppointmentAdapter appointmentAdapter,
+    required CategoryRepository categoryRepo,
   })  : _appointmentRepo = appointmentRepo,
         _prayerTimeService = prayerTimeService,
         _mappingRepo = mappingRepo,
-        _appointmentAdapter = appointmentAdapter;
+        _appointmentAdapter = appointmentAdapter,
+        _categoryRepo = categoryRepo;
 
   // Initialisiert die Google API mit einem AuthClient
   Future<bool> initialize(http.Client client) async {
@@ -301,128 +308,146 @@ class GoogleCalendarSyncService with ChangeNotifier {
         return false;
       }
 
-      DateTime startTime;
-      DateTime endTime;
+      // Implementierung der Kategorie-zu-Kalender-Zuordnung
+      String targetCalendarId = _selectedCalendarId!;
 
-      if (appointment.isRelatedToPrayerTimes) {
-        // Berechne die genauen Zeiten basierend auf Gebetszeiten
-        final calculatedStart = await _prayerTimeService.getCalculatedStartTime(
-            appointment, appointment.startTime!);
-        final calculatedEnd = await _prayerTimeService.getCalculatedEndTime(
-            appointment, appointment.startTime!);
-
-        if (calculatedStart == null || calculatedEnd == null) {
-          debugPrint(
-              'Warnung: Gebetszeit-Berechnung fehlgeschlagen für Termin: ${appointment.subject}');
-          return false;
-        }
-
-        startTime = calculatedStart;
-        endTime = calculatedEnd;
-
-        // Debug-Ausgabe für berechnete Zeiten
-        debugPrint('Gebetszeit-abhängiger Termin "${appointment.subject}":');
-        debugPrint('- Original startTime: ${appointment.startTime}');
+      // Wenn die Kategorie bekannt ist, versuche einen entsprechenden Kalender zu finden
+      if (appointment.categoryId != null && appointment.categoryId! > 0) {
         debugPrint(
-            '- Berechnet startTime: $startTime (${startTime.timeZoneName})');
-        debugPrint('- Berechnet endTime: $endTime (${endTime.timeZoneName})');
-        debugPrint('- Gebetszeit: ${appointment.prayerTime}');
-        debugPrint('- Relation: ${appointment.timeRelation}');
-        debugPrint(
-            '- Minuten vorher/nachher: ${appointment.minutesBeforeAfter}');
-      } else {
-        // Normale Termine ohne Gebetszeitabhängigkeit
-        if (appointment.startTime == null || appointment.endTime == null) {
-          debugPrint(
-              'Fehler: Start- oder Endzeit fehlt für ${appointment.subject}');
-          return false;
+            "🔍 Suche nach Zielkalender für Kategorie ID: ${appointment.categoryId}");
+
+        try {
+          // Lade verfügbare Kalender
+          final calendarList = await _calendarApi!.calendarList.list();
+          final availableCalendars = calendarList.items ?? [];
+
+          // Lade die Kategorie
+          final category =
+              await _categoryRepo.getCategory(appointment.categoryId!);
+
+          if (category != null) {
+            debugPrint(
+                "✓ Kategorie gefunden: ${category.name} (ID: ${category.id})");
+
+            // Suche nach einem Kalender mit demselben Namen (case-insensitive)
+            final lowerCategoryName = category.name.toLowerCase().trim();
+
+            // Erstelle eine Map für einfachere Suche
+            final calendarMap = {
+              for (var calendar in availableCalendars)
+                calendar.summary?.toLowerCase().trim() ?? '': calendar.id ?? ''
+            };
+
+            // 1. Direkte Übereinstimmung des Namens
+            if (calendarMap.containsKey(lowerCategoryName)) {
+              targetCalendarId = calendarMap[lowerCategoryName]!;
+              debugPrint(
+                  "✅ Passender Kalender gefunden: $targetCalendarId für Kategorie: ${category.name}");
+            } else {
+              // 2. Suche nach partiellen Übereinstimmungen
+              final partialMatches = availableCalendars.where((calendar) {
+                final calendarName =
+                    calendar.summary?.toLowerCase().trim() ?? '';
+                return calendarName.contains(lowerCategoryName) ||
+                    lowerCategoryName.contains(calendarName);
+              }).toList();
+
+              if (partialMatches.isNotEmpty) {
+                targetCalendarId =
+                    partialMatches.first.id ?? _selectedCalendarId!;
+                debugPrint(
+                    "✅ Ähnlicher Kalender gefunden: $targetCalendarId für Kategorie: ${category.name}");
+              } else {
+                debugPrint(
+                    "ℹ️ Kein passender Kalender für Kategorie '${category.name}' gefunden, verwende Standard-Kalender");
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint("⚠️ Fehler bei der Kalendersuche: $e");
+          // Bei Fehlern verwenden wir den Standard-Kalender
         }
-        startTime = appointment.startTime!;
-        endTime = appointment.endTime!;
       }
 
-      // Prüfen, ob der Termin bereits synchronisiert wurde
-      final existingMapping = await _mappingRepo.getMappingForDate(
-        appointment.id!,
-        startTime,
-      );
+      debugPrint(
+          "🎯 Verwende Kalender: $targetCalendarId für Termin: ${appointment.subject}");
 
-      // Google Event erstellen oder aktualisieren
-      final event = await _createGoogleEvent(
+      // Überprüfe, ob der Termin bereits in Google existiert
+      final existingMapping = await _mappingRepo.getMappingForLocalAppointment(
+          appointment.id!, 'google');
+
+      if (existingMapping != null && existingMapping.externalId.isNotEmpty) {
+        // Termin aktualisieren
+        final existingEvent = await _calendarApi!.events
+            .get(targetCalendarId, existingMapping.externalId);
+
+        if (existingEvent != null) {
+          // Konvertiere Appointment zu Google Event und aktualisiere
+          final updatedEvent = await _createGoogleEvent(
+            appointment.subject,
+            appointment.startTime!,
+            appointment.endTime!,
+            notes: appointment.notes,
+            location: appointment.location,
+            isAllDay: appointment.isAllDay,
+            reminderMinutes: appointment.reminderMinutesBefore,
+            recurrenceRule: appointment.recurrenceRule,
+            appointmentId: appointment.id,
+          );
+          await _calendarApi!.events.update(
+              updatedEvent, targetCalendarId, existingMapping.externalId);
+
+          // Aktualisiere Zeitstempel in der lokalen Datenbank
+          await _appointmentRepo.updateSyncTimestamp(
+              appointment.id!, DateTime.now().toIso8601String());
+
+          debugPrint(
+              '✅ Termin ${appointment.id} in Google aktualisiert (Google-ID: ${existingMapping.externalId})');
+          return true;
+        }
+      }
+
+      // Neuen Termin erstellen
+      final newEvent = await _createGoogleEvent(
         appointment.subject,
-        startTime,
-        endTime,
+        appointment.startTime!,
+        appointment.endTime!,
         notes: appointment.notes,
         location: appointment.location,
         isAllDay: appointment.isAllDay,
         reminderMinutes: appointment.reminderMinutesBefore,
+        recurrenceRule: appointment.recurrenceRule,
         appointmentId: appointment.id,
-        isRecurringInstance: false,
       );
+      final createdEvent =
+          await _calendarApi!.events.insert(newEvent, targetCalendarId);
 
-      try {
-        if (existingMapping != null) {
-          // Event aktualisieren
-          debugPrint('Aktualisiere Google Event für "${appointment.subject}"');
-          await _calendarApi!.events.update(
-            event,
-            _selectedCalendarId!,
-            existingMapping.googleEventId,
-          );
+      if (createdEvent.id != null) {
+        // Speichere Mapping zwischen Google Event ID und lokalem Appointment
+        await _mappingRepo.addMapping(
+          localId: appointment.id!,
+          externalId: createdEvent.id!,
+          source: 'google',
+          sourceCalendarId: targetCalendarId,
+        );
 
-          // Mapping aktualisieren
-          await _mappingRepo.saveMapping(
-            GoogleEventMapping(
-              id: existingMapping.id,
-              localAppointmentId: appointment.id!,
-              originalDate: startTime.toIso8601String().split('T')[0],
-              googleEventId: existingMapping.googleEventId,
-              lastSyncedAt: DateTime.now(),
-            ),
-          );
-        } else {
-          // Neues Event erstellen
-          debugPrint(
-              'Erstelle neues Google Event für "${appointment.subject}"');
-          debugPrint('- Event-Zusammenfassung: ${event.summary}');
-          debugPrint(
-              '- Event-Startzeit: ${event.start?.dateTime} (Zeitzone: ${event.start?.timeZone})');
-          debugPrint(
-              '- Event-Endzeit: ${event.end?.dateTime} (Zeitzone: ${event.end?.timeZone})');
+        // Aktualisiere externalIdGoogle und lastSyncedAt in der Datenbank
+        await _appointmentRepo.updateExternalId(
+          appointment.id!,
+          createdEvent.id!,
+          'google',
+          DateTime.now().toIso8601String(),
+        );
 
-          final createdEvent = await _calendarApi!.events.insert(
-            event,
-            _selectedCalendarId!,
-          );
-
-          debugPrint(
-              'Google Event erfolgreich erstellt, ID: ${createdEvent.id}');
-
-          // Neues Mapping speichern
-          await _mappingRepo.saveMapping(
-            GoogleEventMapping(
-              localAppointmentId: appointment.id!,
-              originalDate: startTime.toIso8601String().split('T')[0],
-              googleEventId: createdEvent.id!,
-              lastSyncedAt: DateTime.now(),
-            ),
-          );
-        }
-      } catch (e) {
-        // Spezifischere Fehlerbehandlung für API-Fehler
-        if (e.toString().contains('401')) {
-          debugPrint('Authentifizierungsfehler (401) beim Synchronisieren: $e');
-          throw Exception(
-              'Authentifizierungsfehler: Bitte erneut anmelden. Details: $e');
-        } else {
-          debugPrint('Google API-Fehler beim Synchronisieren: $e');
-          rethrow; // Fehler weitergeben für allgemeine Fehlerbehandlung
-        }
+        debugPrint(
+            '✅ Neuer Termin ${appointment.id} in Google erstellt (Google-ID: ${createdEvent.id})');
+        return true;
       }
 
-      return true;
+      return false;
     } catch (e) {
-      debugPrint('Fehler beim Synchronisieren des Einzeltermins: $e');
+      debugPrint(
+          'Fehler beim Synchronisieren des Termins ${appointment.id}: $e');
       return false;
     }
   }
@@ -982,5 +1007,374 @@ class GoogleCalendarSyncService with ChangeNotifier {
       debugPrint('Fehler bei der Bereinigung gelöschter Termine: $e');
       return false;
     }
+  }
+
+  /// Exportiert alle als syncWithGoogleCalendar markierten Termine nach Google Calendar
+  /// useCategoryMapping: Verwendet kategoriebasiertes Mapping für Kalenderauswahl
+  Future<bool> exportToGoogleCalendarOnly(
+      {bool useCategoryMapping = false}) async {
+    try {
+      debugPrint(
+          "🔄 exportToGoogleCalendarOnly(useCategoryMapping: $useCategoryMapping) gestartet...");
+
+      // Überprüfe API-Zugang
+      if (_calendarApi == null) {
+        await _initializeCalendarApi();
+        if (_calendarApi == null) {
+          debugPrint("❌ CalendarApi konnte nicht initialisiert werden");
+          return false;
+        }
+      }
+
+      // Hole alle Termine, die mit Google synchronisiert werden sollen
+      final allAppointments = await _appointmentRepo.getAllAppointments();
+      debugPrint("📋 Insgesamt ${allAppointments.length} Termine geladen");
+
+      // NEU: Bereinige verwaiste Google-Termine (deren lokale Termine gelöscht wurden)
+      await _cleanupOrphanedGoogleEvents(allAppointments);
+
+      final syncAppointments =
+          allAppointments.where((appt) => appt.syncWithGoogleCalendar).toList();
+      debugPrint(
+          "📋 Davon ${syncAppointments.length} Termine für Sync markiert");
+
+      // Kategorie-zu-Kalender-Mapping laden
+      Map<int, String> categoryCalendarMapping = {};
+      if (useCategoryMapping) {
+        categoryCalendarMapping = await _loadCategoryCalendarMapping();
+        debugPrint(
+            "🗂️ Geladen: ${categoryCalendarMapping.length} Kategorie-Kalender-Mappings");
+      }
+
+      if (syncAppointments.isEmpty) {
+        debugPrint("ℹ️ Keine zu synchronisierenden Termine gefunden");
+        return true; // Nichts zu tun, trotzdem Erfolg
+      }
+
+      // Erfolgs- und Fehlerzähler
+      int successCount = 0;
+      int errorCount = 0;
+
+      // Bearbeite jeden Termin einzeln
+      for (final appointment in syncAppointments) {
+        try {
+          // Wenn kategoriebasiertes Mapping aktiviert ist, finde den passenden Kalender
+          String targetCalendarId = 'primary'; // Standardkalender
+
+          if (useCategoryMapping && appointment.categoryId != null) {
+            // Prüfe, ob es ein Mapping für diese Kategorie gibt
+            final mappedCalendarId =
+                categoryCalendarMapping[appointment.categoryId];
+            if (mappedCalendarId != null && mappedCalendarId.isNotEmpty) {
+              targetCalendarId = mappedCalendarId;
+            }
+          }
+
+          debugPrint(
+              "🎯 Verwende Kalender: $targetCalendarId für Termin: ${appointment.subject}");
+
+          // Überprüfe, ob der Termin bereits in Google existiert
+          final existingMapping = await _mappingRepo
+              .getMappingForLocalAppointment(appointment.id!, 'google');
+
+          if (existingMapping != null &&
+              existingMapping.externalId.isNotEmpty) {
+            // Termin aktualisieren
+            final existingEvent = await _calendarApi!.events
+                .get(targetCalendarId, existingMapping.externalId);
+
+            if (existingEvent != null) {
+              // Konvertiere Appointment zu Google Event und aktualisiere
+              final updatedEvent = await _createGoogleEvent(
+                appointment.subject,
+                appointment.startTime!,
+                appointment.endTime!,
+                notes: appointment.notes,
+                location: appointment.location,
+                isAllDay: appointment.isAllDay,
+                reminderMinutes: appointment.reminderMinutesBefore,
+                recurrenceRule: appointment.recurrenceRule,
+                appointmentId: appointment.id,
+              );
+              await _calendarApi!.events.update(
+                  updatedEvent, targetCalendarId, existingMapping.externalId);
+
+              // Aktualisiere Zeitstempel in der lokalen Datenbank
+              await _appointmentRepo.updateSyncTimestamp(
+                  appointment.id!, DateTime.now().toIso8601String());
+
+              debugPrint(
+                  "✅ Termin aktualisiert: ${appointment.subject} (ID: ${appointment.id})");
+              successCount++;
+            } else {
+              // Event nicht gefunden, erstelle neu
+              final newEvent = await _createGoogleEvent(
+                appointment.subject,
+                appointment.startTime!,
+                appointment.endTime!,
+                notes: appointment.notes,
+                location: appointment.location,
+                isAllDay: appointment.isAllDay,
+                reminderMinutes: appointment.reminderMinutesBefore,
+                recurrenceRule: appointment.recurrenceRule,
+                appointmentId: appointment.id,
+              );
+
+              final createdEvent =
+                  await _calendarApi!.events.insert(newEvent, targetCalendarId);
+
+              // Speichere das neue Mapping
+              await _mappingRepo.addMapping(
+                localId: appointment.id!,
+                externalId: createdEvent.id!,
+                source: 'google',
+                sourceCalendarId: targetCalendarId,
+              );
+
+              // Aktualisiere externalIdGoogle im Appointment
+              await _appointmentRepo.updateAppointment(appointment.copyWith(
+                externalIdGoogle: createdEvent.id,
+                lastSyncedAt: DateTime.now(),
+              ));
+
+              // Aktualisiere Zeitstempel
+              await _appointmentRepo.updateSyncTimestamp(
+                  appointment.id!, DateTime.now().toIso8601String());
+
+              debugPrint(
+                  "✅ Termin neu erstellt: ${appointment.subject} (ID: ${appointment.id})");
+              successCount++;
+            }
+          } else {
+            // Neuer Termin, noch nicht in Google
+            final newEvent = await _createGoogleEvent(
+              appointment.subject,
+              appointment.startTime!,
+              appointment.endTime!,
+              notes: appointment.notes,
+              location: appointment.location,
+              isAllDay: appointment.isAllDay,
+              reminderMinutes: appointment.reminderMinutesBefore,
+              recurrenceRule: appointment.recurrenceRule,
+              appointmentId: appointment.id,
+            );
+
+            final createdEvent =
+                await _calendarApi!.events.insert(newEvent, targetCalendarId);
+
+            // Speichere das neue Mapping
+            await _mappingRepo.addMapping(
+              localId: appointment.id!,
+              externalId: createdEvent.id!,
+              source: 'google',
+              sourceCalendarId: targetCalendarId,
+            );
+
+            // Aktualisiere externalIdGoogle im Appointment
+            await _appointmentRepo.updateAppointment(appointment.copyWith(
+              externalIdGoogle: createdEvent.id,
+              lastSyncedAt: DateTime.now(),
+            ));
+
+            // Aktualisiere Zeitstempel
+            await _appointmentRepo.updateSyncTimestamp(
+                appointment.id!, DateTime.now().toIso8601String());
+
+            debugPrint(
+                "✅ Termin neu erstellt: ${appointment.subject} (ID: ${appointment.id})");
+            successCount++;
+          }
+        } catch (e) {
+          debugPrint("❌ Fehler bei Termin ${appointment.id}: $e");
+          errorCount++;
+        }
+      }
+
+      debugPrint(
+          "🔄 Synchronisierung abgeschlossen: $successCount erfolgreich, $errorCount fehlgeschlagen");
+      notifyListeners();
+
+      return errorCount == 0;
+    } catch (e) {
+      debugPrint("❌ Fehler bei der Synchronisierung: $e");
+      return false;
+    }
+  }
+
+  /// Bereinigt verwaiste Google-Kalender-Einträge, deren lokale Termine gelöscht wurden
+  Future<void> _cleanupOrphanedGoogleEvents(
+      List<AppointmentModel> localAppointments) async {
+    try {
+      debugPrint(
+          "🧹 Starte Bereinigung verwaister Google-Kalender-Einträge...");
+
+      if (_calendarApi == null) {
+        debugPrint(
+            "❌ CalendarApi nicht initialisiert, Bereinigung wird übersprungen");
+        return;
+      }
+
+      // Sammle alle lokalen Termin-IDs
+      final Set<int> localAppointmentIds = localAppointments
+          .where((appt) => appt.id != null)
+          .map((appt) => appt.id!)
+          .toSet();
+
+      // Suche nach Google-Einträgen, die mit der App erstellt wurden
+      final eventsResponse = await _calendarApi!.events.list(
+        _selectedCalendarId ?? 'primary',
+        showDeleted: false,
+      );
+
+      int deletedCount = 0;
+
+      // Durchsuche alle Google-Events nach Extended Properties
+      for (final event in eventsResponse.items ?? []) {
+        // Prüfe, ob dieses Event von unserer App erstellt wurde
+        final privateProps = event.extendedProperties?.private ?? {};
+        final appIdString =
+            privateProps['muslimcalendarID'] ?? privateProps['localAppID'];
+
+        if (appIdString != null && appIdString.isNotEmpty) {
+          try {
+            // Konvertiere ID zu int und prüfe, ob der lokale Termin noch existiert
+            final int appointmentId = int.parse(appIdString);
+
+            if (!localAppointmentIds.contains(appointmentId)) {
+              // Lokaler Termin existiert nicht mehr - lösche das Google-Event
+              debugPrint(
+                  "🗑️ Lösche verwaistes Google-Event: ${event.summary} (ID: ${event.id}, AppID: $appointmentId)");
+
+              await _calendarApi!.events
+                  .delete(_selectedCalendarId ?? 'primary', event.id!);
+              deletedCount++;
+            }
+          } catch (e) {
+            debugPrint("⚠️ Fehler beim Verarbeiten eines Google-Events: $e");
+          }
+        }
+      }
+
+      debugPrint(
+          "✅ Bereinigung abgeschlossen, $deletedCount verwaiste Events gelöscht");
+    } catch (e) {
+      debugPrint("❌ Fehler bei der Bereinigung verwaister Events: $e");
+    }
+  }
+
+  // Initialisiert die Google Calendar API mit OAuth2
+  Future<void> _initializeCalendarApi() async {
+    try {
+      debugPrint("🔄 Initialisiere Google Calendar API");
+
+      // Google SignIn-Instance erstellen
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        scopes: [
+          'email',
+          'https://www.googleapis.com/auth/calendar',
+        ],
+      );
+
+      // Prüfen, ob bereits angemeldet
+      bool isSignedIn = await googleSignIn.isSignedIn();
+      GoogleSignInAccount? account;
+
+      if (isSignedIn) {
+        // Versuchen, still anzumelden
+        account = await googleSignIn.signInSilently();
+      }
+
+      // Wenn nicht erfolgreich, interaktive Anmeldung starten
+      if (account == null) {
+        account = await googleSignIn.signIn();
+      }
+
+      // Wenn immer noch null, ist die Anmeldung fehlgeschlagen
+      if (account == null) {
+        debugPrint("❌ Google Sign-In fehlgeschlagen");
+        return;
+      }
+
+      // Auth-Token für die API abrufen
+      final googleAuth = await account.authentication;
+      final accessToken = googleAuth.accessToken;
+
+      if (accessToken == null) {
+        debugPrint("❌ Konnte kein Access Token abrufen");
+        return;
+      }
+
+      // HTTP-Client mit dem Access Token erstellen
+      final httpClient = GoogleAuthClient(accessToken);
+      _calendarApi = gCal.CalendarApi(httpClient);
+
+      // Kalenderliste abrufen, um den primären Kalender zu finden
+      final calendarList = await _calendarApi!.calendarList.list();
+
+      // Standardmäßig den primären Kalender verwenden
+      _selectedCalendarId = 'primary';
+
+      // Den tatsächlichen primären Kalender finden
+      for (var calendar in calendarList.items ?? []) {
+        if (calendar.primary == true) {
+          _selectedCalendarId = calendar.id;
+          break;
+        }
+      }
+
+      debugPrint("✅ Google Calendar API initialisiert: $_selectedCalendarId");
+    } catch (e) {
+      debugPrint("❌ Fehler bei API-Initialisierung: $e");
+      _calendarApi = null;
+    }
+  }
+
+  // Lädt die Kategorie-Kalender-Mappings aus der Datenbank
+  Future<Map<int, String>> _loadCategoryCalendarMapping() async {
+    try {
+      debugPrint("🔄 Lade Kategorie-Kalender-Mappings");
+      final Map<int, String> result = {};
+
+      // Mappings aus SharedPreferences laden
+      final prefs = await SharedPreferences.getInstance();
+      final mappingKeys =
+          prefs.getKeys().where((key) => key.startsWith('category_calendar_'));
+
+      for (final key in mappingKeys) {
+        try {
+          final categoryId =
+              int.parse(key.replaceFirst('category_calendar_', ''));
+          final calendarId = prefs.getString(key) ?? 'primary';
+          result[categoryId] = calendarId;
+        } catch (e) {
+          debugPrint("⚠️ Fehler beim Parsen von $key: $e");
+        }
+      }
+
+      debugPrint("✅ ${result.length} Mappings geladen");
+      return result;
+    } catch (e) {
+      debugPrint("❌ Fehler beim Laden der Mappings: $e");
+      return {};
+    }
+  }
+}
+
+// Hilfsklasse für die Google API-Authentifizierung
+class GoogleAuthClient extends http.BaseClient {
+  final String _accessToken;
+  final http.Client _client = http.Client();
+
+  GoogleAuthClient(this._accessToken);
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    request.headers['Authorization'] = 'Bearer $_accessToken';
+    return _client.send(request);
+  }
+
+  @override
+  void close() {
+    _client.close();
   }
 }

@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:muslim_calendar/models/enums.dart';
+import 'package:intl/intl.dart';
 
 enum AppLanguage { english, german, turkish, arabic, bosnian, spanish, persian }
 
@@ -5498,4 +5499,7 @@ class AppLocalizations extends ChangeNotifier {
         return 'Export completed successfully';
     }
   }
+
+  String get categoryLabel => Intl.message('Kategorie', name: 'categoryLabel');
+  String get privateCategory => Intl.message('Privat', name: 'privateCategory');
 }

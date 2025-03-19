@@ -8,7 +8,9 @@ import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
 import 'package:muslim_calendar/data/services/notification_service.dart';
 import 'package:muslim_calendar/data/services/google_calendar_service.dart';
 import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
+import 'package:muslim_calendar/data/services/google_calendar_sync_service.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
+import 'package:muslim_calendar/models/category_model.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
 import 'package:intl/intl.dart';
@@ -34,6 +36,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   final AppointmentRepository _appointmentRepo = AppointmentRepository();
   AppointmentModel? _appointment;
   bool _isLoading = true;
+  CategoryModel? _category;
 
   // Neu: für Zeitformat
   bool _use24hFormat = false;
@@ -97,8 +100,13 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
           baseDate,
         );
 
+        // Lade die Kategorie
+        final category =
+            await _appointmentRepo.getCategoryById(appt.categoryId ?? 1);
+
         setState(() {
           _appointment = appt;
+          _category = category;
           _computedStartTime = start ?? appt.startTime;
           _computedEndTime = end ?? appt.endTime;
           _isLoading = false;
@@ -106,6 +114,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
       } else {
         setState(() {
           _appointment = null;
+          _category = null;
           _isLoading = false;
         });
       }
@@ -194,18 +203,20 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
     _loadAppointment();
   }
 
-  /// NEU: Mit Google Kalender synchronisieren
+  /// NEU: Mit Google Kalender synchronisieren (mit Kategorie-zu-Kalender-Mapping)
   Future<void> _syncWithGoogleCalendar() async {
     if (_appointment == null) return;
 
     debugPrint("🔄 _syncWithGoogleCalendar wurde aufgerufen");
     final loc = Provider.of<AppLocalizations>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final mounted = this.mounted;
 
     try {
       // Fortschrittsanzeige zeigen
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Starte Synchronisierung mit Google...')),
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text(loc.syncGoogleCalendarNow)),
         );
       }
 
@@ -226,34 +237,48 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         debugPrint("Flag in Datenbank aktualisiert");
       }
 
+      // NEU: Hole alle Termine, um verwaiste Google-Kalendereinträge zu bereinigen
+      final allAppointments = await _appointmentRepo.getAllAppointments();
+      debugPrint(
+          "Alle Termine geladen für Bereinigung von verwaisten Google-Einträgen");
+
       // Termin einzeln synchronisieren
       debugPrint(
-          "Starte verbesserte Synchronisierung mit verbesserten exportToGoogleCalendarOnly");
+          "Starte Synchronisierung mit kategoriebasiertem Kalender-Mapping");
 
       // 1. Alle Wiederholungsregeln korrigieren
       await calendarSyncService.fixInvalidRecurrenceRules();
       debugPrint("✅ Wiederholungsregeln korrigiert");
 
-      // 2. Sync-Flag für alle Termine aktivieren (damit dieser einzelne Termin sicher exportiert wird)
+      // 2. Sync-Flag für diesen Termin aktivieren
       await _appointmentRepo.setGoogleSyncStatus(updatedAppointment.id!, true);
       debugPrint(
           "✅ Sync-Flag für Termin ID ${updatedAppointment.id} aktiviert");
 
-      // 3. Export durchführen - nutzt optimierten GoogleCalendarSyncService oder Fallback
+      // 3. Export durchführen - nutzt kategoriebasiertes Mapping
       debugPrint("🔄 Starte Export mit exportToGoogleCalendarOnly()");
-      await calendarSyncService.exportToGoogleCalendarOnly();
+      await calendarSyncService.exportToGoogleCalendarOnly(
+          useCategoryMapping: true);
       debugPrint("✅ Export abgeschlossen");
+
+      // 4. NEU: Verwaiste Google-Kalendereinträge bereinigen
+      // Wir verwenden direkt den CalendarSyncService für die Bereinigung
+      debugPrint("🧹 Bereinige verwaiste Google-Kalendereinträge...");
+      await calendarSyncService.cleanupOrphanedGoogleEvents(allAppointments);
+      debugPrint("✅ Bereinigung abgeschlossen");
 
       // Laden des aktualisierten Termins
       await _loadAppointment();
       debugPrint("✅ Termin neu geladen");
 
-      // Erfolgsanzeige
+      // Erfolgsanzeige - NEU: Wir löschen zuerst die alte Snackbar
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.clearSnackBars(); // Bestehende Snackbars löschen
+        scaffoldMessenger.showSnackBar(
           SnackBar(
-            content: Text('Mit Google Kalender synchronisiert'),
+            content: Text(loc.exportCompleted),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -261,10 +286,12 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
       debugPrint("❌ Fehler bei der Google-Synchronisierung: $e");
       // Fehlermeldung anzeigen
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.clearSnackBars(); // Bestehende Snackbars löschen
+        scaffoldMessenger.showSnackBar(
           SnackBar(
-            content: Text('Fehler bei der Synchronisierung: $e'),
+            content: Text(loc.syncError(e.toString())),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -348,6 +375,28 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
               ),
             ),
           ),
+        const SizedBox(height: 8),
+
+        // Kategorie
+        Card(
+          color: Theme.of(context).cardColor,
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Row(
+              children: [
+                Icon(Icons.category, color: _category?.color ?? Colors.grey),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${loc.categoryLabel}: ${_category?.name ?? loc.privateCategory}',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height: 8),
 
         // Start/End Times

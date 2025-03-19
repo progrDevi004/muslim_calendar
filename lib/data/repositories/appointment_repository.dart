@@ -306,4 +306,45 @@ class AppointmentRepository {
 
     return maps.map((map) => map['id'] as int).toList();
   }
+
+  // Methode zum Aktualisieren des Sync-Zeitstempels
+  Future<int> updateSyncTimestamp(int appointmentId, String timestamp) async {
+    final db = await dbHelper.database;
+    return await db.update(
+      'appointments',
+      {'lastSyncedAt': timestamp},
+      where: 'id = ?',
+      whereArgs: [appointmentId],
+    );
+  }
+
+  // Methode zum Aktualisieren der externen ID
+  Future<int> updateExternalId(
+    int appointmentId,
+    String externalId,
+    String source,
+    String timestamp,
+  ) async {
+    final db = await dbHelper.database;
+
+    final Map<String, dynamic> updates = {
+      'lastSyncedAt': timestamp,
+    };
+
+    // Je nach Quelle unterschiedliche Felder aktualisieren
+    if (source == 'google') {
+      updates['externalIdGoogle'] = externalId;
+    } else if (source == 'outlook') {
+      updates['externalIdOutlook'] = externalId;
+    } else if (source == 'apple') {
+      updates['externalIdApple'] = externalId;
+    }
+
+    return await db.update(
+      'appointments',
+      updates,
+      where: 'id = ?',
+      whereArgs: [appointmentId],
+    );
+  }
 }

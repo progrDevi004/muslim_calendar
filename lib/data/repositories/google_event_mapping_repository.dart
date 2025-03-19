@@ -10,6 +10,9 @@ class GoogleEventMapping {
   final String googleEventId;
   final DateTime lastSyncedAt;
 
+  // Hilfseigenschaft für die addMapping-Methode
+  String get externalId => googleEventId;
+
   GoogleEventMapping({
     this.id,
     required this.localAppointmentId,
@@ -122,5 +125,33 @@ class GoogleEventMappingRepository {
       where: 'original_date < ?',
       whereArgs: [dateStr],
     );
+  }
+
+  // Findet ein Mapping für einen lokalen Termin und eine Quelle (z.B. 'google')
+  Future<GoogleEventMapping?> getMappingForLocalAppointment(
+      int localAppointmentId, String source) async {
+    final mappings = await getMappingsForAppointment(localAppointmentId);
+    if (mappings.isEmpty) return null;
+
+    // Da wir nur Google-Mappings haben, ignorieren wir den source-Parameter
+    // und geben das erste Mapping zurück
+    return mappings.first;
+  }
+
+  // Hilfsmethode zum Hinzufügen eines neuen Mappings
+  Future<int> addMapping({
+    required int localId,
+    required String externalId,
+    required String source,
+    required String sourceCalendarId,
+  }) async {
+    final today = DateTime.now();
+    final mapping = GoogleEventMapping(
+      localAppointmentId: localId,
+      originalDate: today.toIso8601String().split('T')[0],
+      googleEventId: externalId,
+      lastSyncedAt: today,
+    );
+    return await saveMapping(mapping);
   }
 }

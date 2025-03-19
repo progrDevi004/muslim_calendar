@@ -68,6 +68,7 @@ void main() async {
     prayerTimeService: prayerTimeService,
     mappingRepo: googleEventMappingRepository,
     appointmentAdapter: prayerTimeAppointmentAdapter,
+    categoryRepo: categoryRepository,
   );
 
   // Calendar Sync Service erstellen

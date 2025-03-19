@@ -481,16 +481,40 @@ class CalendarSyncService extends ChangeNotifier {
     debugPrint("🔄 Exportiere Termine zu Google Calendar");
     await calendarProvider.autoSignIn();
 
-    // Lade ausgewählten Hauptkalender für den Export (standardmäßig 'primary')
+    // Lade ausgewählte Kalender
     final prefs = await SharedPreferences.getInstance();
     final selectedCalendarIds =
         prefs.getStringList('selectedCalendarIds') ?? ['primary'];
-    final exportCalendarId =
+
+    // Fallback-Kalender, falls keine Zuordnung gefunden wird
+    final defaultCalendarId =
         selectedCalendarIds.isNotEmpty ? selectedCalendarIds.first : 'primary';
+
+    // Lade Kalender-Informationen für Kategorie-Mapping
+    final calendarList = await calendarProvider.fetchCalendarList();
+    final calendarNamesById = {
+      for (var calendar in calendarList)
+        calendar.id ?? 'primary': calendar.summary ?? 'Kalender'
+    };
+
+    // Umkehrung für die Suche nach Kalender-ID anhand des Namens - VERBESSERT MIT CASE-INSENSITIVE
+    final calendarIdsByName = <String, String>{};
+    for (var calendar in calendarList) {
+      final name = calendar.summary?.toLowerCase().trim() ?? 'kalender';
+      calendarIdsByName[name] = calendar.id ?? 'primary';
+    }
+
+    debugPrint("📅 Verfügbare Kalender für Kategorie-Mapping:");
+    calendarNamesById.forEach((id, name) {
+      debugPrint("   - $id: $name");
+    });
 
     // Alle Termine laden
     List<AppointmentModel> allAppointments =
         await appointmentRepository.getAllAppointments();
+
+    // Neue Funktionalität: Bereinige verwaiste Google-Kalender-Einträge
+    await cleanupOrphanedGoogleEvents(allAppointments);
 
     // Filtere Termine, die bereits von Google importiert wurden
     List<AppointmentModel> appointments = allAppointments
@@ -499,12 +523,141 @@ class CalendarSyncService extends ChangeNotifier {
             appointment.externalIdGoogle!.isEmpty)
         .toList();
 
-    // debugPrint("📊 ${allAppointments.length} Termine insgesamt gefunden");
-    // debugPrint(
-    //     "📊 ${appointments.length} Termine zum Export (ohne von Google importierte)");
-    debugPrint("📅 Export in Kalender: $exportCalendarId");
+    // Lade alle Kategorien für das Mapping
+    final categories = await categoryRepository.getAllCategories();
+    final categoryNameById = {
+      for (var category in categories)
+        category.id ?? 0: category.name.toLowerCase().trim()
+    };
+
+    debugPrint(
+        "📂 ${categories.length} Kategorien für Kalender-Mapping geladen");
+    debugPrint(
+        "📊 ${appointments.length} Termine zum Export (ohne von Google importierte)");
+
+    // Debug-Ausgabe aller ausgewählten Kalender
+    debugPrint(
+        "🔍 Ausgewählte Google-Kalender (${selectedCalendarIds.length}):");
+    for (final id in selectedCalendarIds) {
+      debugPrint("   - ID: $id, Name: ${calendarNamesById[id] ?? 'Unbekannt'}");
+    }
+
+    // Debug-Ausgabe des Kategorie-zu-Kalender-Mappings
+    debugPrint("🔗 Verfügbares Kategorie-zu-Kalender-Mapping:");
+    categoryNameById.forEach((id, name) {
+      final calendarId = calendarIdsByName[name];
+      final isSelected =
+          calendarId != null && selectedCalendarIds.contains(calendarId);
+      debugPrint(
+          "   - Kategorie: $name (ID: $id) → Kalender: ${calendarId ?? 'nicht gefunden'} (Ausgewählt: $isSelected)");
+    });
 
     for (var appointment in appointments) {
+      // Bestimme den Zielkalender basierend auf der Kategorie
+      String targetCalendarId = defaultCalendarId;
+      String mappingReason = "Standard-Kalender (keine Kategorie)";
+
+      if (appointment.categoryId != null && appointment.categoryId! > 0) {
+        // Hole den Kategorienamen
+        final categoryId = appointment.categoryId!;
+        final category = categories.firstWhere(
+          (c) => c.id == categoryId,
+          orElse: () => CategoryModel(
+              id: 0,
+              name: "Unbekannt",
+              color: const Color(0xFF000000),
+              isDefault: false),
+        );
+
+        // Exakter Name aus der Kategorie
+        final categoryExactName = category.name;
+        // Name für case-insensitive Vergleiche
+        final categoryLowerName = categoryExactName.toLowerCase().trim();
+
+        debugPrint(
+            "🔍 Suche für Termin '${appointment.subject}' (Kategorie-ID: $categoryId, Name: $categoryExactName)");
+        debugPrint("   - Kategorienname (exakt): '$categoryExactName'");
+        debugPrint("   - Kategorienname (lowercase): '$categoryLowerName'");
+
+        // METHODE 1: Direkter Lookup mit lowercase Namen
+        final directMatchId = calendarIdsByName[categoryLowerName];
+
+        if (directMatchId != null) {
+          debugPrint(
+              "✅ Direkter Treffer: Kalender-ID '$directMatchId' für Kategorie '$categoryLowerName'");
+
+          if (selectedCalendarIds.contains(directMatchId)) {
+            targetCalendarId = directMatchId;
+            mappingReason = "Direkter Treffer (case-insensitive)";
+          } else {
+            mappingReason = "Direkter Treffer, aber Kalender nicht ausgewählt";
+            debugPrint(
+                "⚠️ Kalender '$directMatchId' existiert, ist aber nicht ausgewählt");
+          }
+        } else {
+          // METHODE 2: Suche nach ähnlichen Namen mit case-insensitive Vergleich
+          debugPrint(
+              "🔍 Keine direkte Übereinstimmung, prüfe ähnliche Namen...");
+
+          // Manueller Vergleich für mehr Kontrolle
+          final matchingCalendars = calendarNamesById.entries
+              .where((entry) =>
+                  entry.value.toLowerCase().trim() == categoryLowerName)
+              .toList();
+
+          if (matchingCalendars.isNotEmpty) {
+            final matchId = matchingCalendars.first.key;
+            debugPrint(
+                "✅ Ähnlicher Treffer: Kalender '${matchingCalendars.first.value}' (ID: $matchId)");
+
+            if (selectedCalendarIds.contains(matchId)) {
+              targetCalendarId = matchId;
+              mappingReason = "Ähnlicher Name gefunden (case-insensitive)";
+            } else {
+              mappingReason =
+                  "Ähnlicher Name gefunden, aber Kalender nicht ausgewählt";
+              debugPrint(
+                  "⚠️ Kalender '$matchId' existiert, ist aber nicht ausgewählt");
+            }
+          } else {
+            // METHODE 3: Teilweiser Namensvergleich - suche nach Kalendern, die den Kategorienamen enthalten
+            final partialMatches = calendarNamesById.entries
+                .where((entry) =>
+                    entry.value.toLowerCase().contains(categoryLowerName) ||
+                    categoryLowerName.contains(entry.value.toLowerCase()))
+                .toList();
+
+            if (partialMatches.isNotEmpty) {
+              final partialMatchId = partialMatches.first.key;
+              debugPrint(
+                  "ℹ️ Teilweise Übereinstimmung: Kalender '${partialMatches.first.value}' (ID: $partialMatchId)");
+
+              if (selectedCalendarIds.contains(partialMatchId)) {
+                targetCalendarId = partialMatchId;
+                mappingReason = "Teilweise Namensübereinstimmung";
+              } else {
+                mappingReason =
+                    "Teilweise Übereinstimmung, aber Kalender nicht ausgewählt";
+              }
+            } else {
+              mappingReason = "Kein passender Kalender gefunden";
+              debugPrint(
+                  "❌ Kein passender Kalender für Kategorie '$categoryExactName' gefunden");
+
+              // Alle verfügbaren Kalender anzeigen für Debugging
+              debugPrint("📋 Alle verfügbaren Kalender (Namen):");
+              calendarNamesById.forEach((id, name) {
+                debugPrint("   - '$name' (ID: $id)");
+              });
+            }
+          }
+        }
+      }
+
+      debugPrint(
+          "🎯 ENTSCHEIDUNG: Termin '${appointment.subject}' wird in Kalender '$targetCalendarId' exportiert");
+      debugPrint("   - Grund: $mappingReason");
+
       if (appointment.isRelatedToPrayerTimes) {
         // Für prayer-related Termine: Berechnung der wiederkehrenden Tage mit RecurrenceService.
         DateTime startRange = DateTime.now();
@@ -513,17 +666,12 @@ class CalendarSyncService extends ChangeNotifier {
         List<DateTime> recurrenceDates = recurrenceService.getRecurrenceDates(
             appointment, startRange, endRange);
 
-        // debugPrint(
-        //     "🕌 Prayer-related Termin: ${appointment.subject} mit ${recurrenceDates.length} Terminen");
-
         for (var date in recurrenceDates) {
           DateTime? calculatedStart =
               await prayerTimeService.getCalculatedStartTime(appointment, date);
           DateTime? calculatedEnd =
               await prayerTimeService.getCalculatedEndTime(appointment, date);
           if (calculatedStart == null || calculatedEnd == null) {
-            // debugPrint(
-            //     "⚠️ Konnte Start/End-Zeit nicht berechnen für Datum: $date");
             continue;
           }
 
@@ -532,9 +680,6 @@ class CalendarSyncService extends ChangeNotifier {
           final formattedDate =
               "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
           final uniqueId = "prayer_${appointment.id}_$formattedDate";
-
-          // debugPrint(
-          //     "📅 Exportiere Einzeltermin für Datum $formattedDate: ${calculatedStart.toIso8601String()}");
 
           await calendarProvider.syncAppointmentEvent(
             appointment: appointment.copyWith(
@@ -548,7 +693,8 @@ class CalendarSyncService extends ChangeNotifier {
             startTime: calculatedStart,
             endTime: calculatedEnd,
             prayerRelated: true,
-            calendarId: exportCalendarId,
+            calendarId:
+                targetCalendarId, // Hier wird der Kategorienabhängige Kalender verwendet
           );
         }
 
@@ -556,28 +702,24 @@ class CalendarSyncService extends ChangeNotifier {
         await calendarProvider.deleteEventsNotInDates(
           appointmentId: appointment.id!,
           validDates: recurrenceDates,
-          calendarId: exportCalendarId,
+          calendarId:
+              targetCalendarId, // Auch hier Kategorie-spezifischer Kalender
         );
       } else {
         // Für normale Termine ohne Gebetszeitenbezug
         if (appointment.startTime == null || appointment.endTime == null) {
-          // debugPrint(
-          //     "⚠️ Termin ohne Start/End-Zeit übersprungen: ${appointment.subject}");
           continue;
         }
 
-        // debugPrint(
-        //     "📆 Exportiere Termin: ${appointment.subject} (${appointment.startTime} - ${appointment.endTime})");
         Event event = await calendarProvider.syncAppointmentEvent(
           appointment: appointment,
           startTime: appointment.startTime!,
           endTime: appointment.endTime!,
           prayerRelated: false,
-          calendarId: exportCalendarId,
+          calendarId: targetCalendarId, // Kategorienabhängiger Kalender
         );
 
         if (appointment.externalIdGoogle == null) {
-          // debugPrint("🆕 Neuer Termin in Google erstellt: ${event.id}");
           // Hier muss ein copyWith verwendet werden, da wir nur ein Feld ändern wollen
           AppointmentModel updatedAppointment =
               appointment.copyWith(externalIdGoogle: event.id);
@@ -621,8 +763,12 @@ class CalendarSyncService extends ChangeNotifier {
   }
 
   /// Führt sofort einen vollständigen Synchronisierungsprozess durch
-  /// (Import und Export nacheinander)
-  Future<void> syncGoogleCalendarNow({int categoryOption = 0}) async {
+  /// (Import und Export nacheinander).
+  ///
+  /// Wenn categoryOption=2 verwendet wird, werden Kategorien beim Import basierend auf den Kalendernamen erstellt.
+  /// Beim Export werden Termine in die entsprechenden Google-Kalender eingefügt, deren Namen mit den Kategorien übereinstimmen.
+  Future<void> syncGoogleCalendarNow(
+      {int categoryOption = 0, bool useCategoryMapping = true}) async {
     debugPrint("Starte vollständige Synchronisierung mit Google Calendar");
 
     // Zuerst fehlerhafte Wiederholungsregeln korrigieren
@@ -639,22 +785,31 @@ class CalendarSyncService extends ChangeNotifier {
       await importAppointments(categoryOption: categoryOption);
       debugPrint("Import von Google Calendar abgeschlossen");
 
-      // 2. Export durchführen
+      // 2. Export durchführen (mit verbessertem Kategorie-zu-Kalender-Mapping)
       debugPrint("Starte Export zu Google Calendar...");
-      bool exportSuccess = false;
 
-      // Wenn der optimierte GoogleCalendarSyncService verfügbar ist, verwende diesen für den Export
-      if (googleCalendarSyncService != null) {
-        exportSuccess = await efficientSyncWithGoogle();
-        if (!exportSuccess) {
-          // Fallback auf Standard-Export-Methode
-          debugPrint(
-              "Optimierter Export fehlgeschlagen, verwende Standard-Export");
+      if (useCategoryMapping) {
+        // Wenn Kategorie-Mapping gewünscht ist, verwenden wir nur die Standard-Export-Methode
+        debugPrint(
+            "📋 Verwende Standard-Export mit Kategorie-zu-Kalender-Zuordnung");
+        await exportAppointments();
+      } else {
+        // Nur wenn explizit kein Kategorie-Mapping gewünscht ist, versuchen wir den optimierten Export
+        bool exportSuccess = false;
+
+        // Wenn der optimierte GoogleCalendarSyncService verfügbar ist, verwende diesen für den Export
+        if (googleCalendarSyncService != null) {
+          exportSuccess = await efficientSyncWithGoogle();
+          if (!exportSuccess) {
+            // Fallback auf Standard-Export-Methode mit Kategorie-Mapping
+            debugPrint(
+                "Optimierter Export fehlgeschlagen, verwende Standard-Export mit Kategorie-Mapping");
+            await exportAppointments();
+          }
+        } else {
+          // Standard-Export-Methode verwenden (jetzt mit Kategorie-Mapping)
           await exportAppointments();
         }
-      } else {
-        // Standard-Export-Methode verwenden
-        await exportAppointments();
       }
 
       debugPrint("Export zu Google Calendar abgeschlossen");
@@ -687,8 +842,13 @@ class CalendarSyncService extends ChangeNotifier {
   }
 
   /// Führt nur einen Export zu Google Calendar durch
-  Future<void> exportToGoogleCalendarOnly() async {
-    debugPrint("Starte Export zu Google Calendar");
+  ///
+  /// Verwendet die kategoriebasierte Zuordnung zu den entsprechenden Google-Kalendern.
+  /// Termine werden automatisch in den Google-Kalender exportiert, dessen Name mit dem
+  /// Kategorienamen übereinstimmt, falls ein solcher Kalender existiert und ausgewählt ist.
+  Future<void> exportToGoogleCalendarOnly(
+      {bool useCategoryMapping = true}) async {
+    debugPrint("Starte Export zu Google Calendar mit Kategorie-Mapping");
 
     // Zuerst fehlerhafte Wiederholungsregeln korrigieren
     await fixInvalidRecurrenceRules();
@@ -700,20 +860,28 @@ class CalendarSyncService extends ChangeNotifier {
       debugPrint("Sync-Flag für $updatedCount Termine aktiviert");
 
       // Export durchführen
-      bool exportSuccess = false;
+      if (useCategoryMapping) {
+        // Wenn Kategorie-Mapping gewünscht ist, verwenden wir nur die Standard-Export-Methode
+        debugPrint(
+            "📋 Verwende Standard-Export mit Kategorie-zu-Kalender-Zuordnung");
+        await exportAppointments();
+      } else {
+        // Nur wenn explizit kein Kategorie-Mapping gewünscht ist, versuchen wir den optimierten Export
+        bool exportSuccess = false;
 
-      // Wenn der optimierte GoogleCalendarSyncService verfügbar ist, verwende diesen für den Export
-      if (googleCalendarSyncService != null) {
-        exportSuccess = await efficientSyncWithGoogle();
-        if (!exportSuccess) {
-          // Fallback auf Standard-Export-Methode
-          debugPrint(
-              "Optimierter Export fehlgeschlagen, verwende Standard-Export");
+        // Wenn der optimierte GoogleCalendarSyncService verfügbar ist, verwende diesen für den Export
+        if (googleCalendarSyncService != null) {
+          exportSuccess = await efficientSyncWithGoogle();
+          if (!exportSuccess) {
+            // Fallback auf Standard-Export-Methode mit Kategorie-Mapping
+            debugPrint(
+                "Optimierter Export fehlgeschlagen, verwende Standard-Export mit Kategorie-Mapping");
+            await exportAppointments();
+          }
+        } else {
+          // Standard-Export-Methode verwenden (jetzt mit Kategorie-Mapping)
           await exportAppointments();
         }
-      } else {
-        // Standard-Export-Methode verwenden
-        await exportAppointments();
       }
 
       // Lokal gelöschte Termine auch in Google löschen
@@ -734,6 +902,10 @@ class CalendarSyncService extends ChangeNotifier {
   /// Diese Methode nutzt Batch-Operationen und intelligente Mappings, um die Synchronisierung
   /// erheblich zu beschleunigen und die API-Aufrufe zu reduzieren.
   /// Hinweis: Diese Methode führt NUR den Export durch. Der Import muss separat aufgerufen werden.
+  ///
+  /// ACHTUNG: Der efficientSyncWithGoogle unterstützt derzeit keine Kategorie-zu-Kalender-Zuordnung!
+  /// Wenn Sie möchten, dass Termine in spezifische Google-Kalender exportiert werden basierend auf
+  /// ihren Kategorien, verwenden Sie stattdessen die standard exportAppointments-Methode.
   Future<bool> efficientSyncWithGoogle() async {
     if (googleCalendarSyncService == null) {
       debugPrint("GoogleCalendarSyncService nicht verfügbar");
@@ -741,6 +913,15 @@ class CalendarSyncService extends ChangeNotifier {
     }
 
     try {
+      // HINWEIS: In dieser Implementierung wurden die Kategorie-zu-Kalender-Zuordnungen
+      // noch nicht implementiert. Die Termine werden alle in den Standardkalender exportiert.
+      debugPrint(
+          "⚠️ HINWEIS: Der optimierte Export (efficientSyncWithGoogle) unterstützt derzeit keine");
+      debugPrint(
+          "⚠️ Kategorie-zu-Kalender-Zuordnung! Alle Termine werden in den Standardkalender exportiert.");
+      debugPrint(
+          "⚠️ Für die Kategorie-zu-Kalender-Zuordnung verwenden Sie bitte exportAppointments().");
+
       // Wir können nicht direkt auf _initializeApiClient zugreifen,
       // aber syncAllAppointments versucht dies intern
       final result = await googleCalendarSyncService!.syncAllAppointments();
@@ -778,6 +959,81 @@ class CalendarSyncService extends ChangeNotifier {
     // Neu synchronisieren
     await importAppointments();
     //debugPrint("✅ Neuimport abgeschlossen");
+  }
+
+  /// Bereinigt verwaiste Termine in Google Calendar, die lokal gelöscht wurden
+  Future<void> cleanupOrphanedGoogleEvents(
+      List<AppointmentModel> localAppointments) async {
+    try {
+      debugPrint(
+          "🧹 Starte Bereinigung verwaister Google-Kalender-Einträge...");
+
+      // Falls der Google Calendar Sync Service verfügbar ist, verwende ihn
+      if (googleCalendarSyncService != null) {
+        // Rufe die Methode auf und ignoriere den Rückgabewert
+        try {
+          // Die Methode gibt Future<bool> zurück, daher mit await aufrufen
+          await googleCalendarSyncService!.deleteMissingLocalAppointments();
+          debugPrint(
+              "✅ Bereinigung über GoogleCalendarSyncService abgeschlossen");
+        } catch (e) {
+          debugPrint(
+              "⚠️ Fehler beim Aufruf von deleteMissingLocalAppointments: $e");
+        }
+        return;
+      }
+
+      // Direkter Ansatz über den CalendarProvider
+      try {
+        // Versuche, bei Google anzumelden - wir ignorieren hier den Rückgabewert,
+        // da die Methode void zurückgibt
+        await calendarProvider.autoSignIn();
+
+        // Stattdessen prüfen wir direkt, ob wir Events abrufen können
+        final events = await calendarProvider.fetchCalendarEvents();
+
+        // Wenn wir hierher kommen, sind wir angemeldet oder es ist kein Login erforderlich
+
+        // Sammle alle lokalen Termin-IDs
+        final Set<int> localAppointmentIds = localAppointments
+            .where((appt) => appt.id != null)
+            .map((appt) => appt.id!)
+            .toSet();
+
+        int deletedCount = 0;
+
+        for (final event in events) {
+          final privateProps = event.extendedProperties?.private ?? {};
+          final appIdString =
+              privateProps['muslimcalendarID'] ?? privateProps['localAppID'];
+
+          if (appIdString != null && appIdString.isNotEmpty) {
+            try {
+              final int appointmentId = int.parse(appIdString);
+
+              if (!localAppointmentIds.contains(appointmentId)) {
+                // Lokaler Termin existiert nicht mehr - lösche das Google-Event
+                debugPrint(
+                    "🗑️ Lösche verwaistes Google-Event: ${event.summary} (ID: ${event.id}, AppID: $appointmentId)");
+
+                await calendarProvider.deleteEventFromGoogleCalendar(event.id!);
+                deletedCount++;
+              }
+            } catch (e) {
+              debugPrint("⚠️ Fehler beim Verarbeiten eines Google-Events: $e");
+            }
+          }
+        }
+
+        debugPrint(
+            "✅ Bereinigung abgeschlossen, $deletedCount verwaiste Events gelöscht");
+      } catch (e) {
+        // Hier fangen wir auch den Fall ab, dass die Anmeldung fehlgeschlagen ist
+        debugPrint("❌ Fehler bei Google-Anmeldung oder Bereinigung: $e");
+      }
+    } catch (e) {
+      debugPrint("❌ Fehler bei der Bereinigung verwaister Events: $e");
+    }
   }
 }
 

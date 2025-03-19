@@ -778,13 +778,17 @@ class HomePageState extends State<HomePage> {
 
   /// Führt eine vollständige Synchronisation mit Google Calendar durch
   void _performGoogleSync(BuildContext context) async {
+    // Referenzen speichern, bevor asynchrone Operationen beginnen
+    final scaffold = ScaffoldMessenger.of(context);
+    final localizations = Provider.of<AppLocalizations>(context, listen: false);
+    final currentMounted = mounted;
+
     try {
-      final scaffold = ScaffoldMessenger.of(context);
-      scaffold.showSnackBar(
-        SnackBar(
-            content: Text(Provider.of<AppLocalizations>(context, listen: false)
-                .syncingWithGoogleCalendar)),
-      );
+      if (currentMounted) {
+        scaffold.showSnackBar(
+          SnackBar(content: Text(localizations.syncingWithGoogleCalendar)),
+        );
+      }
 
       // Vollständige Synchronisation durchführen
       await _calendarSyncService.importAppointments(categoryOption: 0);
@@ -793,18 +797,29 @@ class HomePageState extends State<HomePage> {
       // Nach erfolgreicher Synchronisation Termine neu laden
       await loadAllAppointments();
 
-      scaffold.showSnackBar(
-        SnackBar(
-            content: Text(Provider.of<AppLocalizations>(context, listen: false)
-                .syncCompleted)),
-      );
+      if (currentMounted) {
+        scaffold.clearSnackBars(); // Bestehende Snackbars löschen
+        scaffold.showSnackBar(
+          SnackBar(
+            content: Text(localizations.syncCompleted),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     } catch (e) {
       debugPrint('🔄 Sync-Fehler: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(Provider.of<AppLocalizations>(context, listen: false)
-                .syncSyncError(e.toString()))),
-      );
+
+      if (currentMounted) {
+        scaffold.clearSnackBars(); // Bestehende Snackbars löschen
+        scaffold.showSnackBar(
+          SnackBar(
+            content: Text(localizations.syncSyncError(e.toString())),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -855,13 +870,17 @@ class HomePageState extends State<HomePage> {
   /// Führt einen Import von Google Calendar durch
   void _performGoogleImport(BuildContext context,
       {required int categoryOption}) async {
+    // Referenzen speichern, bevor asynchrone Operationen beginnen
+    final scaffold = ScaffoldMessenger.of(context);
+    final localizations = Provider.of<AppLocalizations>(context, listen: false);
+    final currentMounted = mounted;
+
     try {
-      final scaffold = ScaffoldMessenger.of(context);
-      scaffold.showSnackBar(
-        SnackBar(
-            content: Text(Provider.of<AppLocalizations>(context, listen: false)
-                .importingFromGoogleCalendar)),
-      );
+      if (currentMounted) {
+        scaffold.showSnackBar(
+          SnackBar(content: Text(localizations.importingFromGoogleCalendar)),
+        );
+      }
 
       // Import durchführen
       await _calendarSyncService.importAppointments(
@@ -870,50 +889,74 @@ class HomePageState extends State<HomePage> {
       // Nach erfolgreichem Import Termine neu laden
       await loadAllAppointments();
 
-      scaffold.showSnackBar(
-        SnackBar(
-            content: Text(Provider.of<AppLocalizations>(context, listen: false)
-                    .syncImportCompleted ??
-                Provider.of<AppLocalizations>(context, listen: false)
-                    .importCompleted)),
-      );
+      if (currentMounted) {
+        scaffold.clearSnackBars(); // Bestehende Snackbars löschen
+        scaffold.showSnackBar(
+          SnackBar(
+            content: Text(localizations.syncImportCompleted ??
+                localizations.importCompleted),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     } catch (e) {
       debugPrint('🔄 Import-Fehler: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(Provider.of<AppLocalizations>(context, listen: false)
-                .importError(e.toString()))),
-      );
+
+      if (currentMounted) {
+        scaffold.clearSnackBars(); // Bestehende Snackbars löschen
+        scaffold.showSnackBar(
+          SnackBar(
+            content: Text(localizations.importError(e.toString())),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
   /// Führt einen Export nach Google Calendar durch
   void _performGoogleExport(BuildContext context) async {
+    // Referenzen speichern, bevor asynchrone Operationen beginnen
+    final scaffold = ScaffoldMessenger.of(context);
+    final localizations = Provider.of<AppLocalizations>(context, listen: false);
+    final currentMounted = mounted;
+
     try {
-      final scaffold = ScaffoldMessenger.of(context);
-      scaffold.showSnackBar(
-        SnackBar(
-            content: Text(Provider.of<AppLocalizations>(context, listen: false)
-                .exportingToGoogleCalendar)),
-      );
+      if (currentMounted) {
+        scaffold.showSnackBar(
+          SnackBar(content: Text(localizations.exportingToGoogleCalendar)),
+        );
+      }
 
       // Export durchführen
       await _calendarSyncService.exportAppointments();
 
-      scaffold.showSnackBar(
-        SnackBar(
-            content: Text(Provider.of<AppLocalizations>(context, listen: false)
-                    .syncExportCompleted ??
-                Provider.of<AppLocalizations>(context, listen: false)
-                    .exportCompleted)),
-      );
+      if (currentMounted) {
+        scaffold.clearSnackBars(); // Bestehende Snackbars löschen
+        scaffold.showSnackBar(
+          SnackBar(
+            content: Text(localizations.syncExportCompleted ??
+                localizations.exportCompleted),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     } catch (e) {
       debugPrint('🔄 Export-Fehler: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(Provider.of<AppLocalizations>(context, listen: false)
-                .exportError(e.toString()))),
-      );
+
+      if (currentMounted) {
+        scaffold.clearSnackBars(); // Bestehende Snackbars löschen
+        scaffold.showSnackBar(
+          SnackBar(
+            content: Text(localizations.exportError(e.toString())),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
