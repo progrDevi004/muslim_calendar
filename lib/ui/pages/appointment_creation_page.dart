@@ -343,8 +343,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
             // Gebetszeitverknüpfung
             _isRelatedToPrayerTimes = appointment.isRelatedToPrayerTimes;
+            _selectedPrayerTime = appointment.prayerTime;
             _selectedTimeRelation = appointment.timeRelation;
             _minutesBeforeAfter = appointment.minutesBeforeAfter ?? 0;
+            _duration = appointment.duration ?? const Duration(minutes: 30);
 
             // Setze den Reminder-Wert
             _selectedReminderMinutes = appointment.reminderMinutesBefore;
@@ -466,9 +468,17 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   Future<void> _saveAppointment() async {
     final loc = Provider.of<AppLocalizations>(context, listen: false);
 
-    // >>> NEU: Mehrfaches Klicken verhindern
-    if (_isSaving) {
-      return; // Wenn gerade am Speichern, nichts tun
+    // Verhindern, dass Speichern mehrfach aufgerufen wird
+    if (_isSaving) return;
+
+    // Zunächst Formular validieren
+    if (!_formKey.currentState!.validate()) {
+      // Wenn die Validierung fehlschlägt, Fehler anzeigen und abbrechen
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Bitte füllen Sie alle erforderlichen Felder aus')),
+      );
+      return;
     }
 
     setState(() {
@@ -937,538 +947,529 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   // --------------------------------------------------------------------------
   // NEU: Aufbau des UI – Google Kalender–Stil
   Widget _buildGoogleCalendarForm(AppLocalizations loc) {
-    return Form(
-      key: _formKey,
-      child: ListView(
-        padding: const EdgeInsets.only(bottom: 20),
-        children: [
-          // Titel (groß, ohne Rahmen)
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextFormField(
-              controller: _titleController,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              decoration: InputDecoration(
-                hintText: loc.titleLabel,
-                border: InputBorder.none,
-              ),
-              validator: (value) =>
-                  (value == null || value.isEmpty) ? loc.titleLabel : null,
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 20),
+      children: [
+        // Titel (groß, ohne Rahmen)
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: TextFormField(
+            controller: _titleController,
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            decoration: InputDecoration(
+              hintText: loc.titleLabel,
+              border: InputBorder.none,
             ),
+            validator: (value) => (value == null || value.trim().isEmpty)
+                ? 'Titel ist erforderlich'
+                : null,
           ),
-          const Divider(height: 1),
+        ),
+        const Divider(height: 1),
 
-          // All-Day Schalter
-          Material(
-            elevation: 0,
-            color: Colors.transparent,
-            child: SwitchListTile.adaptive(
-              secondary: const Icon(Icons.access_time),
-              title: Text(loc.allDay),
-              value: _isAllDay,
-              onChanged: (bool value) {
-                setState(() {
-                  _isAllDay = value;
-                  // Ganztägige Termine können nicht an Gebetszeiten gebunden sein
-                  if (value) {
-                    _isRelatedToPrayerTimes = false;
-                    if (_startTime != null) {
-                      // Bei ganztägigen Terminen endet der Tag um 23:59
-                      _endTime = DateTime(
-                        _startTime!.year,
-                        _startTime!.month,
-                        _startTime!.day,
-                        23,
-                        59,
-                      );
-                    }
+        // All-Day Schalter
+        Material(
+          elevation: 0,
+          color: Colors.transparent,
+          child: SwitchListTile.adaptive(
+            secondary: const Icon(Icons.access_time),
+            title: Text(loc.allDay),
+            value: _isAllDay,
+            onChanged: (bool value) {
+              setState(() {
+                _isAllDay = value;
+                // Ganztägige Termine können nicht an Gebetszeiten gebunden sein
+                if (value) {
+                  _isRelatedToPrayerTimes = false;
+                  if (_startTime != null) {
+                    // Bei ganztägigen Terminen endet der Tag um 23:59
+                    _endTime = DateTime(
+                      _startTime!.year,
+                      _startTime!.month,
+                      _startTime!.day,
+                      23,
+                      59,
+                    );
                   }
-                });
-              },
-            ),
+                }
+              });
+            },
           ),
+        ),
 
-          // Gebetszeit-Schalter (aus den fortgeschrittenen Optionen hierher verschoben)
-          Material(
-            elevation: 0,
-            color: Colors.transparent,
-            child: SwitchListTile.adaptive(
-              secondary: const Icon(Icons.mosque),
-              title: Text(loc.relatedToPrayerTimes),
-              value: _isRelatedToPrayerTimes,
-              onChanged: (bool value) {
-                setState(() {
-                  _isRelatedToPrayerTimes = value;
-                  // Gebetszeitbezogene Termine können nicht ganztägig sein
-                  if (value) {
-                    _isAllDay = false;
-                    if (_startTime != null && _duration != null) {
-                      _endTime = _startTime!.add(_duration!);
-                    }
+        // Gebetszeit-Schalter (aus den fortgeschrittenen Optionen hierher verschoben)
+        Material(
+          elevation: 0,
+          color: Colors.transparent,
+          child: SwitchListTile.adaptive(
+            secondary: const Icon(Icons.mosque),
+            title: Text(loc.relatedToPrayerTimes),
+            value: _isRelatedToPrayerTimes,
+            onChanged: (bool value) {
+              setState(() {
+                _isRelatedToPrayerTimes = value;
+                // Gebetszeitbezogene Termine können nicht ganztägig sein
+                if (value) {
+                  _isAllDay = false;
+                  if (_startTime != null && _duration != null) {
+                    _endTime = _startTime!.add(_duration!);
                   }
-                });
-              },
-            ),
+                }
+              });
+            },
           ),
+        ),
 
-          // NEU: Google Kalender Synchronisierung
-          Material(
-            elevation: 0,
-            color: Colors.transparent,
-            child: SwitchListTile.adaptive(
-              secondary: const Icon(Icons.sync),
-              title: Text("Mit Google Kalender synchronisieren"),
-              subtitle: Text("Termin automatisch mit Google Kalender teilen"),
-              value: _syncWithGoogleCalendar,
-              onChanged: (bool value) {
-                setState(() {
-                  _syncWithGoogleCalendar = value;
-                });
-              },
-            ),
+        // NEU: Google Kalender Synchronisierung
+        Material(
+          elevation: 0,
+          color: Colors.transparent,
+          child: SwitchListTile.adaptive(
+            secondary: const Icon(Icons.sync),
+            title: Text("Mit Google Kalender synchronisieren"),
+            subtitle: Text("Termin automatisch mit Google Kalender teilen"),
+            value: _syncWithGoogleCalendar,
+            onChanged: (bool value) {
+              setState(() {
+                _syncWithGoogleCalendar = value;
+              });
+            },
           ),
+        ),
 
-          // Gebetszeit-Einstellungen direkt im Hauptbereich
-          if (_isRelatedToPrayerTimes)
-            Container(
-              margin:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              padding: const EdgeInsets.all(12.0),
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .surfaceVariant
-                    .withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8.0),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Überschrift für den Abschnitt
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Text(
-                      loc.prayerTimeSettings,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                  ),
-
-                  // Datum auswählen
-                  ListTile(
-                    leading: const Icon(Icons.calendar_today),
-                    title: Text(loc.selectDate),
-                    subtitle: Text(
-                        _startTime != null ? _formatDate(_startTime!) : '---'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () async {
-                      await _pickStartDate();
-                    },
-                    // Größere Touch-Fläche für iOS
-                    contentPadding: _isIos
-                        ? const EdgeInsets.symmetric(
-                            horizontal: 16.0, vertical: 10.0)
-                        : const EdgeInsets.symmetric(horizontal: 16.0),
-                  ),
-
-                  // Gebetszeit auswählen
-                  ListTile(
-                    leading: const Icon(Icons.timer),
-                    title: Text(loc.prayerTime),
-                    subtitle: Text(_selectedPrayerTime != null
-                        ? loc.getPrayerTimeLabel(_selectedPrayerTime!)
-                        : loc.selectPrayerTime),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      _showPrayerTimeSelectionDialog(loc);
-                    },
-                    // Größere Touch-Fläche für iOS
-                    contentPadding: _isIos
-                        ? const EdgeInsets.symmetric(
-                            horizontal: 16.0, vertical: 10.0)
-                        : const EdgeInsets.symmetric(horizontal: 16.0),
-                  ),
-
-                  // Zeit-Relation (vor/nach)
-                  ListTile(
-                    leading: const Icon(Icons.schedule),
-                    title: Text(loc.timeRelation),
-                    subtitle: Text(_selectedTimeRelation != null
-                        ? loc.getTimeRelationLabel(_selectedTimeRelation!)
-                        : loc.timeRelation),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      _showTimeRelationSelectionDialog(loc);
-                    },
-                    // Größere Touch-Fläche für iOS
-                    contentPadding: _isIos
-                        ? const EdgeInsets.symmetric(
-                            horizontal: 16.0, vertical: 10.0)
-                        : const EdgeInsets.symmetric(horizontal: 16.0),
-                  ),
-
-                  // Minuten vor/nach & Dauer
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0, vertical: 8.0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            initialValue:
-                                _minutesBeforeAfter?.toString() ?? '15',
-                            keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              labelText: loc.minutesBeforeAfter,
-                              border: const OutlineInputBorder(),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12.0, vertical: 8.0),
-                            ),
-                            onChanged: (value) {
-                              setState(() {
-                                _minutesBeforeAfter = int.tryParse(value) ?? 15;
-                                // Aktualisiere auch bei Änderung der Minuten die berechnete Endzeit
-                                if (_isRelatedToPrayerTimes &&
-                                    _startTime != null &&
-                                    _duration != null) {
-                                  // Wir versuchen, die Startzeit neu zu berechnen
-                                  _updateCalculatedTimes();
-                                }
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            initialValue:
-                                _duration?.inMinutes.toString() ?? '30',
-                            keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              labelText: loc.durationMinutes,
-                              border: const OutlineInputBorder(),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12.0, vertical: 8.0),
-                            ),
-                            onChanged: (value) {
-                              setState(() {
-                                _duration = Duration(
-                                    minutes: int.tryParse(value) ?? 30);
-                                // Aktualisiere auch die Endzeit basierend auf der neuen Dauer
-                                if (_isRelatedToPrayerTimes &&
-                                    _startTime != null) {
-                                  // Bei gebetszeitabhängigen Terminen die Endzeit automatisch aktualisieren
-                                  _updateCalculatedTimes();
-                                } else if (_startTime != null) {
-                                  // Bei normalen Terminen die Endzeit berechnen
-                                  _endTime = _startTime!.add(_duration!);
-                                }
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // Startzeit und Endzeit nur anzeigen, wenn NICHT an Gebetszeit gebunden
+        // Gebetszeit-Einstellungen direkt im Hauptbereich
+        if (_isRelatedToPrayerTimes)
           Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding: const EdgeInsets.all(12.0),
+            decoration: BoxDecoration(
+              color:
+                  Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(8.0),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+              ),
+            ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (!_isRelatedToPrayerTimes) ...[
-                  // Startzeit
-                  Row(
-                    children: <Widget>[
+                // Überschrift für den Abschnitt
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text(
+                    loc.prayerTimeSettings,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
+
+                // Datum auswählen
+                ListTile(
+                  leading: const Icon(Icons.calendar_today),
+                  title: Text(loc.selectDate),
+                  subtitle: Text(
+                      _startTime != null ? _formatDate(_startTime!) : '---'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () async {
+                    await _pickStartDate();
+                  },
+                  // Größere Touch-Fläche für iOS
+                  contentPadding: _isIos
+                      ? const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 10.0)
+                      : const EdgeInsets.symmetric(horizontal: 16.0),
+                ),
+
+                // Gebetszeit auswählen
+                ListTile(
+                  leading: const Icon(Icons.timer),
+                  title: Text(loc.prayerTime),
+                  subtitle: Text(_selectedPrayerTime != null
+                      ? loc.getPrayerTimeLabel(_selectedPrayerTime!)
+                      : loc.selectPrayerTime),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    _showPrayerTimeSelectionDialog(loc);
+                  },
+                  // Größere Touch-Fläche für iOS
+                  contentPadding: _isIos
+                      ? const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 10.0)
+                      : const EdgeInsets.symmetric(horizontal: 16.0),
+                ),
+
+                // Zeit-Relation (vor/nach)
+                ListTile(
+                  leading: const Icon(Icons.schedule),
+                  title: Text(loc.timeRelation),
+                  subtitle: Text(_selectedTimeRelation != null
+                      ? loc.getTimeRelationLabel(_selectedTimeRelation!)
+                      : loc.timeRelation),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    _showTimeRelationSelectionDialog(loc);
+                  },
+                  // Größere Touch-Fläche für iOS
+                  contentPadding: _isIos
+                      ? const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 10.0)
+                      : const EdgeInsets.symmetric(horizontal: 16.0),
+                ),
+
+                // Minuten vor/nach & Dauer
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 8.0),
+                  child: Row(
+                    children: [
                       Expanded(
-                        child: Material(
-                          elevation: 0,
-                          color: Colors.transparent,
-                          child: ListTile(
-                            title: Center(
-                              child: Text(
-                                  _startTime != null
-                                      ? _formatDate(_startTime!)
-                                      : '---',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w500)),
-                            ),
-                            onTap: () async {
-                              await _pickStartDate();
-                            },
+                        child: TextFormField(
+                          initialValue: _minutesBeforeAfter?.toString() ?? '15',
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: loc.minutesBeforeAfter,
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12.0, vertical: 8.0),
                           ),
+                          onChanged: (value) {
+                            setState(() {
+                              _minutesBeforeAfter = int.tryParse(value) ?? 15;
+                              // Aktualisiere auch bei Änderung der Minuten die berechnete Endzeit
+                              if (_isRelatedToPrayerTimes &&
+                                  _startTime != null &&
+                                  _duration != null) {
+                                // Wir versuchen, die Startzeit neu zu berechnen
+                                _updateCalculatedTimes();
+                              }
+                            });
+                          },
                         ),
                       ),
-                      const SizedBox(height: 24, child: VerticalDivider()),
+                      const SizedBox(width: 16),
                       Expanded(
-                        child: Material(
-                          elevation: 0,
-                          color: Colors.transparent,
-                          child: ListTile(
-                            title: Center(
-                              child: Text(
-                                  _startTime != null
-                                      ? _formatTime(_startTime!)
-                                      : '--:--',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w500)),
-                            ),
-                            onTap: () async {
-                              await _pickStartTime();
-                            },
+                        child: TextFormField(
+                          initialValue: _duration?.inMinutes.toString() ?? '30',
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: loc.durationMinutes,
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12.0, vertical: 8.0),
                           ),
+                          onChanged: (value) {
+                            setState(() {
+                              _duration =
+                                  Duration(minutes: int.tryParse(value) ?? 30);
+                              // Aktualisiere auch die Endzeit basierend auf der neuen Dauer
+                              if (_isRelatedToPrayerTimes &&
+                                  _startTime != null) {
+                                // Bei gebetszeitabhängigen Terminen die Endzeit automatisch aktualisieren
+                                _updateCalculatedTimes();
+                              } else if (_startTime != null) {
+                                // Bei normalen Terminen die Endzeit berechnen
+                                _endTime = _startTime!.add(_duration!);
+                              }
+                            });
+                          },
                         ),
                       ),
                     ],
                   ),
-                  // Endzeit
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Material(
-                          elevation: 0,
-                          color: Colors.transparent,
-                          child: ListTile(
-                            title: Center(
-                              child: Text(
-                                  _endTime != null
-                                      ? _formatDate(_endTime!)
-                                      : '---',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w500)),
-                            ),
-                            onTap: () async {
-                              await _pickEndDate();
-                            },
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24, child: VerticalDivider()),
-                      Expanded(
-                        child: Material(
-                          elevation: 0,
-                          color: Colors.transparent,
-                          child: ListTile(
-                            title: Center(
-                              child: Text(
-                                  _endTime != null
-                                      ? _formatTime(_endTime!)
-                                      : '--:--',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w500)),
-                            ),
-                            onTap: () async {
-                              await _pickEndTime();
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ],
             ),
           ),
 
-          // Wiederholungs-Widget
-          Material(
-            elevation: 0,
-            color: Colors.transparent,
-            child: ListTile(
-              leading: const Icon(Icons.autorenew),
-              title: Row(
-                children: [
-                  Expanded(child: Text(_getRecurrenceText(loc))),
-                  Switch.adaptive(
-                    value: _isRecurring,
-                    onChanged: (value) {
-                      setState(() {
-                        _isRecurring = value;
-                        // Wenn Wiederholung aktiviert wird, zeige den Dialog zur Konfiguration
-                        if (value) {
-                          // Wir verzögern den Dialog leicht, damit der Switch-Zustand aktualisiert wird
-                          Future.delayed(Duration(milliseconds: 100), () {
-                            _showRecurrenceSelectionDialog();
-                          });
-                        }
-                      });
-                    },
-                  ),
-                ],
-              ),
-              trailing: _isRecurring
-                  ? IconButton(
-                      icon: const Icon(Icons.edit, size: 20),
-                      onPressed: () {
-                        _showRecurrenceSelectionDialog();
-                      },
-                    )
-                  : null,
-              onTap: _isRecurring
-                  ? () {
-                      _showRecurrenceSelectionDialog();
-                    }
-                  : null,
-            ),
-          ),
-
-          // Erinnerung
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        // Startzeit und Endzeit nur anzeigen, wenn NICHT an Gebetszeit gebunden
+        Container(
+          child: Column(
             children: [
-              // Bereits hinzugefügte Erinnerungen
-              ..._remindersList.map((minutes) {
-                String text;
-                if (minutes < 60) {
-                  text = loc.minutesBefore(minutes);
-                } else if (minutes < 1440) {
-                  text = loc.hoursBefore(minutes ~/ 60);
-                } else {
-                  text = loc.daysBefore(minutes ~/ 1440);
-                }
-
-                return Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0, vertical: 4.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(text),
+              if (!_isRelatedToPrayerTimes) ...[
+                // Startzeit
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Material(
+                        elevation: 0,
+                        color: Colors.transparent,
+                        child: ListTile(
+                          title: Center(
+                            child: Text(
+                                _startTime != null
+                                    ? _formatDate(_startTime!)
+                                    : '---',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500)),
+                          ),
+                          onTap: () async {
+                            await _pickStartDate();
+                          },
+                        ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 20),
-                        onPressed: () {
-                          setState(() {
-                            _remindersList.remove(minutes);
-                          });
-                        },
+                    ),
+                    const SizedBox(height: 24, child: VerticalDivider()),
+                    Expanded(
+                      child: Material(
+                        elevation: 0,
+                        color: Colors.transparent,
+                        child: ListTile(
+                          title: Center(
+                            child: Text(
+                                _startTime != null
+                                    ? _formatTime(_startTime!)
+                                    : '--:--',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500)),
+                          ),
+                          onTap: () async {
+                            await _pickStartTime();
+                          },
+                        ),
                       ),
-                    ],
-                  ),
-                );
-              }).toList(),
-
-              // Button zum Hinzufügen neuer Erinnerungen
-              if (_remindersList.length < _maxReminders)
-                Material(
-                  elevation: 0,
-                  color: Colors.transparent,
-                  child: ListTile(
-                    leading: const Icon(Icons.notifications_none),
-                    title: Text(loc.addNotifications),
-                    onTap: () {
-                      _showReminderSelectionDialog(loc);
-                    },
-                  ),
+                    ),
+                  ],
                 ),
-
-              const Divider(height: 1),
+                // Endzeit
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Material(
+                        elevation: 0,
+                        color: Colors.transparent,
+                        child: ListTile(
+                          title: Center(
+                            child: Text(
+                                _endTime != null
+                                    ? _formatDate(_endTime!)
+                                    : '---',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500)),
+                          ),
+                          onTap: () async {
+                            await _pickEndDate();
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24, child: VerticalDivider()),
+                    Expanded(
+                      child: Material(
+                        elevation: 0,
+                        color: Colors.transparent,
+                        child: ListTile(
+                          title: Center(
+                            child: Text(
+                                _endTime != null
+                                    ? _formatTime(_endTime!)
+                                    : '--:--',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500)),
+                          ),
+                          onTap: () async {
+                            await _pickEndTime();
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
+        ),
 
-          // Kategorie & Farbe
-          Material(
-            elevation: 0,
-            color: Colors.transparent,
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: _color,
+        // Wiederholungs-Widget
+        Material(
+          elevation: 0,
+          color: Colors.transparent,
+          child: ListTile(
+            leading: const Icon(Icons.autorenew),
+            title: Row(
+              children: [
+                Expanded(child: Text(_getRecurrenceText(loc))),
+                Switch.adaptive(
+                  value: _isRecurring,
+                  onChanged: (value) {
+                    setState(() {
+                      _isRecurring = value;
+                      // Wenn Wiederholung aktiviert wird, zeige den Dialog zur Konfiguration
+                      if (value) {
+                        // Wir verzögern den Dialog leicht, damit der Switch-Zustand aktualisiert wird
+                        Future.delayed(Duration(milliseconds: 100), () {
+                          _showRecurrenceSelectionDialog();
+                        });
+                      }
+                    });
+                  },
+                ),
+              ],
+            ),
+            trailing: _isRecurring
+                ? IconButton(
+                    icon: const Icon(Icons.edit, size: 20),
+                    onPressed: () {
+                      _showRecurrenceSelectionDialog();
+                    },
+                  )
+                : null,
+            onTap: _isRecurring
+                ? () {
+                    _showRecurrenceSelectionDialog();
+                  }
+                : null,
+          ),
+        ),
+
+        // Erinnerung
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Bereits hinzugefügte Erinnerungen
+            ..._remindersList.map((minutes) {
+              String text;
+              if (minutes < 60) {
+                text = loc.minutesBefore(minutes);
+              } else if (minutes < 1440) {
+                text = loc.hoursBefore(minutes ~/ 60);
+              } else {
+                text = loc.daysBefore(minutes ~/ 1440);
+              }
+
+              return Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(text),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () {
+                        setState(() {
+                          _remindersList.remove(minutes);
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+
+            // Button zum Hinzufügen neuer Erinnerungen
+            if (_remindersList.length < _maxReminders)
+              Material(
+                elevation: 0,
+                color: Colors.transparent,
+                child: ListTile(
+                  leading: const Icon(Icons.notifications_none),
+                  title: Text(loc.addNotifications),
+                  onTap: () {
+                    _showReminderSelectionDialog(loc);
+                  },
+                ),
               ),
-              title: Text(_selectedCategory != null
-                  ? _selectedCategory!.name
-                  : loc.selectCategoryLabel),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              onTap: () {
-                _showCategorySelectionDialog(loc);
-              },
+
+            const Divider(height: 1),
+          ],
+        ),
+
+        // Kategorie & Farbe
+        Material(
+          elevation: 0,
+          color: Colors.transparent,
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: _color,
             ),
+            title: Text(_selectedCategory != null
+                ? _selectedCategory!.name
+                : loc.selectCategoryLabel),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              _showCategorySelectionDialog(loc);
+            },
           ),
+        ),
 
-          // Beschreibung
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-            child: TextFormField(
-              controller: _descriptionController,
-              decoration: InputDecoration(labelText: loc.description),
-              minLines: 1,
-              maxLines: 3,
+        // Beschreibung
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+          child: TextFormField(
+            controller: _descriptionController,
+            decoration: InputDecoration(labelText: loc.description),
+            minLines: 1,
+            maxLines: 3,
+          ),
+        ),
+
+        const Divider(height: 1),
+
+        // Mehr Optionen ein-/ausklappen
+        Material(
+          elevation: 0,
+          color: Colors.transparent,
+          child: ListTile(
+            leading: const Icon(Icons.more_horiz),
+            title: Text(
+                _showAdvancedOptions ? loc.fewerOptions : loc.advancedOptions),
+            trailing: Icon(
+              _showAdvancedOptions
+                  ? Icons.arrow_drop_up
+                  : Icons.arrow_drop_down,
             ),
+            onTap: () {
+              setState(() {
+                _showAdvancedOptions = !_showAdvancedOptions;
+              });
+            },
           ),
+        ),
 
-          const Divider(height: 1),
+        if (_showAdvancedOptions) ...[
+          // Die Gebetszeit-Einstellungen wurden in den Hauptbereich verschoben
 
-          // Mehr Optionen ein-/ausklappen
-          Material(
-            elevation: 0,
-            color: Colors.transparent,
-            child: ListTile(
-              leading: const Icon(Icons.more_horiz),
-              title: Text(_showAdvancedOptions
-                  ? loc.fewerOptions
-                  : loc.advancedOptions),
-              trailing: Icon(
-                _showAdvancedOptions
-                    ? Icons.arrow_drop_up
-                    : Icons.arrow_drop_down,
-              ),
-              onTap: () {
-                setState(() {
-                  _showAdvancedOptions = !_showAdvancedOptions;
-                });
-              },
-            ),
+          // Standort (Länder/City)
+          ListTile(
+            leading: const Icon(Icons.location_on),
+            title: Text(loc.country),
+            subtitle: Text(_selectedCountry ?? loc.selectCountry),
+            trailing: const Icon(Icons.arrow_forward_ios),
+            onTap: () {
+              _showCountrySelectionDialog(loc);
+            },
           ),
-
-          if (_showAdvancedOptions) ...[
-            // Die Gebetszeit-Einstellungen wurden in den Hauptbereich verschoben
-
-            // Standort (Länder/City)
+          if (_selectedCountry != null)
             ListTile(
-              leading: const Icon(Icons.location_on),
-              title: Text(loc.country),
-              subtitle: Text(_selectedCountry ?? loc.selectCountry),
+              leading: const Icon(Icons.location_city),
+              title: Text(loc.city),
+              subtitle: Text(_selectedCity ?? loc.selectCity),
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () {
-                _showCountrySelectionDialog(loc);
+                _showCitySelectionDialog(loc);
               },
             ),
-            if (_selectedCountry != null)
-              ListTile(
-                leading: const Icon(Icons.location_city),
-                title: Text(loc.city),
-                subtitle: Text(_selectedCity ?? loc.selectCity),
-                trailing: const Icon(Icons.arrow_forward_ios),
-                onTap: () {
-                  _showCitySelectionDialog(loc);
-                },
-              ),
-          ],
-
-          // Save Button
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: _isIos
-                ? CupertinoButton.filled(
-                    child: Text(loc.save),
-                    onPressed: _saveAppointment,
-                  )
-                : FilledButton(
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                    ),
-                    onPressed: _saveAppointment,
-                    child: Text(loc.save),
-                  ),
-          ),
         ],
-      ),
+
+        // Save Button
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: _isIos
+              ? CupertinoButton.filled(
+                  child: Text(loc.save),
+                  onPressed: _saveAppointment,
+                )
+              : FilledButton(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                  onPressed: _saveAppointment,
+                  child: Text(loc.save),
+                ),
+        ),
+      ],
     );
   }
   // --------------------------------------------------------------------------
@@ -1493,7 +1494,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           ),
         ),
         child: SafeArea(
-          child: _buildGoogleCalendarForm(loc),
+          child: Form(
+            key: _formKey,
+            child: _buildGoogleCalendarForm(loc),
+          ),
         ),
       );
     } else {
@@ -1503,7 +1507,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               ? loc.createAppointment
               : loc.editAppointment),
         ),
-        body: _buildGoogleCalendarForm(loc),
+        body: Form(
+          key: _formKey,
+          child: _buildGoogleCalendarForm(loc),
+        ),
       );
     }
   }

@@ -5502,4 +5502,47 @@ class AppLocalizations extends ChangeNotifier {
 
   String get categoryLabel => Intl.message('Kategorie', name: 'categoryLabel');
   String get privateCategory => Intl.message('Privat', name: 'privateCategory');
+
+  // ------------------------------
+  // Form-Validierung
+  // ------------------------------
+  String get titleRequired {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Titel ist erforderlich';
+      case AppLanguage.turkish:
+        return 'Başlık gereklidir';
+      case AppLanguage.arabic:
+        return 'العنوان مطلوب';
+      case AppLanguage.bosnian:
+        return 'Naslov je obavezan';
+      case AppLanguage.spanish:
+        return 'El título es obligatorio';
+      case AppLanguage.persian:
+        return 'عنوان الزامی است';
+      case AppLanguage.english:
+      default:
+        return 'Title is required';
+    }
+  }
+
+  String get appointmentTitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Titel des Termins';
+      case AppLanguage.turkish:
+        return 'Randevu başlığı';
+      case AppLanguage.arabic:
+        return 'عنوان الموعد';
+      case AppLanguage.bosnian:
+        return 'Naslov termina';
+      case AppLanguage.spanish:
+        return 'Título de la cita';
+      case AppLanguage.persian:
+        return 'عنوان قرار ملاقات';
+      case AppLanguage.english:
+      default:
+        return 'Appointment title';
+    }
+  }
 }

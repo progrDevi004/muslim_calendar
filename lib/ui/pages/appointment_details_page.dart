@@ -20,6 +20,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
 
+// Repository
+import 'package:muslim_calendar/data/repositories/category_repository.dart';
+
 class AppointmentDetailsPage extends StatefulWidget {
   final int appointmentId;
 
@@ -34,6 +37,7 @@ class AppointmentDetailsPage extends StatefulWidget {
 
 class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   final AppointmentRepository _appointmentRepo = AppointmentRepository();
+  final CategoryRepository _categoryRepo = CategoryRepository();
   AppointmentModel? _appointment;
   bool _isLoading = true;
   CategoryModel? _category;
@@ -76,55 +80,60 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   }
 
   Future<void> _loadAppointment() async {
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
+
     try {
-      final appt = await _appointmentRepo.getAppointment(widget.appointmentId);
-      if (appt != null) {
-        // NEU: Computed Times
-        final baseDate = appt.startTime != null
-            ? DateTime(
-                appt.startTime!.year,
-                appt.startTime!.month,
-                appt.startTime!.day,
-              )
-            : DateTime.now();
+      _appointment =
+          await _appointmentRepo.getAppointment(widget.appointmentId);
 
-        final start = await _prayerTimeService.getCalculatedStartTime(
-          appt,
-          baseDate,
-        );
-        final end = await _prayerTimeService.getCalculatedEndTime(
-          appt,
-          baseDate,
-        );
+      if (_appointment != null) {
+        _category =
+            await _categoryRepo.getCategory(_appointment!.categoryId ?? 1);
 
-        // Lade die Kategorie
-        final category =
-            await _appointmentRepo.getCategoryById(appt.categoryId ?? 1);
+        // Gebetszeit-abhängige berechnete Terminzeiten
+        if (_appointment!.isRelatedToPrayerTimes &&
+            _appointment!.prayerTime != null) {
+          // Gebetszeit-Adapter verwenden
+          final prayerTimeService =
+              Provider.of<PrayerTimeService>(context, listen: false);
 
-        setState(() {
-          _appointment = appt;
-          _category = category;
-          _computedStartTime = start ?? appt.startTime;
-          _computedEndTime = end ?? appt.endTime;
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _appointment = null;
-          _category = null;
-          _isLoading = false;
-        });
+          // Berechnete Startzeit
+          _computedStartTime = await prayerTimeService.getCalculatedStartTime(
+                _appointment!,
+                _appointment!.startTime ?? DateTime.now(),
+              ) ??
+              _appointment!.startTime;
+
+          // Berechnete Endzeit
+          _computedEndTime = await prayerTimeService.getCalculatedEndTime(
+                _appointment!,
+                _appointment!.startTime ?? DateTime.now(),
+              ) ??
+              _appointment!.endTime;
+        } else {
+          // Bei normalen Terminen die regulären Zeiten verwenden
+          _computedStartTime = _appointment!.startTime;
+          _computedEndTime = _appointment!.endTime;
+        }
+
+        // Debug-Ausgaben für die Google-Synchronisierungsdaten
+        debugPrint(
+            "📋 Termin geladen: ${_appointment!.subject} (ID: ${_appointment!.id})");
+        debugPrint(
+            "  - Google-Sync aktiviert: ${_appointment!.syncWithGoogleCalendar}");
+        debugPrint(
+            "  - Google-ID: ${_appointment!.externalIdGoogle ?? 'Nicht gesetzt'}");
+        debugPrint(
+            "  - Letzte Synchronisierung: ${_appointment!.lastSyncedAt?.toIso8601String() ?? 'Nie'}");
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading appointment: $e')),
-      );
+      debugPrint("❌ Fehler beim Laden des Termins: $e");
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -231,10 +240,30 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
           "Aktueller Sync-Status: ${_appointment!.syncWithGoogleCalendar}");
       if (!_appointment!.syncWithGoogleCalendar) {
         debugPrint("Aktiviere syncWithGoogleCalendar Flag");
+        // Dieses Flag muss gesetzt sein, damit der Termin für die Synchronisierung ausgewählt wird
         updatedAppointment =
             _appointment!.copyWith(syncWithGoogleCalendar: true);
+
+        // In der Datenbank aktualisieren und auf Aktualisierung warten
         await _appointmentRepo.updateAppointment(updatedAppointment);
         debugPrint("Flag in Datenbank aktualisiert");
+
+        // Sicherstellen, dass der Termin direkt mit dem Flag aktualisiert wurde
+        await _appointmentRepo.setGoogleSyncStatus(
+            updatedAppointment.id!, true);
+        debugPrint("Flag explizit über setGoogleSyncStatus gesetzt");
+
+        // Termin neu laden, um sicherzustellen, dass wir die aktualisierten Daten haben
+        final refreshedAppointment =
+            await _appointmentRepo.getAppointment(updatedAppointment.id!);
+        if (refreshedAppointment != null) {
+          updatedAppointment = refreshedAppointment;
+          setState(() {
+            _appointment = refreshedAppointment;
+          });
+          debugPrint(
+              "Termin nach Flag-Update neu geladen, syncFlag ist jetzt: ${_appointment!.syncWithGoogleCalendar}");
+        }
       }
 
       // NEU: Hole alle Termine, um verwaiste Google-Kalendereinträge zu bereinigen
@@ -267,9 +296,24 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
       await calendarSyncService.cleanupOrphanedGoogleEvents(allAppointments);
       debugPrint("✅ Bereinigung abgeschlossen");
 
-      // Laden des aktualisierten Termins
-      await _loadAppointment();
-      debugPrint("✅ Termin neu geladen");
+      // Kurze Verzögerung, damit die Datenbank-Updates abgeschlossen werden können
+      debugPrint(
+          "⏱️ Warte kurz, damit die Datenbank-Updates abgeschlossen werden können...");
+      await Future.delayed(Duration(milliseconds: 500));
+
+      // Termin explizit und direkt aus der Datenbank neu laden
+      final refreshedAppointment =
+          await _appointmentRepo.getAppointment(widget.appointmentId);
+      if (refreshedAppointment != null) {
+        setState(() {
+          _appointment = refreshedAppointment;
+        });
+        debugPrint("📋 Termin neu geladen (direkt aus DB):");
+        debugPrint(
+            "  - Google-ID: ${_appointment?.externalIdGoogle ?? 'Nicht gesetzt'}");
+        debugPrint(
+            "  - Letzte Synchronisierung: ${_appointment?.lastSyncedAt?.toIso8601String() ?? 'Nie'}");
+      }
 
       // Erfolgsanzeige - NEU: Wir löschen zuerst die alte Snackbar
       if (mounted) {
@@ -629,29 +673,22 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
             const SizedBox(height: 12),
 
             // Info-Anzeige über den Google-Sync-Status
-            if (_appointment!.syncWithGoogleCalendar ||
-                _appointment!.externalIdGoogle != null)
+            if (_appointment!.externalIdGoogle != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
                 child: Row(
                   children: [
                     Icon(
-                      _appointment!.externalIdGoogle != null
-                          ? Icons.check_circle
-                          : Icons.pending,
-                      color: _appointment!.externalIdGoogle != null
-                          ? Colors.green
-                          : Colors.orange,
+                      Icons.check_circle,
+                      color: Colors.green,
                       size: 18,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        _appointment!.externalIdGoogle != null
-                            ? _appointment!.lastSyncedAt != null
-                                ? "Zuletzt synchronisiert: ${DateFormat('dd.MM.yyyy, HH:mm').format(_appointment!.lastSyncedAt!)}"
-                                : "Mit Google Kalender synchronisiert"
-                            : "Synchronisierung mit Google Kalender aktiviert",
+                        _appointment!.lastSyncedAt != null
+                            ? "Zuletzt synchronisiert: ${DateFormat('dd.MM.yyyy, HH:mm').format(_appointment!.lastSyncedAt!)}"
+                            : "Termin mit Google Kalender synchronisiert",
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
@@ -665,8 +702,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                 icon: _appointment!.syncWithGoogleCalendar
                     ? Icons.sync
                     : Icons.sync_disabled,
-                label: _appointment!.syncWithGoogleCalendar &&
-                        _appointment!.externalIdGoogle != null
+                label: _appointment!.externalIdGoogle != null
                     ? "Mit Google erneut synchronisieren"
                     : "Mit Google synchronisieren",
                 onPressed: () async {

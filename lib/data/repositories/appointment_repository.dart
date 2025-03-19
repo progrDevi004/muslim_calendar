@@ -133,38 +133,8 @@ class AppointmentRepository {
               isDefault: true,
             ));
 
-    // Termine konvertieren und dabei Kategorien richtig zuordnen
-    final appointments = <AppointmentModel>[];
-
-    for (var map in maps) {
-      // Kategorie-ID aus dem Termin-Map extrahieren
-      final categoryId = map['categoryId'] as int?;
-
-      // Wenn keine Kategorie zugewiesen ist, Standard-Kategorie verwenden
-      if (categoryId == null) {
-        final appointment = AppointmentModel.fromMap({
-          ...map,
-          'categoryId': standardCategory.id,
-        });
-        appointments.add(appointment);
-        continue;
-      }
-
-      // Prüfen, ob die Kategorie existiert
-      final category = allCategories.firstWhere(
-        (cat) => cat.id == categoryId,
-        orElse: () => standardCategory,
-      );
-
-      // Termin mit korrekter Kategorie erstellen
-      final appointment = AppointmentModel.fromMap({
-        ...map,
-        'categoryId': category.id,
-      });
-      appointments.add(appointment);
-    }
-
-    return appointments;
+    // Verwende die gemeinsame Hilfsmethode für die Konvertierung
+    return _convertMapToAppointments(maps, allCategories, standardCategory);
   }
 
   Future<AppointmentModel?> getAppointmentByExternalIdGoogle(
@@ -346,5 +316,123 @@ class AppointmentRepository {
       where: 'id = ?',
       whereArgs: [appointmentId],
     );
+  }
+
+  // Neue Methode: Aktualisiert nur die Google-spezifischen Felder nach der Synchronisation
+  Future<int> updateAppointmentGoogleSync(
+      int appointmentId, String externalIdGoogle, DateTime syncedAt) async {
+    final db = await dbHelper.database;
+
+    // Füge explizit das syncWithGoogleCalendar-Flag hinzu
+    final result = await db.update(
+      'appointments',
+      {
+        'externalIdGoogle': externalIdGoogle,
+        'lastSyncedAt': syncedAt.toIso8601String(),
+        'syncWithGoogleCalendar':
+            1, // Stelle sicher, dass das Flag aktiviert ist
+      },
+      where: 'id = ?',
+      whereArgs: [appointmentId],
+    );
+
+    debugPrint("🔄 Google-Sync-Daten für Termin $appointmentId aktualisiert:");
+    debugPrint("  - Google-ID: $externalIdGoogle");
+    debugPrint("  - Sync-Zeit: $syncedAt");
+    debugPrint("  - syncWithGoogleCalendar: true");
+
+    // Überprüfe, ob das Update erfolgreich war
+    final appointment = await getAppointment(appointmentId);
+    if (appointment != null) {
+      debugPrint(
+          "  - Verifizierung in DB: Google-ID=${appointment.externalIdGoogle}, syncFlag=${appointment.syncWithGoogleCalendar}");
+    } else {
+      debugPrint(
+          "  - Warnung: Konnte Termin mit ID $appointmentId nicht zur Verifizierung laden");
+    }
+
+    return result;
+  }
+
+  // Neue Methode: Gibt alle Termine zurück, die mit Google synchronisiert werden sollen
+  Future<List<AppointmentModel>> getAppointmentsToSync() async {
+    final db = await dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'appointments',
+      where: 'syncWithGoogleCalendar = 1',
+    );
+
+    // Alle Kategorien laden
+    List<CategoryModel> allCategories = [];
+    try {
+      final List<Map<String, dynamic>> categoryMaps =
+          await db.query('categories');
+      allCategories =
+          categoryMaps.map((m) => CategoryModel.fromMap(m)).toList();
+    } catch (e) {
+      debugPrint("Fehler beim Laden der Kategorien: $e");
+      // Standard-Kategorie als Fallback
+      allCategories = [
+        CategoryModel(
+          id: 1,
+          name: 'Privat',
+          color: const Color(0xFF2196F3),
+          isDefault: true,
+        ),
+      ];
+    }
+
+    // Standardkategorie definieren (für Termine ohne Kategorie)
+    final standardCategory = allCategories.firstWhere((cat) => cat.isDefault,
+        orElse: () => CategoryModel(
+              id: 1,
+              name: 'Privat',
+              color: const Color(0xFF2196F3),
+              isDefault: true,
+            ));
+
+    return _convertMapToAppointments(maps, allCategories, standardCategory);
+  }
+
+  // Private Hilfsmethode zum Konvertieren von Map zu AppointmentModel mit Kategoriezuordnung
+  List<AppointmentModel> _convertMapToAppointments(
+    List<Map<String, dynamic>> maps,
+    List<CategoryModel> allCategories,
+    CategoryModel standardCategory,
+  ) {
+    final appointments = <AppointmentModel>[];
+
+    for (var map in maps) {
+      // Kategorie-ID aus dem Termin-Map extrahieren
+      final categoryId = map['categoryId'] as int?;
+
+      // Wenn keine Kategorie zugewiesen ist, Standard-Kategorie verwenden
+      if (categoryId == null) {
+        final appointment = AppointmentModel.fromMap({
+          ...map,
+          'categoryId': standardCategory.id,
+        });
+        appointments.add(appointment);
+        continue;
+      }
+
+      // Suche nach der passenden Kategorie für die ID
+      final categoryFound = allCategories.any((cat) => cat.id == categoryId);
+
+      if (!categoryFound) {
+        // Wenn keine passende Kategorie gefunden wurde, die Standard-Kategorie verwenden
+        final appointment = AppointmentModel.fromMap({
+          ...map,
+          'categoryId': standardCategory.id,
+        });
+        appointments.add(appointment);
+      } else {
+        // Kategorie existiert, Termin direkt hinzufügen
+        final appointment = AppointmentModel.fromMap(map);
+        appointments.add(appointment);
+      }
+    }
+
+    return appointments;
   }
 }

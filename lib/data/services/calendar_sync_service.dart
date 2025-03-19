@@ -719,11 +719,24 @@ class CalendarSyncService extends ChangeNotifier {
           calendarId: targetCalendarId, // Kategorienabhängiger Kalender
         );
 
-        if (appointment.externalIdGoogle == null) {
+        if (appointment.externalIdGoogle == null ||
+            appointment.externalIdGoogle != event.id) {
           // Hier muss ein copyWith verwendet werden, da wir nur ein Feld ändern wollen
-          AppointmentModel updatedAppointment =
-              appointment.copyWith(externalIdGoogle: event.id);
+          final now = DateTime.now();
+          AppointmentModel updatedAppointment = appointment.copyWith(
+              externalIdGoogle: event.id,
+              lastSyncedAt: now // Aktualisiere auch lastSyncedAt
+              );
           await appointmentRepository.updateAppointment(updatedAppointment);
+          debugPrint(
+              "✅ Termin '${appointment.subject}' (ID: ${appointment.id}) mit Google-ID ${event.id} aktualisiert");
+          debugPrint("  - Synchronisierungszeitpunkt: $now");
+
+          // Überprüfen, ob die Aktualisierung erfolgreich war
+          final checkAppointment =
+              await appointmentRepository.getAppointment(appointment.id!);
+          debugPrint(
+              "  - Nach Update in DB: Google-ID=${checkAppointment?.externalIdGoogle}, lastSyncedAt=${checkAppointment?.lastSyncedAt}");
         }
       }
     }
@@ -841,60 +854,67 @@ class CalendarSyncService extends ChangeNotifier {
     }
   }
 
-  /// Führt nur einen Export zu Google Calendar durch
-  ///
-  /// Verwendet die kategoriebasierte Zuordnung zu den entsprechenden Google-Kalendern.
-  /// Termine werden automatisch in den Google-Kalender exportiert, dessen Name mit dem
-  /// Kategorienamen übereinstimmt, falls ein solcher Kalender existiert und ausgewählt ist.
+  /// Exportiert nur Termine zu Google Calendar (ohne Import)
   Future<void> exportToGoogleCalendarOnly(
-      {bool useCategoryMapping = true}) async {
-    debugPrint("Starte Export zu Google Calendar mit Kategorie-Mapping");
-
-    // Zuerst fehlerhafte Wiederholungsregeln korrigieren
-    await fixInvalidRecurrenceRules();
+      {bool useCategoryMapping = false}) async {
+    debugPrint("🔄 Nur Export zu Google Calendar wird ausgeführt");
 
     try {
-      // Aktiviere das Sync-Flag für alle Termine automatisch
-      final updatedCount =
-          await appointmentRepository.enableSyncForAllAppointments();
-      debugPrint("Sync-Flag für $updatedCount Termine aktiviert");
-
-      // Export durchführen
       if (useCategoryMapping) {
-        // Wenn Kategorie-Mapping gewünscht ist, verwenden wir nur die Standard-Export-Methode
-        debugPrint(
-            "📋 Verwende Standard-Export mit Kategorie-zu-Kalender-Zuordnung");
+        debugPrint("🗂️ Verwende kategoriebasiertes Kalender-Mapping");
         await exportAppointments();
       } else {
-        // Nur wenn explizit kein Kategorie-Mapping gewünscht ist, versuchen wir den optimierten Export
-        bool exportSuccess = false;
+        await calendarProvider.autoSignIn();
 
-        // Wenn der optimierte GoogleCalendarSyncService verfügbar ist, verwende diesen für den Export
-        if (googleCalendarSyncService != null) {
-          exportSuccess = await efficientSyncWithGoogle();
-          if (!exportSuccess) {
-            // Fallback auf Standard-Export-Methode mit Kategorie-Mapping
+        // Alle Termine laden, die mit Google synchronisiert werden sollen
+        List<AppointmentModel> appointmentsToSync =
+            await appointmentRepository.getAppointmentsToSync();
+
+        debugPrint(
+            "📊 ${appointmentsToSync.length} Termine zur Synchronisierung gefunden");
+
+        for (var appointment in appointmentsToSync) {
+          if (appointment.id == null) continue;
+
+          try {
+            // Hier verwenden wir die direkte API-Schnittstelle des GoogleCalendarService
+            final externalId = await calendarProvider
+                .syncAppointmentWithGoogleCalendar(appointment);
+
+            if (externalId != null) {
+              // Die neue Methode verwenden, um nur die Google-Sync-Daten zu aktualisieren
+              final now = DateTime.now();
+              await appointmentRepository.updateAppointmentGoogleSync(
+                appointment.id!,
+                externalId,
+                now,
+              );
+              debugPrint(
+                  "✅ Termin '${appointment.subject}' (ID: ${appointment.id}) mit Google synchronisiert");
+              debugPrint("  - Neue Google-ID: $externalId");
+              debugPrint("  - Synchronisierungszeitpunkt: $now");
+
+              // Überprüfen, ob die Aktualisierung erfolgreich war
+              final updatedAppointment =
+                  await appointmentRepository.getAppointment(appointment.id!);
+              debugPrint(
+                  "  - Nach Update: Google-ID=${updatedAppointment?.externalIdGoogle}, lastSyncedAt=${updatedAppointment?.lastSyncedAt}");
+            } else {
+              debugPrint(
+                  "⚠️ Keine Google-ID für Termin '${appointment.subject}' (ID: ${appointment.id}) erhalten");
+            }
+          } catch (e) {
             debugPrint(
-                "Optimierter Export fehlgeschlagen, verwende Standard-Export mit Kategorie-Mapping");
-            await exportAppointments();
+                "❌ Fehler bei der Synchronisierung von '${appointment.subject}': $e");
           }
-        } else {
-          // Standard-Export-Methode verwenden (jetzt mit Kategorie-Mapping)
-          await exportAppointments();
         }
       }
-
-      // Lokal gelöschte Termine auch in Google löschen
-      if (googleCalendarSyncService != null) {
-        debugPrint("Bereinige lokal gelöschte Termine in Google Calendar...");
-        await googleCalendarSyncService!.deleteMissingLocalAppointments();
-        debugPrint("Bereinigung abgeschlossen");
-      }
-
-      debugPrint("Export zu Google Calendar abgeschlossen");
     } catch (e) {
-      debugPrint("Fehler beim Export: $e");
+      debugPrint("❌ Fehler beim Export: $e");
     }
+
+    debugPrint("✅ Export zu Google Calendar abgeschlossen");
+    notifyListeners();
   }
 
   /// Verwendet den optimierten GoogleCalendarSyncService für effizientere Synchronisierung
