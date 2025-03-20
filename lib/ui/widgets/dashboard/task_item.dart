@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:muslim_calendar/models/dashboard_task.dart';
+import 'package:muslim_calendar/ui/components/platform_adaptive_card.dart';
 
 class TaskItem extends StatelessWidget {
   final DashboardTask task;
@@ -66,20 +69,60 @@ class RegularTaskItem extends StatelessWidget {
     final startStr = task.formattedStartTime;
     final endStr = task.formattedEndTime;
 
+    // Plattformspezifische Anpassungen
+    final double verticalMargin = Platform.isIOS ? 7 : 6;
+    final double horizontalPadding = Platform.isIOS ? 14 : 16;
+    final double verticalPadding = Platform.isIOS ? 14 : 16;
+    final BorderRadius borderRadius =
+        Platform.isIOS ? BorderRadius.circular(12) : BorderRadius.circular(16);
+
+    final TextStyle titleStyle = Platform.isIOS
+        ? TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+            color: textColor,
+          )
+        : TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: textColor,
+          );
+
+    final TextStyle durationStyle = Platform.isIOS
+        ? TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+            color: textColor,
+          )
+        : TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: textColor,
+          );
+
+    final TextStyle timeStyle = TextStyle(
+      color: textColor.withOpacity(0.9),
+      fontSize: Platform.isIOS ? 9 : 10,
+    );
+
+    final TextStyle descriptionStyle = TextStyle(
+      color: textColor.withOpacity(0.9),
+      fontSize: Platform.isIOS ? 13 : 14,
+    );
+
     return MouseRegion(
       onEnter: (_) => onHoverEnter(task.appointmentId ?? 0),
       onExit: (_) => onHoverExit(task.appointmentId ?? 0),
-      child: InkWell(
-        splashColor: backgroundColor.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(16),
+      child: GestureDetector(
         onTap: () =>
             task.appointmentId != null ? onTaskTap(task.appointmentId!) : null,
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 6),
-          padding: const EdgeInsets.all(16),
+          margin: EdgeInsets.symmetric(vertical: verticalMargin),
+          padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding, vertical: verticalPadding),
           decoration: BoxDecoration(
             color: backgroundColor,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: borderRadius,
             boxShadow: hoveredTaskId == task.appointmentId
                 ? [
                     BoxShadow(
@@ -99,42 +142,29 @@ class RegularTaskItem extends StatelessWidget {
                   children: [
                     Text(
                       _formatDuration(task.durationInMinutes),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: textColor,
-                      ),
+                      style: durationStyle,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '$startStr - $endStr',
-                      style: TextStyle(
-                        color: textColor.withOpacity(0.9),
-                        fontSize: 10,
-                      ),
+                      style: timeStyle,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: Platform.isIOS ? 14 : 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       task.title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: textColor,
-                      ),
+                      style: titleStyle,
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: Platform.isIOS ? 3 : 4),
                     Text(
                       task.description,
-                      style: TextStyle(
-                        color: textColor.withOpacity(0.9),
-                      ),
+                      style: descriptionStyle,
                     ),
                   ],
                 ),
@@ -169,20 +199,39 @@ class AllDayTaskItem extends StatelessWidget {
     final textColor = _getContrastingTextColor(backgroundColor);
     final loc = Provider.of<AppLocalizations>(context);
 
+    // Plattformspezifische Anpassungen
+    final double verticalMargin = Platform.isIOS ? 7 : 6;
+    final double padding = Platform.isIOS ? 14 : 16;
+    final BorderRadius borderRadius =
+        Platform.isIOS ? BorderRadius.circular(12) : BorderRadius.circular(16);
+
+    final IconData calendarIcon =
+        Platform.isIOS ? CupertinoIcons.calendar : Icons.calendar_month;
+
+    final TextStyle titleStyle = Platform.isIOS
+        ? TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+            color: textColor,
+          )
+        : TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: textColor,
+          );
+
     return MouseRegion(
       onEnter: (_) => onHoverEnter(task.appointmentId ?? 0),
       onExit: (_) => onHoverExit(task.appointmentId ?? 0),
-      child: InkWell(
-        splashColor: backgroundColor.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(16),
+      child: GestureDetector(
         onTap: () =>
             task.appointmentId != null ? onTaskTap(task.appointmentId!) : null,
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 6),
-          padding: const EdgeInsets.all(16),
+          margin: EdgeInsets.symmetric(vertical: verticalMargin),
+          padding: EdgeInsets.all(padding),
           decoration: BoxDecoration(
             color: backgroundColor.withOpacity(0.9),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: borderRadius,
             boxShadow: hoveredTaskId == task.appointmentId
                 ? [
                     BoxShadow(
@@ -195,20 +244,16 @@ class AllDayTaskItem extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Icon(
-                Icons.calendar_month,
+              Icon(
+                calendarIcon,
                 color: Colors.white,
-                size: 24,
+                size: Platform.isIOS ? 22 : 24,
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: Platform.isIOS ? 10 : 12),
               Expanded(
                 child: Text(
                   '${task.title} (${loc.allDay})',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: textColor,
-                  ),
+                  style: titleStyle,
                 ),
               ),
             ],
@@ -232,12 +277,36 @@ class PrayerSlotItem extends StatelessWidget {
     final timeStr = task.formattedStartTime;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Plattformspezifische Anpassungen
+    final double verticalMargin = Platform.isIOS ? 7 : 6;
+    final EdgeInsets padding = Platform.isIOS
+        ? const EdgeInsets.symmetric(horizontal: 14, vertical: 8)
+        : const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 8);
+
+    final BorderRadius borderRadius =
+        Platform.isIOS ? BorderRadius.circular(12) : BorderRadius.circular(16);
+
+    final IconData starIcon =
+        Platform.isIOS ? CupertinoIcons.star_fill : Icons.star;
+
+    final TextStyle timeStyle = TextStyle(
+      fontWeight: Platform.isIOS ? FontWeight.w600 : FontWeight.bold,
+      fontSize: Platform.isIOS ? 13 : 14,
+      color: Colors.teal.shade700,
+    );
+
+    final TextStyle titleStyle = TextStyle(
+      fontWeight: Platform.isIOS ? FontWeight.w600 : FontWeight.bold,
+      fontSize: Platform.isIOS ? 15 : 16,
+      color: isDark ? Colors.white : Colors.black87,
+    );
+
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 8),
+      margin: EdgeInsets.symmetric(vertical: verticalMargin),
+      padding: padding,
       decoration: BoxDecoration(
         color: Colors.grey.shade200.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: borderRadius,
         border: Border.all(
           color: Colors.grey.shade400,
           style: BorderStyle.solid,
@@ -246,29 +315,16 @@ class PrayerSlotItem extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.star, color: Colors.teal),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  task.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Colors.teal,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  timeStr,
-                  style: TextStyle(
-                    color: isDark ? Colors.white70 : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
+          Icon(starIcon, color: Colors.teal),
+          SizedBox(width: Platform.isIOS ? 10 : 12),
+          Text(
+            task.title,
+            style: titleStyle,
+          ),
+          const Spacer(),
+          Text(
+            timeStr,
+            style: timeStyle,
           ),
         ],
       ),
@@ -276,14 +332,22 @@ class PrayerSlotItem extends StatelessWidget {
   }
 }
 
-// Hilfsfunktionen
-Color _getContrastingTextColor(Color background) {
-  final brightness = ThemeData.estimateBrightnessForColor(background);
-  return brightness == Brightness.dark ? Colors.white : Colors.black;
+Color _getContrastingTextColor(Color bgColor) {
+  return ThemeData.estimateBrightnessForColor(bgColor) == Brightness.light
+      ? Colors.black
+      : Colors.white;
 }
 
 String _formatDuration(int minutes) {
-  final h = minutes ~/ 60;
-  final m = minutes % 60;
-  return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}h';
+  if (minutes < 60) {
+    return '$minutes ${minutes == 1 ? 'min' : 'mins'}';
+  } else {
+    final hours = minutes ~/ 60;
+    final mins = minutes % 60;
+    if (mins == 0) {
+      return '$hours ${hours == 1 ? 'hour' : 'hours'}';
+    } else {
+      return '$hours:${mins.toString().padLeft(2, '0')}h';
+    }
+  }
 }

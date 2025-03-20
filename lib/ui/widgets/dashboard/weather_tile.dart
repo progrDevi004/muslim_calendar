@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:provider/provider.dart';
 
@@ -24,26 +26,83 @@ class WeatherTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final loc = Provider.of<AppLocalizations>(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+
+    // Plattformspezifische Stile und Werte
+    final IconData weatherIcon =
+        Platform.isIOS ? CupertinoIcons.sun_max : Icons.wb_sunny_outlined;
+
+    final IconData errorIcon =
+        Platform.isIOS ? CupertinoIcons.wifi_slash : Icons.wifi_off;
+
+    final TextStyle titleStyle = Platform.isIOS
+        ? TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+            color: accentTextColor,
+          )
+        : theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: accentTextColor,
+            ) ??
+            TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: accentTextColor,
+            );
+
+    final TextStyle temperatureStyle = Platform.isIOS
+        ? TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 28,
+            color: accentTextColor,
+          )
+        : theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: accentTextColor,
+            ) ??
+            TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 28,
+              color: accentTextColor,
+            );
+
+    final TextStyle locationStyle = Platform.isIOS
+        ? TextStyle(
+            fontSize: 12,
+            color: accentTextColor.withOpacity(0.8),
+          )
+        : theme.textTheme.bodySmall?.copyWith(
+              color: accentTextColor,
+            ) ??
+            TextStyle(
+              fontSize: 12,
+              color: accentTextColor,
+            );
 
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Platform.isIOS
+            ? const CupertinoActivityIndicator()
+            : const CircularProgressIndicator(),
+      );
     }
 
     if (errorMessage != null) {
+      final Color errorColor = Colors.red.shade400;
+
       return Container(
         padding: const EdgeInsets.all(8),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(Icons.wifi_off, color: Colors.red.shade400, size: 28),
+            Icon(errorIcon, color: errorColor, size: 28),
             const SizedBox(height: 8),
             Text(
               loc.networkError,
               style: TextStyle(
-                  color: Colors.red.shade400,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16),
+                  color: errorColor, fontWeight: FontWeight.bold, fontSize: 16),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 4),
@@ -62,39 +121,31 @@ class WeatherTile extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(Icons.wb_sunny_outlined, color: accentTextColor),
+            Icon(weatherIcon, color: accentTextColor),
             const SizedBox(width: 8),
             Text(
               loc.weather,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: accentTextColor,
-              ),
+              style: titleStyle,
             ),
           ],
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: Platform.isIOS ? 8 : 6),
         Text(
           temperature ?? '--',
-          style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: accentTextColor,
-          ),
+          style: temperatureStyle,
         ),
         const SizedBox(height: 4),
         Text(
           symbol ?? '',
           style: TextStyle(
-            fontSize: 28,
+            fontSize: Platform.isIOS ? 30 : 28,
             color: accentTextColor,
           ),
         ),
         const Spacer(),
         Text(
           location ?? '--',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: accentTextColor,
-          ),
+          style: locationStyle,
         ),
       ],
     );

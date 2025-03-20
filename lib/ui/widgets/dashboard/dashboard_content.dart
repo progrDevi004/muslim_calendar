@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:muslim_calendar/models/dashboard_task.dart';
 import 'package:muslim_calendar/ui/widgets/dashboard/dashboard_header.dart';
@@ -56,15 +57,24 @@ class DashboardContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color mainColor = Theme.of(context).colorScheme.primary;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Plattformspezifische Anpassungen
+    final double horizontalPadding = Platform.isIOS ? 14.0 : 16.0;
+    final double topPadding = Platform.isIOS ? 14.0 : 16.0;
+    final double betweenSectionsPadding = Platform.isIOS ? 18.0 : 16.0;
+    final double borderRadius = Platform.isIOS ? 14.0 : 16.0;
+    final double tilePadding = Platform.isIOS ? 14.0 : 16.0;
+    final double tileMargin = Platform.isIOS ? 6.0 : 8.0;
+
     final Color accentCardColor = mainColor.withOpacity(isDark ? 0.3 : 0.1);
     final Color accentTextColor = mainColor.withOpacity(isDark ? 0.9 : 0.7);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 16),
+          SizedBox(height: topPadding),
 
           // Datum
           DashboardHeader(
@@ -80,11 +90,11 @@ class DashboardContent extends StatelessWidget {
                 // Wetter-Kachel
                 Expanded(
                   child: Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.all(16),
+                    margin: EdgeInsets.only(right: tileMargin),
+                    padding: EdgeInsets.all(tilePadding),
                     decoration: BoxDecoration(
                       color: accentCardColor,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(borderRadius),
                     ),
                     child: WeatherTile(
                       temperature: weatherTemp,
@@ -100,11 +110,11 @@ class DashboardContent extends StatelessWidget {
                 // Gebetszeiten-Kachel
                 Expanded(
                   child: Container(
-                    margin: const EdgeInsets.only(left: 8),
-                    padding: const EdgeInsets.all(16),
+                    margin: EdgeInsets.only(left: tileMargin),
+                    padding: EdgeInsets.all(tilePadding),
                     decoration: BoxDecoration(
                       color: accentCardColor,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(borderRadius),
                     ),
                     child: PrayerTimeTile(
                       prayerTimesDisplay: prayerTimesDisplay,
@@ -118,7 +128,7 @@ class DashboardContent extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 16),
+          SizedBox(height: betweenSectionsPadding),
 
           // Aufgabenliste
           TaskList(
@@ -130,7 +140,8 @@ class DashboardContent extends StatelessWidget {
             onTaskTap: onTaskTap,
           ),
 
-          const SizedBox(height: 40),
+          // Extra Abstand am Ende für den FAB
+          SizedBox(height: Platform.isIOS ? 80 : 40),
         ],
       ),
     );

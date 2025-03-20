@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/models/dashboard_task.dart';
 import 'package:muslim_calendar/ui/widgets/dashboard/task_item.dart';
@@ -26,17 +28,45 @@ class TaskList extends StatelessWidget {
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
     final Color mainColor = Theme.of(context).colorScheme.primary;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Plattformspezifische Icons und Stile
+    final IconData taskIcon =
+        Platform.isIOS ? CupertinoIcons.checkmark_circle : Icons.task_alt;
+
+    final TextStyle headerStyle = Platform.isIOS
+        ? TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+            color: isDark ? Colors.white : Colors.black,
+          )
+        : Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ) ??
+            const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            );
+
+    final TextStyle emptyMessageStyle = Platform.isIOS
+        ? TextStyle(
+            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+            fontStyle: FontStyle.italic,
+            fontSize: 14,
+          )
+        : TextStyle(
+            color: Colors.grey.shade600,
+            fontStyle: FontStyle.italic,
+          );
 
     // Header für die Aufgabenliste
     final header = Row(
       children: [
-        Icon(Icons.task_alt, color: mainColor),
+        Icon(taskIcon, color: mainColor),
         const SizedBox(width: 8),
         Text(
           loc.upcomingTasksLabel,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: headerStyle,
         ),
       ],
     );
@@ -46,8 +76,12 @@ class TaskList extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           header,
-          const SizedBox(height: 16),
-          const Center(child: CircularProgressIndicator()),
+          SizedBox(height: Platform.isIOS ? 20 : 16),
+          Center(
+            child: Platform.isIOS
+                ? const CupertinoActivityIndicator()
+                : const CircularProgressIndicator(),
+          ),
         ],
       );
     }
@@ -57,14 +91,11 @@ class TaskList extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           header,
-          const SizedBox(height: 16),
+          SizedBox(height: Platform.isIOS ? 20 : 16),
           Center(
             child: Text(
               loc.noAppointmentsToday,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontStyle: FontStyle.italic,
-              ),
+              style: emptyMessageStyle,
             ),
           ),
         ],
@@ -75,7 +106,7 @@ class TaskList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         header,
-        const SizedBox(height: 8),
+        SizedBox(height: Platform.isIOS ? 10 : 8),
         ...tasks.map((task) => TaskItem(
               task: task,
               hoveredTaskId: hoveredTaskId,
