@@ -2,7 +2,9 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart' show initializeDateFormatting;
 import 'package:provider/provider.dart';
@@ -31,6 +33,10 @@ import 'package:muslim_calendar/ui/pages/qibla_compass_page.dart';
 // Dashboard Widgets
 import 'package:muslim_calendar/ui/widgets/dashboard/dashboard_content.dart';
 import 'package:muslim_calendar/ui/widgets/home/category_filter_dialog.dart';
+
+// Platform-Adaptive Komponenten
+import 'package:muslim_calendar/ui/components/platform_adaptive_dialog.dart';
+import 'package:muslim_calendar/ui/components/platform_adaptive_list_tile.dart';
 
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 
@@ -255,134 +261,138 @@ class DashboardPageState extends State<DashboardPage> {
     final localizations = Provider.of<AppLocalizations>(context, listen: false);
     final scaffold = ScaffoldMessenger.of(context);
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(localizations.googleCalendar),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+    final Color iconColor = logoColor;
+
+    // Dialog-Inhalt erstellen, der für beide Plattformen passt
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Vollständig synchronisieren
+        PlatformAdaptiveListTile(
+          leading: Icon(
+              Platform.isIOS ? CupertinoIcons.arrow_2_circlepath : Icons.sync,
+              color: iconColor),
+          title: localizations.fullSync,
+          subtitle: localizations.importAndExport,
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onTap: () async {
+            Navigator.pop(context);
+
+            try {
+              // Fortschritt anzeigen
+              scaffold.showSnackBar(
+                SnackBar(
+                    content: Text(localizations.syncingWithGoogleCalendar)),
+              );
+
+              // Vollständige Synchronisation durchführen
+              await _calendarSyncService.importAppointments(categoryOption: 0);
+              await _calendarSyncService.exportAppointments();
+
+              // Nach erfolgreicher Synchronisation neu laden
+              await reloadData();
+
+              // Auch HomePage aktualisieren falls nötig
+              final homePageState =
+                  context.findAncestorStateOfType<HomePageState>();
+              homePageState?.loadAllAppointments();
+
+              scaffold.clearSnackBars();
+              scaffold.showSnackBar(
+                SnackBar(
+                  content: Text(localizations.syncCompleted),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            } catch (e) {
+              debugPrint('Sync-Fehler: $e');
+              scaffold.clearSnackBars();
+              scaffold.showSnackBar(
+                SnackBar(
+                  content: Text(localizations.syncSyncError(e.toString())),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Vollständig synchronisieren
-            ListTile(
-              leading: const Icon(Icons.sync, color: logoColor),
-              title: Text(
-                localizations.fullSync,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(localizations.importAndExport),
-              onTap: () async {
-                Navigator.pop(context);
 
-                try {
-                  // Fortschritt anzeigen
-                  scaffold.showSnackBar(
-                    SnackBar(
-                        content: Text(localizations.syncingWithGoogleCalendar)),
-                  );
-
-                  // Vollständige Synchronisation durchführen
-                  await _calendarSyncService.importAppointments(
-                      categoryOption: 0);
-                  await _calendarSyncService.exportAppointments();
-
-                  // Nach erfolgreicher Synchronisation neu laden
-                  await reloadData();
-
-                  // Auch HomePage aktualisieren falls nötig
-                  final homePageState =
-                      context.findAncestorStateOfType<HomePageState>();
-                  homePageState?.loadAllAppointments();
-
-                  scaffold.clearSnackBars();
-                  scaffold.showSnackBar(
-                    SnackBar(
-                      content: Text(localizations.syncCompleted),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } catch (e) {
-                  debugPrint('Sync-Fehler: $e');
-                  scaffold.clearSnackBars();
-                  scaffold.showSnackBar(
-                    SnackBar(
-                      content: Text(localizations.syncSyncError(e.toString())),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-            ),
-            const Divider(),
-            // Nur importieren
-            ListTile(
-              leading: const Icon(Icons.download, color: logoColor),
-              title: Text(
-                localizations.importOnly,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(localizations.importFromGoogleCalendar),
-              onTap: () {
-                Navigator.pop(context);
-                _showImportOptionsDialog(context);
-              },
-            ),
-            const Divider(),
-            // Nur exportieren
-            ListTile(
-              leading: const Icon(Icons.upload, color: logoColor),
-              title: Text(
-                localizations.exportOnly,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(localizations.exportToGoogleCalendar),
-              onTap: () async {
-                Navigator.pop(context);
-
-                try {
-                  // Fortschritt anzeigen
-                  scaffold.showSnackBar(
-                    SnackBar(
-                        content: Text(localizations.exportingToGoogleCalendar)),
-                  );
-
-                  // Export durchführen
-                  await _calendarSyncService.exportAppointments();
-
-                  scaffold.clearSnackBars();
-                  scaffold.showSnackBar(
-                    SnackBar(
-                      content: Text(localizations.syncExportCompleted ??
-                          localizations.exportCompleted),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } catch (e) {
-                  debugPrint('Export-Fehler: $e');
-                  scaffold.clearSnackBars();
-                  scaffold.showSnackBar(
-                    SnackBar(
-                      content: Text(localizations.exportError(e.toString())),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-            ),
-          ],
+        // Nur importieren
+        PlatformAdaptiveListTile(
+          leading: Icon(
+              Platform.isIOS
+                  ? CupertinoIcons.arrow_down_circle
+                  : Icons.download,
+              color: iconColor),
+          title: localizations.importOnly,
+          subtitle: localizations.importFromGoogleCalendar,
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onTap: () {
+            Navigator.pop(context);
+            _showImportOptionsDialog(context);
+          },
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              foregroundColor: logoColor,
-            ),
-            child: Text(localizations.cancel),
-          ),
-        ],
+
+        // Nur exportieren
+        PlatformAdaptiveListTile(
+          leading: Icon(
+              Platform.isIOS ? CupertinoIcons.arrow_up_circle : Icons.upload,
+              color: iconColor),
+          title: localizations.exportOnly,
+          subtitle: localizations.exportToGoogleCalendar,
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onTap: () async {
+            Navigator.pop(context);
+
+            try {
+              // Fortschritt anzeigen
+              scaffold.showSnackBar(
+                SnackBar(
+                    content: Text(localizations.exportingToGoogleCalendar)),
+              );
+
+              // Export durchführen
+              await _calendarSyncService.exportAppointments();
+
+              scaffold.clearSnackBars();
+              scaffold.showSnackBar(
+                SnackBar(
+                  content: Text(localizations.syncExportCompleted ??
+                      localizations.exportCompleted),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            } catch (e) {
+              debugPrint('Export-Fehler: $e');
+              scaffold.clearSnackBars();
+              scaffold.showSnackBar(
+                SnackBar(
+                  content: Text(localizations.exportError(e.toString())),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+        ),
+      ],
+    );
+
+    // Dialog-Aktionen erstellen
+    final actions = [
+      PlatformAdaptiveDialog.adaptiveDialogAction(
+        context: context,
+        text: localizations.cancel,
+        onPressed: () => Navigator.pop(context),
+        color: logoColor,
       ),
+    ];
+
+    // Plattformspezifischen Dialog anzeigen
+    PlatformAdaptiveDialog.showAdaptiveDialog(
+      context: context,
+      title: localizations.googleCalendar,
+      content: content,
+      actions: actions,
     );
   }
 
@@ -391,139 +401,140 @@ class DashboardPageState extends State<DashboardPage> {
     final localizations = Provider.of<AppLocalizations>(context, listen: false);
     final scaffold = ScaffoldMessenger.of(context);
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(localizations.importOptions),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text(
-                localizations.howToHandleCategories,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.category_outlined, color: logoColor),
-              title: Text(
-                localizations.useExistingCategories,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(localizations.searchForMatchingCategories),
-              onTap: () async {
-                Navigator.pop(context);
+    final Color iconColor = logoColor;
 
-                try {
-                  // Fortschritt anzeigen
-                  scaffold.showSnackBar(
-                    SnackBar(
-                        content:
-                            Text(localizations.importingFromGoogleCalendar)),
-                  );
-
-                  // Import durchführen mit Option: bestehende Kategorien verwenden
-                  await _calendarSyncService.importAppointments(
-                      categoryOption: 0);
-
-                  // Nach erfolgreichem Import neu laden
-                  await reloadData();
-
-                  // Auch HomePage aktualisieren falls nötig
-                  final homePageState =
-                      context.findAncestorStateOfType<HomePageState>();
-                  homePageState?.loadAllAppointments();
-
-                  scaffold.clearSnackBars();
-                  scaffold.showSnackBar(
-                    SnackBar(
-                      content: Text(localizations.syncImportCompleted ??
-                          localizations.importCompleted),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } catch (e) {
-                  debugPrint('Import-Fehler: $e');
-                  scaffold.clearSnackBars();
-                  scaffold.showSnackBar(
-                    SnackBar(
-                      content: Text(localizations.importError(e.toString())),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.add_circle_outline, color: logoColor),
-              title: Text(
-                localizations.createNewCategories,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(localizations.forEachNewAppointment),
-              onTap: () async {
-                Navigator.pop(context);
-
-                try {
-                  // Fortschritt anzeigen
-                  scaffold.showSnackBar(
-                    SnackBar(
-                        content:
-                            Text(localizations.importingFromGoogleCalendar)),
-                  );
-
-                  // Import durchführen mit Option: neue Kategorien erstellen
-                  await _calendarSyncService.importAppointments(
-                      categoryOption: 1);
-
-                  // Nach erfolgreichem Import neu laden
-                  await reloadData();
-
-                  // Auch HomePage aktualisieren falls nötig
-                  final homePageState =
-                      context.findAncestorStateOfType<HomePageState>();
-                  homePageState?.loadAllAppointments();
-
-                  scaffold.clearSnackBars();
-                  scaffold.showSnackBar(
-                    SnackBar(
-                      content: Text(localizations.syncImportCompleted ??
-                          localizations.importCompleted),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } catch (e) {
-                  debugPrint('Import-Fehler: $e');
-                  scaffold.clearSnackBars();
-                  scaffold.showSnackBar(
-                    SnackBar(
-                      content: Text(localizations.importError(e.toString())),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              foregroundColor: logoColor,
-            ),
-            child: Text(localizations.cancel),
+    // Dialog-Inhalt erstellen, der für beide Plattformen passt
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PlatformAdaptiveListTile(
+          title: localizations.howToHandleCategories,
+          titleStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
           ),
-        ],
+        ),
+
+        // Bestehende Kategorien verwenden
+        PlatformAdaptiveListTile(
+          leading: Icon(
+              Platform.isIOS ? CupertinoIcons.tag : Icons.category_outlined,
+              color: iconColor),
+          title: localizations.useExistingCategories,
+          subtitle: localizations.searchForMatchingCategories,
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onTap: () async {
+            Navigator.pop(context);
+
+            try {
+              // Fortschritt anzeigen
+              scaffold.showSnackBar(
+                SnackBar(
+                    content: Text(localizations.importingFromGoogleCalendar)),
+              );
+
+              // Import durchführen mit Option: bestehende Kategorien verwenden
+              await _calendarSyncService.importAppointments(categoryOption: 0);
+
+              // Nach erfolgreichem Import neu laden
+              await reloadData();
+
+              // Auch HomePage aktualisieren falls nötig
+              final homePageState =
+                  context.findAncestorStateOfType<HomePageState>();
+              homePageState?.loadAllAppointments();
+
+              scaffold.clearSnackBars();
+              scaffold.showSnackBar(
+                SnackBar(
+                  content: Text(localizations.syncImportCompleted ??
+                      localizations.importCompleted),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            } catch (e) {
+              debugPrint('Import-Fehler: $e');
+              scaffold.clearSnackBars();
+              scaffold.showSnackBar(
+                SnackBar(
+                  content: Text(localizations.importError(e.toString())),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+        ),
+
+        // Neue Kategorien erstellen
+        PlatformAdaptiveListTile(
+          leading: Icon(
+              Platform.isIOS
+                  ? CupertinoIcons.add_circled
+                  : Icons.add_circle_outline,
+              color: iconColor),
+          title: localizations.createNewCategories,
+          subtitle: localizations.forEachNewAppointment,
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onTap: () async {
+            Navigator.pop(context);
+
+            try {
+              // Fortschritt anzeigen
+              scaffold.showSnackBar(
+                SnackBar(
+                    content: Text(localizations.importingFromGoogleCalendar)),
+              );
+
+              // Import durchführen mit Option: neue Kategorien erstellen
+              await _calendarSyncService.importAppointments(categoryOption: 1);
+
+              // Nach erfolgreichem Import neu laden
+              await reloadData();
+
+              // Auch HomePage aktualisieren falls nötig
+              final homePageState =
+                  context.findAncestorStateOfType<HomePageState>();
+              homePageState?.loadAllAppointments();
+
+              scaffold.clearSnackBars();
+              scaffold.showSnackBar(
+                SnackBar(
+                  content: Text(localizations.syncImportCompleted ??
+                      localizations.importCompleted),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            } catch (e) {
+              debugPrint('Import-Fehler: $e');
+              scaffold.clearSnackBars();
+              scaffold.showSnackBar(
+                SnackBar(
+                  content: Text(localizations.importError(e.toString())),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+        ),
+      ],
+    );
+
+    // Dialog-Aktionen erstellen
+    final actions = [
+      PlatformAdaptiveDialog.adaptiveDialogAction(
+        context: context,
+        text: localizations.cancel,
+        onPressed: () => Navigator.pop(context),
+        color: logoColor,
       ),
+    ];
+
+    // Plattformspezifischen Dialog anzeigen
+    PlatformAdaptiveDialog.showAdaptiveDialog(
+      context: context,
+      title: localizations.importOptions,
+      content: content,
+      actions: actions,
     );
   }
 

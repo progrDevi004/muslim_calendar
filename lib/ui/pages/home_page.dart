@@ -5,6 +5,10 @@ import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
+import 'package:flutter/cupertino.dart';
+import 'package:muslim_calendar/ui/components/platform_adaptive_dialog.dart';
+import 'package:muslim_calendar/ui/components/platform_adaptive_list_tile.dart';
 
 // Repositories & Services
 import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
@@ -681,40 +685,56 @@ class HomePageState extends State<HomePage> {
   void _showSyncOptionsMenu(BuildContext context, RenderBox button) {
     final localizations = Provider.of<AppLocalizations>(context, listen: false);
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Kalender Synchronisation'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Google Kalender Option
-            ListTile(
-              leading: const Icon(Icons.calendar_today),
-              title: Text(localizations.googleCalendar),
-              subtitle: Text(localizations.syncImportExport),
-              onTap: () {
-                Navigator.pop(context); // Dialog schließen
-                _showGoogleSyncDialog(context);
-              },
-            ),
-            const Divider(),
-            // Outlook Option (deaktiviert)
-            ListTile(
-              enabled: false, // Deaktiviert, da noch nicht implementiert
-              leading: const Icon(Icons.calendar_month),
-              title: Text(localizations.outlookCalendar),
-              subtitle: Text(localizations.comingSoon),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(localizations.cancel),
+    // Dialog-Inhalt erstellen, der für beide Plattformen passt
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Google Kalender Option
+        PlatformAdaptiveListTile(
+          leading: Icon(
+            Platform.isIOS ? CupertinoIcons.calendar : Icons.calendar_today,
+            color: logoColor,
           ),
-        ],
+          title: localizations.googleCalendar,
+          subtitle: localizations.syncImportExport,
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onTap: () {
+            Navigator.pop(context); // Dialog schließen
+            _showGoogleSyncDialog(context);
+          },
+        ),
+
+        // Outlook Option (deaktiviert)
+        PlatformAdaptiveListTile(
+          leading: Icon(
+            Platform.isIOS
+                ? CupertinoIcons.calendar_badge_plus
+                : Icons.calendar_month,
+            color: Colors.grey,
+          ),
+          title: localizations.outlookCalendar,
+          subtitle: localizations.comingSoon,
+          enabled: false, // Deaktiviert, da noch nicht implementiert
+        ),
+      ],
+    );
+
+    // Dialog-Aktionen erstellen
+    final actions = [
+      PlatformAdaptiveDialog.adaptiveDialogAction(
+        context: context,
+        text: localizations.cancel,
+        onPressed: () => Navigator.pop(context),
+        color: logoColor,
       ),
+    ];
+
+    // Plattformspezifischen Dialog anzeigen
+    PlatformAdaptiveDialog.showAdaptiveDialog(
+      context: context,
+      title: 'Kalender Synchronisation',
+      content: content,
+      actions: actions,
     );
   }
 
@@ -722,51 +742,73 @@ class HomePageState extends State<HomePage> {
   void _showGoogleSyncDialog(BuildContext context) {
     final localizations = Provider.of<AppLocalizations>(context, listen: false);
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(localizations.googleCalendar),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.sync),
-              title: Text(localizations.fullSync),
-              subtitle: Text(localizations.importAndExport),
-              onTap: () {
-                Navigator.pop(context);
-                _performGoogleSync(context);
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.download),
-              title: Text(localizations.importOnly),
-              subtitle: Text(localizations.importFromGoogleCalendar),
-              onTap: () {
-                Navigator.pop(context);
-                _showImportOptionsDialog(context);
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.upload),
-              title: Text(localizations.exportOnly),
-              subtitle: Text(localizations.exportToGoogleCalendar),
-              onTap: () {
-                Navigator.pop(context);
-                _performGoogleExport(context);
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(localizations.cancel),
+    // Dialog-Inhalt erstellen, der für beide Plattformen passt
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Vollständig synchronisieren
+        PlatformAdaptiveListTile(
+          leading: Icon(
+            Platform.isIOS ? CupertinoIcons.arrow_2_circlepath : Icons.sync,
+            color: logoColor,
           ),
-        ],
+          title: localizations.fullSync,
+          subtitle: localizations.importAndExport,
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onTap: () {
+            Navigator.pop(context);
+            _performGoogleSync(context);
+          },
+        ),
+
+        // Nur importieren
+        PlatformAdaptiveListTile(
+          leading: Icon(
+            Platform.isIOS ? CupertinoIcons.arrow_down_circle : Icons.download,
+            color: logoColor,
+          ),
+          title: localizations.importOnly,
+          subtitle: localizations.importFromGoogleCalendar,
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onTap: () {
+            Navigator.pop(context);
+            _showImportOptionsDialog(context);
+          },
+        ),
+
+        // Nur exportieren
+        PlatformAdaptiveListTile(
+          leading: Icon(
+            Platform.isIOS ? CupertinoIcons.arrow_up_circle : Icons.upload,
+            color: logoColor,
+          ),
+          title: localizations.exportOnly,
+          subtitle: localizations.exportToGoogleCalendar,
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onTap: () {
+            Navigator.pop(context);
+            _performGoogleExport(context);
+          },
+        ),
+      ],
+    );
+
+    // Dialog-Aktionen erstellen
+    final actions = [
+      PlatformAdaptiveDialog.adaptiveDialogAction(
+        context: context,
+        text: localizations.cancel,
+        onPressed: () => Navigator.pop(context),
+        color: logoColor,
       ),
+    ];
+
+    // Plattformspezifischen Dialog anzeigen
+    PlatformAdaptiveDialog.showAdaptiveDialog(
+      context: context,
+      title: localizations.googleCalendar,
+      content: content,
+      actions: actions,
     );
   }
 
@@ -821,43 +863,68 @@ class HomePageState extends State<HomePage> {
   void _showImportOptionsDialog(BuildContext context) {
     final localizations = Provider.of<AppLocalizations>(context, listen: false);
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(localizations.importOptions),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text(localizations.howToHandleCategories),
-            ),
-            const Divider(),
-            ListTile(
-              title: Text(localizations.useExistingCategories),
-              subtitle: Text(localizations.searchForMatchingCategories),
-              onTap: () {
-                Navigator.pop(context);
-                _performGoogleImport(context, categoryOption: 0);
-              },
-            ),
-            const Divider(),
-            ListTile(
-              title: Text(localizations.createNewCategories),
-              subtitle: Text(localizations.forEachNewAppointment),
-              onTap: () {
-                Navigator.pop(context);
-                _performGoogleImport(context, categoryOption: 1);
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(localizations.cancel),
+    // Dialog-Inhalt erstellen, der für beide Plattformen passt
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PlatformAdaptiveListTile(
+          title: localizations.howToHandleCategories,
+          titleStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
           ),
-        ],
+        ),
+
+        // Bestehende Kategorien verwenden
+        PlatformAdaptiveListTile(
+          leading: Icon(
+            Platform.isIOS ? CupertinoIcons.tag : Icons.category_outlined,
+            color: logoColor,
+          ),
+          title: localizations.useExistingCategories,
+          subtitle: localizations.searchForMatchingCategories,
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onTap: () {
+            Navigator.pop(context);
+            _performGoogleImport(context, categoryOption: 0);
+          },
+        ),
+
+        // Neue Kategorien erstellen
+        PlatformAdaptiveListTile(
+          leading: Icon(
+            Platform.isIOS
+                ? CupertinoIcons.add_circled
+                : Icons.add_circle_outline,
+            color: logoColor,
+          ),
+          title: localizations.createNewCategories,
+          subtitle: localizations.forEachNewAppointment,
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onTap: () {
+            Navigator.pop(context);
+            _performGoogleImport(context, categoryOption: 1);
+          },
+        ),
+      ],
+    );
+
+    // Dialog-Aktionen erstellen
+    final actions = [
+      PlatformAdaptiveDialog.adaptiveDialogAction(
+        context: context,
+        text: localizations.cancel,
+        onPressed: () => Navigator.pop(context),
+        color: logoColor,
       ),
+    ];
+
+    // Plattformspezifischen Dialog anzeigen
+    PlatformAdaptiveDialog.showAdaptiveDialog(
+      context: context,
+      title: localizations.importOptions,
+      content: content,
+      actions: actions,
     );
   }
 
