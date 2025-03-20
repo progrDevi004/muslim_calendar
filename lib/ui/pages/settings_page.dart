@@ -217,6 +217,10 @@ class _SettingsPageState extends State<SettingsPage> {
           prefs.getInt('outlookSyncFrequency') ?? SyncFrequency.none.index];
     });
 
+    // Aktualisiere die Sprache im AppLocalizations Provider
+    Provider.of<AppLocalizations>(context, listen: false)
+        .setLanguage(_selectedLanguage);
+
     // Aktualisieren des Themes über den ThemeNotifier
     themeNotifier.toggleTheme(_isDarkMode);
   }

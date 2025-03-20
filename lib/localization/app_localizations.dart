@@ -2232,20 +2232,20 @@ class AppLocalizations extends ChangeNotifier {
   String get timeFormat24 {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return "24-Stunden-Format";
+        return "Zeitformat";
       case AppLanguage.turkish:
-        return "24 saat formatı";
+        return "Zaman formatı";
       case AppLanguage.arabic:
-        return "تنسيق 24 ساعة";
+        return "تنسيق الوقت";
       case AppLanguage.bosnian:
-        return "24-satni format";
+        return "Format vremena";
       case AppLanguage.spanish:
-        return "Formato 24 horas";
+        return "Formato de hora";
       case AppLanguage.persian:
-        return "فرمت 24 ساعته";
+        return "قالب زمان";
       case AppLanguage.english:
       default:
-        return "24-hour format";
+        return "Time format";
     }
   }
 
