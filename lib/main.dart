@@ -350,7 +350,7 @@ class _MyAppState extends State<MyApp> {
     );
 
     return MaterialApp(
-      title: 'Muslim Calendar',
+      title: 'Taqvimi',
       debugShowCheckedModeBanner: false,
       themeMode: themeMode,
       theme: lightTheme,

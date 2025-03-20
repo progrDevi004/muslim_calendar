@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
+import 'package:muslim_calendar/ui/components/platform_adaptive_navigation.dart';
 
 class HomeNavigationBar extends StatelessWidget {
   final int selectedIndex;
-  final Function(int) onIndexSelected;
+  final ValueChanged<int> onIndexSelected;
   final AppLocalizations localizations;
 
   const HomeNavigationBar({
@@ -15,27 +18,37 @@ class HomeNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return NavigationBar(
-      selectedIndex: selectedIndex,
-      onDestinationSelected: onIndexSelected,
-      destinations: [
-        NavigationDestination(
-          icon: const Icon(Icons.dashboard),
-          label: localizations.dashboard,
-        ),
-        NavigationDestination(
-          icon: const Icon(Icons.view_day),
-          label: localizations.day,
-        ),
-        NavigationDestination(
-          icon: const Icon(Icons.view_week),
-          label: localizations.week,
-        ),
-        NavigationDestination(
-          icon: const Icon(Icons.calendar_month),
-          label: localizations.month,
-        ),
-      ],
+    // Definiere die Navigationselemente mit plattformspezifischen Icons
+    final List<BottomNavigationItem> items = [
+      BottomNavigationItem(
+        androidIcon: Icons.dashboard,
+        iOSIcon: CupertinoIcons.home,
+        label: localizations.dashboard,
+      ),
+      BottomNavigationItem(
+        androidIcon: Icons.view_day,
+        iOSIcon: CupertinoIcons.calendar_today,
+        label: localizations.day,
+      ),
+      BottomNavigationItem(
+        androidIcon: Icons.view_week,
+        iOSIcon: CupertinoIcons.calendar,
+        label: localizations.week,
+      ),
+      BottomNavigationItem(
+        androidIcon: Icons.view_module,
+        iOSIcon: CupertinoIcons.calendar_badge_plus,
+        label: localizations.month,
+      ),
+    ];
+
+    // Nutze die plattformadaptive Navigationsleiste
+    return PlatformAdaptiveNavigation.buildBottomNavigation(
+      context: context,
+      currentIndex: selectedIndex,
+      items: items,
+      onTap: onIndexSelected,
+      activeColor: const Color(0xFF468178), // Logo-Farbe
     );
   }
 }

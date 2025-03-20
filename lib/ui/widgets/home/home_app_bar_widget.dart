@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
+import 'package:muslim_calendar/ui/components/platform_adaptive_app_bar.dart';
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onQiblaCompassPressed;
@@ -21,20 +24,39 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
-      centerTitle: false,
-      title: const Text(
-        'Muslim Calendar',
-        style: TextStyle(fontWeight: FontWeight.bold),
+    // Plattformspezifische Icons für die Aktionen
+    final Widget menuIcon = Icon(
+      Platform.isIOS ? CupertinoIcons.line_horizontal_3 : Icons.menu,
+    );
+
+    // Plattformspezifische Actions
+    final List<Widget> actions = Platform.isIOS
+        ? [
+            // Auf iOS zeigen wir nur ein Mehr-Menü an
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: onMenuPressed,
+              child: const Icon(CupertinoIcons.ellipsis),
+            ),
+          ]
+        : []; // Auf Android nutzen wir den Drawer, daher keine Actions
+
+    return PlatformAdaptiveAppBar(
+      title:
+          'Taqvimi', // Festen Titel verwenden, da unser Schlüssel nicht existiert
+      leading: GestureDetector(
+        onTap: onMenuPressed,
+        child: menuIcon,
       ),
-      leading: IconButton(
-        icon: const Icon(Icons.menu),
-        onPressed: onMenuPressed,
-      ),
-      elevation: 0,
+      actions: actions,
+      centerTitle:
+          Platform.isIOS, // Auf iOS zentrieren, auf Android links ausrichten
+      onLeadingPressed: onMenuPressed,
     );
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => Platform.isIOS
+      ? const Size.fromHeight(44.0) // iOS height
+      : const Size.fromHeight(kToolbarHeight); // Android height
 }

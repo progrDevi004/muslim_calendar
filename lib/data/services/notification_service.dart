@@ -380,11 +380,11 @@ class NotificationService {
     }
   }
 
-  /// Zeigt einen Dialog mit Hinweisen zu benötigten Berechtigungen an
+  /// Shows a dialog with information about required permissions
   Future<void> showPermissionInfoDialog(BuildContext context) async {
     if (!Platform.isAndroid) return;
 
-    // Einfache Prüfung, ob Benachrichtigungen aktiviert sind
+    // Simple check if notifications are enabled
     final androidImplementation =
         _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
@@ -394,18 +394,18 @@ class NotificationService {
         : false;
 
     if (notificationsEnabled == null || !notificationsEnabled) {
-      // Keine Benachrichtigungsberechtigung
+      // No notification permission
       await showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Benachrichtigungen deaktiviert'),
+          title: const Text('Notifications disabled'),
           content: const Text(
-              'Benachrichtigungen sind nicht aktiviert. Bitte erlaube Benachrichtigungen in den '
-              'App-Einstellungen, damit die Terminerinnerungen funktionieren können.'),
+              'Notifications are not enabled. Please allow notifications in the '
+              'app settings for appointment reminders to work properly.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Schließen'),
+              child: const Text('Close'),
             ),
           ],
         ),
@@ -413,34 +413,34 @@ class NotificationService {
       return;
     }
 
-    // Info zu exakten Alarmen für Android 12+
+    // Info about exact alarms for Android 12+
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Benachrichtigungs-Hinweis'),
+        title: const Text('Notification Information'),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Damit geplante Benachrichtigungen zuverlässig angezeigt werden, werden '
-              'folgende Einstellungen benötigt:',
+              'For scheduled notifications to be displayed reliably, the '
+              'following settings are required:',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 12),
-            Text('1. Alarme & Erinnerungen erlauben:'),
+            Text('1. Allow alarms & reminders:'),
             Text(
-                '   Einstellungen > Apps > Muslim Calendar > Spezielle App-Zugriffe > Alarme & Erinnerungen'),
+                '   Settings > Apps > Muslim Calendar > Special app access > Alarms & reminders'),
             SizedBox(height: 8),
-            Text('2. Batterie-Optimierungen deaktivieren:'),
+            Text('2. Disable battery optimizations:'),
             Text(
-                '   Einstellungen > Apps > Muslim Calendar > Akku > Keine Einschränkungen'),
+                '   Settings > Apps > Muslim Calendar > Battery > Unrestricted'),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Verstanden'),
+            child: const Text('Understood'),
           ),
         ],
       ),

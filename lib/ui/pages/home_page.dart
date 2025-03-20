@@ -9,6 +9,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:muslim_calendar/ui/components/platform_adaptive_dialog.dart';
 import 'package:muslim_calendar/ui/components/platform_adaptive_list_tile.dart';
+import 'package:muslim_calendar/ui/components/platform_adaptive_navigation.dart';
 
 // Repositories & Services
 import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
@@ -1088,80 +1089,213 @@ class HomePageState extends State<HomePage> {
 
   // Baut den Drawer mit den Menüoptionen
   Widget _buildDrawer(AppLocalizations loc) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color headerColor =
-        isDark ? Colors.grey.shade800 : logoColor.withOpacity(0.1);
-    final Color iconColor = logoColor;
-
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: <Widget>[
-          // Header
-          DrawerHeader(
-            decoration: BoxDecoration(
-              color: headerColor,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  'Muslim Calendar',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : logoColor,
-                      ),
+    if (Platform.isIOS) {
+      // iOS-spezifischer Drawer (modifiziertes Bottom-Sheet)
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: CupertinoColors.systemGrey5.resolveFrom(context),
+                    width: 1.0,
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Menü',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: isDark ? Colors.white70 : Colors.black54,
+              ),
+              child: Row(
+                children: [
+                  // App Icon
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: logoColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        CupertinoIcons.calendar,
+                        color: logoColor,
+                        size: 24,
                       ),
-                ),
-              ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // App Name
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        loc.appTitle,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: CupertinoColors.label.resolveFrom(context),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Menü',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: CupertinoColors.secondaryLabel
+                              .resolveFrom(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  // Close Button
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () => Navigator.pop(context),
+                    child: const Icon(CupertinoIcons.xmark_circle_fill,
+                        color: CupertinoColors.systemGrey),
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          // Einstellungen
-          ListTile(
-            leading: Icon(Icons.settings, color: iconColor),
-            title: Text(loc.settings),
-            onTap: () => _openSettings(),
-          ),
+            const SizedBox(height: 16),
 
-          // Qibla Kompass
-          ListTile(
-            leading: Icon(Icons.explore, color: iconColor),
-            title: const Text('Qibla Compass'),
-            onTap: () => _openQiblaCompass(),
-          ),
+            // Menu Items
+            PlatformAdaptiveNavigation.buildNavigationItem(
+              context: context,
+              title: loc.settings,
+              androidIcon: Icons.settings,
+              iOSIcon: CupertinoIcons.settings,
+              iconColor: logoColor,
+              onTap: () {
+                Navigator.pop(context);
+                _openSettings();
+              },
+            ),
 
-          // Kategorien
-          ListTile(
-            leading: Icon(Icons.category, color: iconColor),
-            title: const Text('Kategorien'),
-            onTap: () => _showCategoryFilterDialog(context),
-          ),
+            PlatformAdaptiveNavigation.buildNavigationItem(
+              context: context,
+              title: 'Qibla Compass',
+              androidIcon: Icons.explore,
+              iOSIcon: CupertinoIcons.compass,
+              iconColor: logoColor,
+              onTap: () {
+                Navigator.pop(context);
+                _openQiblaCompass();
+              },
+            ),
 
-          const Divider(),
+            PlatformAdaptiveNavigation.buildNavigationItem(
+              context: context,
+              title: 'Kategorien',
+              androidIcon: Icons.category,
+              iOSIcon: CupertinoIcons.tag,
+              iconColor: logoColor,
+              onTap: () {
+                Navigator.pop(context);
+                _showCategoryFilterDialog(context);
+              },
+            ),
 
-          // Synchronisation
-          ListTile(
-            leading: Icon(Icons.sync, color: iconColor),
-            title: const Text('Synchronisation'),
-            onTap: () {
-              Navigator.pop(context); // Drawer schließen
-              final RenderBox box = context.findRenderObject() as RenderBox;
-              _showSyncOptionsMenu(context, box);
-            },
-          ),
+            const SizedBox(height: 8),
+            const Divider(),
+            const SizedBox(height: 8),
 
-          // Weitere Trennlinie am Ende
-          const Divider(),
-        ],
-      ),
-    );
+            PlatformAdaptiveNavigation.buildNavigationItem(
+              context: context,
+              title: 'Synchronisation',
+              androidIcon: Icons.sync,
+              iOSIcon: CupertinoIcons.arrow_2_circlepath,
+              iconColor: logoColor,
+              onTap: () {
+                Navigator.pop(context);
+                final RenderBox box = context.findRenderObject() as RenderBox;
+                _showSyncOptionsMenu(context, box);
+              },
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Android Material Design Drawer
+      final bool isDark = Theme.of(context).brightness == Brightness.dark;
+      final Color headerColor =
+          isDark ? Colors.grey.shade800 : logoColor.withOpacity(0.1);
+      final Color iconColor = logoColor;
+
+      return Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            // Header
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: headerColor,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    loc.appTitle,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : logoColor,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Menü',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: isDark ? Colors.white70 : Colors.black54,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Einstellungen
+            ListTile(
+              leading: Icon(Icons.settings, color: iconColor),
+              title: Text(loc.settings),
+              onTap: () => _openSettings(),
+            ),
+
+            // Qibla Kompass
+            ListTile(
+              leading: Icon(Icons.explore, color: iconColor),
+              title: const Text('Qibla Compass'),
+              onTap: () => _openQiblaCompass(),
+            ),
+
+            // Kategorien
+            ListTile(
+              leading: Icon(Icons.category, color: iconColor),
+              title: const Text('Kategorien'),
+              onTap: () => _showCategoryFilterDialog(context),
+            ),
+
+            const Divider(),
+
+            // Synchronisation
+            ListTile(
+              leading: Icon(Icons.sync, color: iconColor),
+              title: const Text('Synchronisation'),
+              onTap: () {
+                Navigator.pop(context); // Drawer schließen
+                final RenderBox box = context.findRenderObject() as RenderBox;
+                _showSyncOptionsMenu(context, box);
+              },
+            ),
+
+            // Weitere Trennlinie am Ende
+            const Divider(),
+          ],
+        ),
+      );
+    }
   }
 }

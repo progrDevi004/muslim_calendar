@@ -37,6 +37,8 @@ import 'package:muslim_calendar/ui/widgets/home/category_filter_dialog.dart';
 // Platform-Adaptive Komponenten
 import 'package:muslim_calendar/ui/components/platform_adaptive_dialog.dart';
 import 'package:muslim_calendar/ui/components/platform_adaptive_list_tile.dart';
+import 'package:muslim_calendar/ui/components/platform_adaptive_app_bar.dart';
+import 'package:muslim_calendar/ui/components/platform_adaptive_navigation.dart';
 
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 
@@ -986,7 +988,7 @@ class DashboardPageState extends State<DashboardPage> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Text(
-                  'Muslim Calendar',
+                  loc.appTitle,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: isDark ? Colors.white : logoColor,
@@ -1056,19 +1058,15 @@ class DashboardPageState extends State<DashboardPage> {
 
     return Scaffold(
       key: _scaffoldKey,
-      appBar: AppBar(
-        title: Text(
-          loc.dashboard,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+      appBar: PlatformAdaptiveAppBar(
+        title: loc.dashboard,
+        leading: Icon(
+          Platform.isIOS ? CupertinoIcons.line_horizontal_3 : Icons.menu,
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () {
-            _scaffoldKey.currentState?.openDrawer();
-          },
-        ),
-        elevation: 0,
-        centerTitle: false,
+        onLeadingPressed: () {
+          _scaffoldKey.currentState?.openDrawer();
+        },
+        centerTitle: Platform.isIOS, // Auf iOS zentrieren, auf Android links
       ),
       drawer: _buildDrawer(loc),
       floatingActionButton: FloatingActionButton(

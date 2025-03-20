@@ -1463,19 +1463,23 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.german:
         return 'Übersicht';
       case AppLanguage.turkish:
-        return 'Gösterge Paneli';
+        return 'Panel';
       case AppLanguage.arabic:
-        return 'لوحة التحكم';
+        return 'لوحة';
       case AppLanguage.bosnian:
-        return 'Kontrolna ploča';
+        return 'Pregled';
       case AppLanguage.spanish:
-        return 'Tablero';
+        return 'Panel';
       case AppLanguage.persian:
         return 'داشبورد';
       case AppLanguage.english:
       default:
         return 'Dashboard';
     }
+  }
+
+  String get appTitle {
+    return 'Taqvimi';
   }
 
   // >>> Getter für "addNewAppointment"
