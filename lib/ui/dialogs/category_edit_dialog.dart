@@ -9,9 +9,9 @@ class CategoryEditDialog extends StatefulWidget {
   final CategoryModel category;
 
   const CategoryEditDialog({
-    Key? key,
+    super.key,
     required this.category,
-  }) : super(key: key);
+  });
 
   @override
   _CategoryEditDialogState createState() => _CategoryEditDialogState();

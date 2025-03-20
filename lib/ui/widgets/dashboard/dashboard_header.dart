@@ -6,10 +6,10 @@ class DashboardHeader extends StatelessWidget {
   final String weekdayString;
 
   const DashboardHeader({
-    Key? key,
+    super.key,
     required this.dateString,
     required this.weekdayString,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

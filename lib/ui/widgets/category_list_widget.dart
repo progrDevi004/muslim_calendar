@@ -9,9 +9,9 @@ class CategoryListWidget extends StatefulWidget {
   final Function()? onCategoriesChanged;
 
   const CategoryListWidget({
-    Key? key,
+    super.key,
     this.onCategoriesChanged,
-  }) : super(key: key);
+  });
 
   @override
   _CategoryListWidgetState createState() => _CategoryListWidgetState();

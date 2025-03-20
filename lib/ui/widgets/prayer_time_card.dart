@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 class PrayerTimeCard extends StatelessWidget {
   final String prayerTimeName;
 
-  const PrayerTimeCard({Key? key, required this.prayerTimeName})
-      : super(key: key);
+  const PrayerTimeCard({super.key, required this.prayerTimeName});
 
   @override
   Widget build(BuildContext context) {
@@ -33,10 +32,10 @@ class PrayerTimeCard extends StatelessWidget {
             children: [
               Text(
                 prayerTimeName,
-                style: TextStyle(
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
-                  color: const Color(0xFF468178),
+                  color: Color(0xFF468178),
                 ),
               ),
             ],

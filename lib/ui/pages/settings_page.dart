@@ -34,7 +34,7 @@ enum SyncFrequency {
 }
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({Key? key}) : super(key: key);
+  const SettingsPage({super.key});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -74,8 +74,8 @@ class _SettingsPageState extends State<SettingsPage> {
   LocationService? _locationService;
 
   // Neue Variable für Notification Status
-  String _notificationStatus = "";
-  bool _isLoadingStatus = false;
+  final String _notificationStatus = "";
+  final bool _isLoadingStatus = false;
 
   @override
   void initState() {
@@ -261,7 +261,7 @@ class _SettingsPageState extends State<SettingsPage> {
     bool googleConnected = googleService.isSignedIn;
 
     // Temporäre Mock-Implementierung für Outlook
-    final outlookConnected = false;
+    const outlookConnected = false;
 
     setState(() {
       _googleCalendarConnected = googleConnected;
@@ -405,7 +405,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final loc = Provider.of<AppLocalizations>(context);
     return _isIos
         ? CupertinoPageScaffold(
-            navigationBar: CupertinoNavigationBar(
+            navigationBar: const CupertinoNavigationBar(
               middle: Text('Settings'),
             ),
             child: SafeArea(
@@ -420,7 +420,7 @@ class _SettingsPageState extends State<SettingsPage> {
           )
         : Scaffold(
             appBar: AppBar(
-              title: Text('Settings'),
+              title: const Text('Settings'),
             ),
             body: SafeArea(
               child: SingleChildScrollView(
@@ -600,7 +600,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 _automaticLocation
                     ? loc.currentLocationAuto
                     : loc.currentLocationManual,
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Row(
@@ -645,7 +645,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(loc.locationDetecting),
-                duration: Duration(seconds: 1),
+                duration: const Duration(seconds: 1),
               ),
             );
 
@@ -658,7 +658,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   SnackBar(
                     content: Text(_locationService!.errorMessage ??
                         loc.locationDetectionFailed),
-                    duration: Duration(seconds: 3),
+                    duration: const Duration(seconds: 3),
                   ),
                 );
               }
@@ -671,9 +671,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(loc.locationUpdated +
-                      ': ${_locationService!.currentCity}, ${_locationService!.currentCountry}'),
-                  duration: Duration(seconds: 3),
+                  content: Text(
+                      '${loc.locationUpdated}: ${_locationService!.currentCity}, ${_locationService!.currentCountry}'),
+                  duration: const Duration(seconds: 3),
                 ),
               );
             }
@@ -689,7 +689,7 @@ class _SettingsPageState extends State<SettingsPage> {
         const SizedBox(height: 8),
         Text(
           loc.chooseLocationManually,
-          style: TextStyle(fontStyle: FontStyle.italic),
+          style: const TextStyle(fontStyle: FontStyle.italic),
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
@@ -783,13 +783,13 @@ class _SettingsPageState extends State<SettingsPage> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(loc.locationUpdated),
-                        duration: Duration(seconds: 2),
+                        duration: const Duration(seconds: 2),
                       ),
                     );
                   }
                 }
               : null, // Deaktivieren wenn keine Auswahl getroffen wurde
-          icon: Icon(Icons.save),
+          icon: const Icon(Icons.save),
           label: Text(loc.applyLocation),
           style: ElevatedButton.styleFrom(
             minimumSize: const Size(double.infinity, 48),
@@ -1052,10 +1052,10 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
 
         // Outlook account status
-        ListTile(
-          leading: const Icon(Icons.account_circle_outlined),
+        const ListTile(
+          leading: Icon(Icons.account_circle_outlined),
           title: Text('Not connected to Outlook Calendar'),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16.0),
         ),
 
         // Connect button
@@ -1068,7 +1068,8 @@ class _SettingsPageState extends State<SettingsPage> {
               try {
                 // Placeholder für Outlook-Verbindungsimplementierung
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Outlook Integration coming soon!')),
+                  const SnackBar(
+                      content: Text('Outlook Integration coming soon!')),
                 );
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -1321,7 +1322,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const Divider(),
             ListTile(
-              title: Text("Kategorien von Google Kalender übernehmen"),
+              title: const Text("Kategorien von Google Kalender übernehmen"),
               subtitle: Text(loc.searchForMatchingCategories),
               onTap: () {
                 Navigator.pop(context);
@@ -1330,8 +1331,8 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const Divider(),
             ListTile(
-              title: Text("In die Standardkategorie einfügen"),
-              subtitle: Text(
+              title: const Text("In die Standardkategorie einfügen"),
+              subtitle: const Text(
                   "Alle importierten Termine werden der Standardkategorie zugewiesen"),
               onTap: () {
                 Navigator.pop(context);

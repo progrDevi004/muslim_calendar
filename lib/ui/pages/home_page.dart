@@ -1,7 +1,6 @@
 // lib/ui/pages/home_page.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:intl/intl.dart';
@@ -19,7 +18,6 @@ import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
 import 'package:muslim_calendar/models/category_model.dart';
 import 'package:muslim_calendar/models/enums.dart';
-import 'package:muslim_calendar/ui/widgets/create_events.dart';
 import 'package:muslim_calendar/ui/widgets/prayer_time_appointment_adapter.dart';
 
 // Ausgelagerte Widgets
@@ -30,15 +28,11 @@ import 'package:muslim_calendar/ui/widgets/home/home_app_bar_widget.dart';
 import 'package:muslim_calendar/ui/widgets/home/add_appointment_fab.dart';
 
 // Pages
-import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
 import 'package:muslim_calendar/ui/pages/settings_page.dart';
 import 'package:muslim_calendar/ui/pages/dashboard_page.dart';
-import 'package:muslim_calendar/ui/pages/appointment_details_page.dart';
 import 'package:muslim_calendar/ui/pages/qibla_compass_page.dart';
-import 'package:muslim_calendar/ui/pages/category_management_page.dart';
 
 // Dialogs
-import 'package:muslim_calendar/ui/dialogs/category_edit_dialog.dart';
 
 // Localization
 import 'package:muslim_calendar/localization/app_localizations.dart';

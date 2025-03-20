@@ -11,13 +11,13 @@ class TaskItem extends StatelessWidget {
   final Function(int) onTaskTap;
 
   const TaskItem({
-    Key? key,
+    super.key,
     required this.task,
     this.hoveredTaskId,
     required this.onHoverEnter,
     required this.onHoverExit,
     required this.onTaskTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -51,13 +51,13 @@ class RegularTaskItem extends StatelessWidget {
   final Function(int) onTaskTap;
 
   const RegularTaskItem({
-    Key? key,
+    super.key,
     required this.task,
     this.hoveredTaskId,
     required this.onHoverEnter,
     required this.onHoverExit,
     required this.onTaskTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -155,13 +155,13 @@ class AllDayTaskItem extends StatelessWidget {
   final Function(int) onTaskTap;
 
   const AllDayTaskItem({
-    Key? key,
+    super.key,
     required this.task,
     this.hoveredTaskId,
     required this.onHoverEnter,
     required this.onHoverExit,
     required this.onTaskTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -223,9 +223,9 @@ class PrayerSlotItem extends StatelessWidget {
   final DashboardTask task;
 
   const PrayerSlotItem({
-    Key? key,
+    super.key,
     required this.task,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

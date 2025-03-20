@@ -13,7 +13,7 @@ import 'package:muslim_calendar/localization/app_localizations.dart';
 const Color logoColor = Color(0xFF468178);
 
 class QiblaCompassPage extends StatefulWidget {
-  const QiblaCompassPage({Key? key}) : super(key: key);
+  const QiblaCompassPage({super.key});
 
   @override
   State<QiblaCompassPage> createState() => _QiblaCompassPageState();

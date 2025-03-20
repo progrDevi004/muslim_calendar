@@ -11,10 +11,10 @@ class GoogleCalendarSyncWidget extends StatefulWidget {
   final bool isSettingsScreen;
 
   const GoogleCalendarSyncWidget({
-    Key? key,
+    super.key,
     this.appointment,
     this.isSettingsScreen = false,
-  }) : super(key: key);
+  });
 
   @override
   State<GoogleCalendarSyncWidget> createState() =>

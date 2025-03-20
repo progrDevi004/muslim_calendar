@@ -20,7 +20,7 @@ class CalendarViewWidget extends StatelessWidget {
   final VoidCallback onAppointmentsChanged;
 
   const CalendarViewWidget({
-    Key? key,
+    super.key,
     required this.selectedView,
     required this.calendarController,
     required this.dataSource,
@@ -33,7 +33,7 @@ class CalendarViewWidget extends StatelessWidget {
     required this.onViewChanged,
     required this.onSelectedDateChanged,
     required this.onAppointmentsChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

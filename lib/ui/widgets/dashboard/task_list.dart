@@ -13,14 +13,14 @@ class TaskList extends StatelessWidget {
   final Function(int) onTaskTap;
 
   const TaskList({
-    Key? key,
+    super.key,
     required this.tasks,
     required this.isLoading,
     this.hoveredTaskId,
     required this.onHoverEnter,
     required this.onHoverExit,
     required this.onTaskTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

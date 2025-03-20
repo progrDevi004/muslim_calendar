@@ -9,10 +9,10 @@ class CreateCategoryWidget extends StatefulWidget {
   final AppLocalizations localizations;
 
   const CreateCategoryWidget({
-    Key? key,
+    super.key,
     required this.onCategoryCreated,
     required this.localizations,
-  }) : super(key: key);
+  });
 
   @override
   State<CreateCategoryWidget> createState() => _CreateCategoryWidgetState();
@@ -89,7 +89,7 @@ class _CreateCategoryWidgetState extends State<CreateCategoryWidget> {
             ),
           ),
           const SizedBox(height: 20),
-          Text('Farbe auswählen:',
+          const Text('Farbe auswählen:',
               style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           SizedBox(

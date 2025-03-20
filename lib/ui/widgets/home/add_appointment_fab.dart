@@ -9,12 +9,12 @@ class AddAppointmentFAB extends StatelessWidget {
   final AppLocalizations localizations;
 
   const AddAppointmentFAB({
-    Key? key,
+    super.key,
     required this.selectedDate,
     required this.onAppointmentAdded,
     required this.logoColor,
     required this.localizations,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

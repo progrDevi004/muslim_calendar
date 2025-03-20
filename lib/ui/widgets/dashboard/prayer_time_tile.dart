@@ -9,12 +9,12 @@ class PrayerTimeTile extends StatelessWidget {
   final Color accentTextColor;
 
   const PrayerTimeTile({
-    Key? key,
+    super.key,
     required this.prayerTimesDisplay,
     this.errorMessage,
     required this.isLoading,
     required this.accentTextColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

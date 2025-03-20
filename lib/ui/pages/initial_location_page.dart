@@ -19,7 +19,7 @@ import 'package:muslim_calendar/data/services/location_service.dart';
 const Color logoColor = Color(0xFF468178);
 
 class InitialLocationPage extends StatefulWidget {
-  const InitialLocationPage({Key? key}) : super(key: key);
+  const InitialLocationPage({super.key});
 
   @override
   State<InitialLocationPage> createState() => _InitialLocationPageState();
@@ -419,7 +419,7 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
 
                       // Switch für Standort-Modus
                       SwitchListTile.adaptive(
-                        title: Text("Automatische Standorterkennung"),
+                        title: const Text("Automatische Standorterkennung"),
                         subtitle: Text(_useAutomaticLocation
                             ? "Standort automatisch erkennen"
                             : "Standort manuell auswählen"),
@@ -519,10 +519,11 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                               popupProps: const PopupProps.menu(
                                 showSearchBox: true,
                               ),
-                              dropdownDecoratorProps: DropDownDecoratorProps(
+                              dropdownDecoratorProps:
+                                  const DropDownDecoratorProps(
                                 dropdownSearchDecoration: InputDecoration(
                                   hintText: "Land auswählen",
-                                  border: const OutlineInputBorder(),
+                                  border: OutlineInputBorder(),
                                 ),
                               ),
                             ),
@@ -554,10 +555,10 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                                       showSearchBox: true,
                                     ),
                                     dropdownDecoratorProps:
-                                        DropDownDecoratorProps(
+                                        const DropDownDecoratorProps(
                                       dropdownSearchDecoration: InputDecoration(
                                         hintText: "Stadt auswählen",
-                                        border: const OutlineInputBorder(),
+                                        border: OutlineInputBorder(),
                                       ),
                                     ),
                                   ),
@@ -565,7 +566,7 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                               ),
 
                             if (_selectedCountry == null)
-                              Text(
+                              const Text(
                                 "Bitte wählen Sie erst ein Land aus",
                                 style: TextStyle(color: Colors.orange),
                               ),

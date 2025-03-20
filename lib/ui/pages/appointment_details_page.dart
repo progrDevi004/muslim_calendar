@@ -27,9 +27,9 @@ class AppointmentDetailsPage extends StatefulWidget {
   final int appointmentId;
 
   const AppointmentDetailsPage({
-    Key? key,
+    super.key,
     required this.appointmentId,
-  }) : super(key: key);
+  });
 
   @override
   State<AppointmentDetailsPage> createState() => _AppointmentDetailsPageState();
@@ -70,7 +70,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   /// Hilfsfunktion, um das Datum/Uhrzeit im richtigen Format zu zeigen
   String _formatDateTime(DateTime? dt) {
     if (dt == null) return '--';
-    final datePattern = 'yyyy-MM-dd';
+    const datePattern = 'yyyy-MM-dd';
     final timePattern = _use24hFormat ? 'HH:mm' : 'h:mm a';
 
     final dateStr = DateFormat(datePattern).format(dt);
@@ -299,7 +299,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
       // Kurze Verzögerung, damit die Datenbank-Updates abgeschlossen werden können
       debugPrint(
           "⏱️ Warte kurz, damit die Datenbank-Updates abgeschlossen werden können...");
-      await Future.delayed(Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 500));
 
       // Termin explizit und direkt aus der Datenbank neu laden
       final refreshedAppointment =
@@ -678,7 +678,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                 padding: const EdgeInsets.only(bottom: 8.0),
                 child: Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.check_circle,
                       color: Colors.green,
                       size: 18,
@@ -838,7 +838,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         (recurrenceRule.contains("BYDAY=") &&
             (recurrenceRule.contains(",") ||
                 !recurrenceRule
-                    .contains("BYDAY=" + _getDayOfWeekCode(DateTime.now()))));
+                    .contains("BYDAY=${_getDayOfWeekCode(DateTime.now())}")));
 
     if (isCustom) {
       return loc.getRecurrenceTypeLabel("custom");

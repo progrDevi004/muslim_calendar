@@ -9,13 +9,13 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final AppLocalizations localizations;
 
   const HomeAppBar({
-    Key? key,
+    super.key,
     required this.onQiblaCompassPressed,
     required this.onSettingsPressed,
     required this.onCategoryFilterPressed,
     required this.onSyncPressed,
     required this.localizations,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

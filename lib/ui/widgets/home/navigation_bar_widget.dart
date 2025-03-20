@@ -7,11 +7,11 @@ class HomeNavigationBar extends StatelessWidget {
   final AppLocalizations localizations;
 
   const HomeNavigationBar({
-    Key? key,
+    super.key,
     required this.selectedIndex,
     required this.onIndexSelected,
     required this.localizations,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

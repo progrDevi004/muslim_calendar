@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
 
 class CategoryManagementPage extends StatefulWidget {
-  const CategoryManagementPage({Key? key}) : super(key: key);
+  const CategoryManagementPage({super.key});
 
   @override
   _CategoryManagementPageState createState() => _CategoryManagementPageState();

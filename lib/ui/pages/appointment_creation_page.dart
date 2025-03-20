@@ -45,8 +45,8 @@ class AppointmentCreationPage extends StatefulWidget {
   const AppointmentCreationPage({
     this.appointmentId,
     this.selectedDate,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   _AppointmentCreationPageState createState() =>
@@ -119,7 +119,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   int? _currentAppointmentId;
 
   // AZIZ: isCategoryDropdownClicked
-  bool _isCategoryDropdownClicked = false;
+  final bool _isCategoryDropdownClicked = false;
 
   // >>> NEU: Um Mehrfachklicks zu verhindern
   bool _isSaving = false;
@@ -475,7 +475,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     if (!_formKey.currentState!.validate()) {
       // Wenn die Validierung fehlschlägt, Fehler anzeigen und abbrechen
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
             content: Text('Bitte füllen Sie alle erforderlichen Felder aus')),
       );
       return;
@@ -499,7 +499,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           // Bei gebetszeitabhängigen Terminen berechnen wir die Endzeit aus der Dauer
           if (_duration == null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Bitte geben Sie eine Dauer an')),
+              const SnackBar(content: Text('Bitte geben Sie eine Dauer an')),
             );
             return;
           }
@@ -814,10 +814,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   }
 
   Future<void> _pickStartTime() async {
-    if (_startTime == null) {
-      // Falls noch kein Start-Datum gewählt, nimm "Heute"
-      _startTime = DateTime.now();
-    }
+    _startTime ??= DateTime.now();
     final pickedTime = await _pickAdaptiveTime(_startTime!);
     if (pickedTime != null) {
       setState(() {
@@ -893,10 +890,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   }
 
   Future<void> _pickEndTime() async {
-    if (_endTime == null) {
-      // Falls noch kein End-Datum gewählt, nimm StartTime oder Heute
-      _endTime = _startTime ?? DateTime.now();
-    }
+    _endTime ??= _startTime ?? DateTime.now();
     final pickedTime = await _pickAdaptiveTime(_endTime!);
     if (pickedTime != null) {
       setState(() {
@@ -1026,8 +1020,9 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           color: Colors.transparent,
           child: SwitchListTile.adaptive(
             secondary: const Icon(Icons.sync),
-            title: Text("Mit Google Kalender synchronisieren"),
-            subtitle: Text("Termin automatisch mit Google Kalender teilen"),
+            title: const Text("Mit Google Kalender synchronisieren"),
+            subtitle:
+                const Text("Termin automatisch mit Google Kalender teilen"),
             value: _syncWithGoogleCalendar,
             onChanged: (bool value) {
               setState(() {
@@ -1043,8 +1038,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             padding: const EdgeInsets.all(12.0),
             decoration: BoxDecoration(
-              color:
-                  Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+              color: Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHighest
+                  .withOpacity(0.3),
               borderRadius: BorderRadius.circular(8.0),
               border: Border.all(
                 color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
@@ -1297,7 +1294,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                       // Wenn Wiederholung aktiviert wird, zeige den Dialog zur Konfiguration
                       if (value) {
                         // Wir verzögern den Dialog leicht, damit der Switch-Zustand aktualisiert wird
-                        Future.delayed(Duration(milliseconds: 100), () {
+                        Future.delayed(const Duration(milliseconds: 100), () {
                           _showRecurrenceSelectionDialog();
                         });
                       }
@@ -1356,7 +1353,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   ],
                 ),
               );
-            }).toList(),
+            }),
 
             // Button zum Hinzufügen neuer Erinnerungen
             if (_remindersList.length < _maxReminders)
@@ -1458,8 +1455,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           padding: const EdgeInsets.all(16.0),
           child: _isIos
               ? CupertinoButton.filled(
-                  child: Text(loc.save),
                   onPressed: _saveAppointment,
+                  child: Text(loc.save),
                 )
               : FilledButton(
                   style: FilledButton.styleFrom(
@@ -1732,7 +1729,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               shrinkWrap: true,
               children: [
                 RadioListTile<int>(
-                  title: Text("5 minutes before"),
+                  title: const Text("5 minutes before"),
                   value: 5,
                   groupValue: null,
                   onChanged: (value) {
@@ -1741,7 +1738,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   },
                 ),
                 RadioListTile<int>(
-                  title: Text("10 minutes before"),
+                  title: const Text("10 minutes before"),
                   value: 10,
                   groupValue: null,
                   onChanged: (value) {
@@ -1750,7 +1747,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   },
                 ),
                 RadioListTile<int>(
-                  title: Text("30 minutes before"),
+                  title: const Text("30 minutes before"),
                   value: 30,
                   groupValue: null,
                   onChanged: (value) {
@@ -1759,7 +1756,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   },
                 ),
                 RadioListTile<int>(
-                  title: Text("1 hour before"),
+                  title: const Text("1 hour before"),
                   value: 60,
                   groupValue: null,
                   onChanged: (value) {
@@ -1768,7 +1765,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   },
                 ),
                 RadioListTile<int>(
-                  title: Text("1 day before"),
+                  title: const Text("1 day before"),
                   value: 1440,
                   groupValue: null,
                   onChanged: (value) {
@@ -1777,7 +1774,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   },
                 ),
                 RadioListTile<int>(
-                  title: Text("Custom..."),
+                  title: const Text("Custom..."),
                   value: -1,
                   groupValue: null,
                   onChanged: (int? value) {
@@ -1802,7 +1799,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       builder: (context) {
         if (_isIos) {
           return CupertinoAlertDialog(
-            title: Text("Custom reminder"),
+            title: const Text("Custom reminder"),
             content: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: CupertinoTextField(
@@ -1832,13 +1829,13 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           );
         } else {
           return AlertDialog(
-            title: Text("Custom reminder"),
+            title: const Text("Custom reminder"),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: "Minutes before event",
                   ),
                   onChanged: (value) {
@@ -2472,7 +2469,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       // Fortschrittsanzeige anzeigen
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Starte Synchronisierung mit Google...')),
+          const SnackBar(
+              content: Text('Starte Synchronisierung mit Google...')),
         );
       }
 
@@ -2499,7 +2497,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       // Feedback anzeigen
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Mit Google Kalender synchronisiert')),
+          const SnackBar(content: Text('Mit Google Kalender synchronisiert')),
         );
       }
     } catch (e) {
@@ -2524,7 +2522,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: Text(loc.getRecurrenceTypeLabel("custom")),
-          content: Container(
+          content: SizedBox(
             width: double.maxFinite, // Maximale Breite begrenzen
             child: SingleChildScrollView(
               child: Column(
@@ -2636,7 +2634,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(
                           labelText: loc.recurrenceCount,
-                          border: OutlineInputBorder(),
+                          border: const OutlineInputBorder(),
                         ),
                         onChanged: (value) {
                           final count = int.tryParse(value);
@@ -2886,7 +2884,7 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 /// >>> NEU: Hilfs-Widget zum automatischen Selektieren beim Fokus (wie im Original)
 class _OverwriteOnFocus extends StatelessWidget {
   final Widget child;
-  const _OverwriteOnFocus({required this.child, Key? key}) : super(key: key);
+  const _OverwriteOnFocus({required this.child, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -2898,8 +2896,7 @@ class _OverwriteOnFocus extends StatelessWidget {
 
 class _SelectAllOnFocusChild extends StatefulWidget {
   final Widget child;
-  const _SelectAllOnFocusChild({required this.child, Key? key})
-      : super(key: key);
+  const _SelectAllOnFocusChild({required this.child, super.key});
 
   @override
   State<_SelectAllOnFocusChild> createState() => _SelectAllOnFocusChildState();
@@ -2917,8 +2914,7 @@ class _SelectAllOnFocusChildState extends State<_SelectAllOnFocusChild> {
 
 class _SelectAllInterceptor extends StatelessWidget {
   final Widget child;
-  const _SelectAllInterceptor({required this.child, Key? key})
-      : super(key: key);
+  const _SelectAllInterceptor({required this.child, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -2929,8 +2925,7 @@ class _SelectAllInterceptor extends StatelessWidget {
 }
 
 class _SelectAllTextOnFocusInherited extends InheritedWidget {
-  const _SelectAllTextOnFocusInherited({Key? key, required Widget child})
-      : super(key: key, child: child);
+  const _SelectAllTextOnFocusInherited({super.key, required super.child});
 
   @override
   bool updateShouldNotify(_SelectAllTextOnFocusInherited oldWidget) => false;

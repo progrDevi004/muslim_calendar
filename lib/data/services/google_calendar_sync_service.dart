@@ -381,30 +381,28 @@ class GoogleCalendarSyncService with ChangeNotifier {
         final existingEvent = await _calendarApi!.events
             .get(targetCalendarId, existingMapping.externalId);
 
-        if (existingEvent != null) {
-          // Konvertiere Appointment zu Google Event und aktualisiere
-          final updatedEvent = await _createGoogleEvent(
-            appointment.subject,
-            appointment.startTime!,
-            appointment.endTime!,
-            notes: appointment.notes,
-            location: appointment.location,
-            isAllDay: appointment.isAllDay,
-            reminderMinutes: appointment.reminderMinutesBefore,
-            recurrenceRule: appointment.recurrenceRule,
-            appointmentId: appointment.id,
-          );
-          await _calendarApi!.events.update(
-              updatedEvent, targetCalendarId, existingMapping.externalId);
+        // Konvertiere Appointment zu Google Event und aktualisiere
+        final updatedEvent = await _createGoogleEvent(
+          appointment.subject,
+          appointment.startTime!,
+          appointment.endTime!,
+          notes: appointment.notes,
+          location: appointment.location,
+          isAllDay: appointment.isAllDay,
+          reminderMinutes: appointment.reminderMinutesBefore,
+          recurrenceRule: appointment.recurrenceRule,
+          appointmentId: appointment.id,
+        );
+        await _calendarApi!.events
+            .update(updatedEvent, targetCalendarId, existingMapping.externalId);
 
-          // Aktualisiere Zeitstempel in der lokalen Datenbank
-          await _appointmentRepo.updateSyncTimestamp(
-              appointment.id!, DateTime.now().toIso8601String());
+        // Aktualisiere Zeitstempel in der lokalen Datenbank
+        await _appointmentRepo.updateSyncTimestamp(
+            appointment.id!, DateTime.now().toIso8601String());
 
-          debugPrint(
-              '✅ Termin ${appointment.id} in Google aktualisiert (Google-ID: ${existingMapping.externalId})');
-          return true;
-        }
+        debugPrint(
+            '✅ Termin ${appointment.id} in Google aktualisiert (Google-ID: ${existingMapping.externalId})');
+        return true;
       }
 
       // Neuen Termin erstellen
@@ -918,9 +916,44 @@ class GoogleCalendarSyncService with ChangeNotifier {
   // Diese Methode kann verwendet werden, um Termine, die in Google existieren, aber lokal entfernt wurden, zu löschen
   Future<bool> deleteMissingLocalAppointments() async {
     try {
+      // Prüfen, ob wir angemeldet sind und die API initialisiert ist
       if (_calendarApi == null || _selectedCalendarId == null) {
-        debugPrint('Google API nicht initialisiert');
-        return false;
+        debugPrint('Google API nicht initialisiert. Initialisiere...');
+
+        // Versuche die Initialisierung (ähnlich wie bei anderen Sync-Methoden)
+        final googleSignIn = GoogleSignIn(
+          scopes: [
+            'email',
+            'https://www.googleapis.com/auth/calendar',
+          ],
+        );
+
+        // Versuche, aktuellen Benutzer zu bekommen oder neu anzumelden
+        final account =
+            await googleSignIn.signInSilently() ?? await googleSignIn.signIn();
+        if (account == null) {
+          debugPrint('Google-Anmeldung fehlgeschlagen');
+          return false;
+        }
+
+        // API-Client initialisieren
+        final authHeaders = await account.authentication;
+        if (authHeaders.accessToken == null) {
+          debugPrint('Zugriffs-Token ist null');
+          return false;
+        }
+
+        final httpClient = GoogleAuthClient(authHeaders.accessToken!);
+        _calendarApi = calendar.CalendarApi(httpClient);
+
+        // CalendarId laden oder 'primary' verwenden
+        await _loadSelectedCalendarId();
+
+        // Prüfen, ob wir jetzt initialisiert sind
+        if (_calendarApi == null || _selectedCalendarId == null) {
+          debugPrint('Initialisierung war nicht erfolgreich');
+          return false;
+        }
       }
 
       debugPrint('Suche nach Terminen in Google, die lokal gelöscht wurden...');
@@ -1083,68 +1116,28 @@ class GoogleCalendarSyncService with ChangeNotifier {
             final existingEvent = await _calendarApi!.events
                 .get(targetCalendarId, existingMapping.externalId);
 
-            if (existingEvent != null) {
-              // Konvertiere Appointment zu Google Event und aktualisiere
-              final updatedEvent = await _createGoogleEvent(
-                appointment.subject,
-                appointment.startTime!,
-                appointment.endTime!,
-                notes: appointment.notes,
-                location: appointment.location,
-                isAllDay: appointment.isAllDay,
-                reminderMinutes: appointment.reminderMinutesBefore,
-                recurrenceRule: appointment.recurrenceRule,
-                appointmentId: appointment.id,
-              );
-              await _calendarApi!.events.update(
-                  updatedEvent, targetCalendarId, existingMapping.externalId);
+            // Konvertiere Appointment zu Google Event und aktualisiere
+            final updatedEvent = await _createGoogleEvent(
+              appointment.subject,
+              appointment.startTime!,
+              appointment.endTime!,
+              notes: appointment.notes,
+              location: appointment.location,
+              isAllDay: appointment.isAllDay,
+              reminderMinutes: appointment.reminderMinutesBefore,
+              recurrenceRule: appointment.recurrenceRule,
+              appointmentId: appointment.id,
+            );
+            await _calendarApi!.events.update(
+                updatedEvent, targetCalendarId, existingMapping.externalId);
 
-              // Aktualisiere Zeitstempel in der lokalen Datenbank
-              await _appointmentRepo.updateSyncTimestamp(
-                  appointment.id!, DateTime.now().toIso8601String());
+            // Aktualisiere Zeitstempel in der lokalen Datenbank
+            await _appointmentRepo.updateSyncTimestamp(
+                appointment.id!, DateTime.now().toIso8601String());
 
-              debugPrint(
-                  "✅ Termin aktualisiert: ${appointment.subject} (ID: ${appointment.id})");
-              successCount++;
-            } else {
-              // Event nicht gefunden, erstelle neu
-              final newEvent = await _createGoogleEvent(
-                appointment.subject,
-                appointment.startTime!,
-                appointment.endTime!,
-                notes: appointment.notes,
-                location: appointment.location,
-                isAllDay: appointment.isAllDay,
-                reminderMinutes: appointment.reminderMinutesBefore,
-                recurrenceRule: appointment.recurrenceRule,
-                appointmentId: appointment.id,
-              );
-
-              final createdEvent =
-                  await _calendarApi!.events.insert(newEvent, targetCalendarId);
-
-              // Speichere das neue Mapping
-              await _mappingRepo.addMapping(
-                localId: appointment.id!,
-                externalId: createdEvent.id!,
-                source: 'google',
-                sourceCalendarId: targetCalendarId,
-              );
-
-              // Aktualisiere externalIdGoogle im Appointment
-              await _appointmentRepo.updateAppointment(appointment.copyWith(
-                externalIdGoogle: createdEvent.id,
-                lastSyncedAt: DateTime.now(),
-              ));
-
-              // Aktualisiere Zeitstempel
-              await _appointmentRepo.updateSyncTimestamp(
-                  appointment.id!, DateTime.now().toIso8601String());
-
-              debugPrint(
-                  "✅ Termin neu erstellt: ${appointment.subject} (ID: ${appointment.id})");
-              successCount++;
-            }
+            debugPrint(
+                "✅ Termin aktualisiert: ${appointment.subject} (ID: ${appointment.id})");
+            successCount++;
           } else {
             // Neuer Termin, noch nicht in Google
             final newEvent = await _createGoogleEvent(
@@ -1285,9 +1278,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
       }
 
       // Wenn nicht erfolgreich, interaktive Anmeldung starten
-      if (account == null) {
-        account = await googleSignIn.signIn();
-      }
+      account ??= await googleSignIn.signIn();
 
       // Wenn immer noch null, ist die Anmeldung fehlgeschlagen
       if (account == null) {

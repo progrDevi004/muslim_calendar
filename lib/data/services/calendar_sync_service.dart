@@ -397,8 +397,7 @@ class CalendarSyncService extends ChangeNotifier {
             ? event.end!.dateTime!.difference(event.start!.dateTime!)
             : null,
         location: event.location,
-        recurrenceRule:
-            event.recurrence != null ? event.recurrence!.join(',') : null,
+        recurrenceRule: event.recurrence?.join(','),
         recurrenceExceptionDates: null,
         color: const Color(0xFF2196F3),
         startTime: finalStartTime,

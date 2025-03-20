@@ -34,7 +34,7 @@ import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 class DashboardPage extends StatefulWidget {
   final Function(DashboardPageState)? onStateCreated;
 
-  const DashboardPage({Key? key, this.onStateCreated}) : super(key: key);
+  const DashboardPage({super.key, this.onStateCreated});
 
   @override
   State<DashboardPage> createState() => DashboardPageState();

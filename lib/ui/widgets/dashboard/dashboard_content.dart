@@ -33,7 +33,7 @@ class DashboardContent extends StatelessWidget {
   final Function(int) onTaskTap;
 
   const DashboardContent({
-    Key? key,
+    super.key,
     required this.dateString,
     required this.weekdayString,
     this.weatherTemp,
@@ -50,7 +50,7 @@ class DashboardContent extends StatelessWidget {
     required this.onHoverEnter,
     required this.onHoverExit,
     required this.onTaskTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -95,7 +95,7 @@ class RecurrenceRuleConverter {
       icalParams.add('BYSETPOS=1');
     }
 
-    return '${icalParams.join(';').toUpperCase()}';
+    return icalParams.join(';').toUpperCase();
   }
 
   /// Konvertiert eine iCalendar-Wiederholungsregel in das Google Calendar Format
@@ -139,14 +139,14 @@ class RecurrenceRuleConverter {
       // Wenn ein Startdatum vorhanden ist, fügen wir den entsprechenden Wochentag hinzu
       if (startDate != null) {
         String weekday = getWeekdayFromDate(startDate);
-        recurrenceRule = '${recurrenceRule};BYDAY=$weekday';
+        recurrenceRule = '$recurrenceRule;BYDAY=$weekday';
       }
     }
 
     // Stelle sicher, dass bei 'FREQ=WEEKLY' ein 'INTERVAL' vorhanden ist
     if (recurrenceRule.contains('FREQ=WEEKLY') &&
         !recurrenceRule.contains('INTERVAL')) {
-      recurrenceRule = '${recurrenceRule};INTERVAL=1';
+      recurrenceRule = '$recurrenceRule;INTERVAL=1';
     }
 
     // Bei monatlichen Wiederholungen mit BYDAY, aber ohne BYSETPOS
@@ -154,7 +154,7 @@ class RecurrenceRuleConverter {
         recurrenceRule.contains('BYDAY=') &&
         !recurrenceRule.contains('BYSETPOS=')) {
       // Standardmäßig das erste Vorkommen im Monat verwenden
-      recurrenceRule = '${recurrenceRule};BYSETPOS=1';
+      recurrenceRule = '$recurrenceRule;BYSETPOS=1';
     }
 
     return recurrenceRule;

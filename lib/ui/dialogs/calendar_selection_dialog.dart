@@ -8,9 +8,9 @@ class CalendarSelectionDialog extends StatefulWidget {
   final List<SelectedCalendar> calendars;
 
   const CalendarSelectionDialog({
-    Key? key,
+    super.key,
     required this.calendars,
-  }) : super(key: key);
+  });
 
   @override
   State<CalendarSelectionDialog> createState() =>

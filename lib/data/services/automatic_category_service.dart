@@ -261,7 +261,7 @@ class AutomaticCategoryService {
   /// anhand von Schlagwörtern. Gibt den Kategorienamen (z. B. 'Islam') zurück
   /// oder null, falls nichts passt.
   static String? suggestCategoryName(String title, String? notes) {
-    final textToCheck = (title + ' ' + (notes ?? '')).toLowerCase();
+    final textToCheck = ('$title ${notes ?? ''}').toLowerCase();
 
     // Für jede bekannte Kategorie durchgehen
     for (final categoryName in _keywordMap.keys) {

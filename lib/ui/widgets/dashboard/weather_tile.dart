@@ -11,14 +11,14 @@ class WeatherTile extends StatelessWidget {
   final Color accentTextColor;
 
   const WeatherTile({
-    Key? key,
+    super.key,
     this.temperature,
     this.location,
     this.symbol,
     this.errorMessage,
     required this.isLoading,
     required this.accentTextColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -13,12 +13,12 @@ class CategoryFilterDialog extends StatefulWidget {
   final Function() onCategoriesChanged;
 
   const CategoryFilterDialog({
-    Key? key,
+    super.key,
     required this.categories,
     required this.selectedCategoryIds,
     required this.onCategoriesSelected,
     required this.onCategoriesChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<CategoryFilterDialog> createState() => _CategoryFilterDialogState();
@@ -82,17 +82,17 @@ class _CategoryFilterDialogState extends State<CategoryFilterDialog> {
                           final confirmDelete = await showDialog<bool>(
                             context: context,
                             builder: (ctx) => AlertDialog(
-                              title: Text('Kategorie löschen'),
+                              title: const Text('Kategorie löschen'),
                               content: Text(
                                   'Möchten Sie die Kategorie "${cat.name}" wirklich löschen?'),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.of(ctx).pop(false),
-                                  child: Text('Abbrechen'),
+                                  child: const Text('Abbrechen'),
                                 ),
                                 TextButton(
                                   onPressed: () => Navigator.of(ctx).pop(true),
-                                  child: Text('Löschen',
+                                  child: const Text('Löschen',
                                       style: TextStyle(color: Colors.red)),
                                 ),
                               ],
@@ -160,7 +160,7 @@ class _CategoryFilterDialogState extends State<CategoryFilterDialog> {
             );
             widget.onCategoriesChanged();
           },
-          child: Text('Kategorien verwalten'),
+          child: const Text('Kategorien verwalten'),
         ),
       ],
     );
