@@ -246,6 +246,33 @@ class CalendarViewWidget extends StatelessWidget {
               }
             }
           },
+          onLongPress: (calendarLongPressDetails) async {
+            // Auf Langklick/Langdruck auf einen Zeitslot reagieren
+            // Hinweis: Wir verwenden onLongPress statt onDoubleTap, da dies auf Mobilgeräten
+            // intuitiver zu bedienen ist und besser mit dem Verhalten anderer Kalender-Apps übereinstimmt
+            if (calendarLongPressDetails.targetElement ==
+                CalendarElement.calendarCell) {
+              // Nur in Tages- oder Wochenansicht öffnen
+              if (selectedView == CalendarView.day ||
+                  selectedView == CalendarView.week) {
+                final selectedDate = calendarLongPressDetails.date;
+                if (selectedDate != null) {
+                  debugPrint(
+                      'Langdruck auf Zeitslot: ${selectedDate.toString()}');
+                  // Öffne AppointmentCreationPage mit voreingestellter Startzeit
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (ctx) => AppointmentCreationPage(
+                        selectedDate: selectedDate,
+                      ),
+                    ),
+                  );
+                  // Kalender aktualisieren, falls ein neuer Termin erstellt wurde
+                  onAppointmentsChanged();
+                }
+              }
+            }
+          },
         ),
       ),
     );

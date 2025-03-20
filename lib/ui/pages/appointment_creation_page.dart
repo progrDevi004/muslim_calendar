@@ -287,10 +287,13 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
       _recurrenceType = sf.RecurrenceType.weekly;
 
       // Datum: entweder widget.selectedDate oder "heute"
-      final baseDate = widget.selectedDate ?? DateTime.now();
+      final baseDate = widget.selectedDate ??
+          DateTime(DateTime.now().day, DateTime.now().month, DateTime.now().day,
+              12, 0);
 
       // >>> Startzeit 12:00, Endzeit 12:30
-      _startTime = DateTime(baseDate.year, baseDate.month, baseDate.day, 12, 0);
+      _startTime = DateTime(baseDate.year, baseDate.month, baseDate.day,
+          baseDate.hour, baseDate.minute);
       _endTime = _startTime!.add(const Duration(minutes: 30));
 
       // Wochentag markieren
