@@ -6,6 +6,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onSettingsPressed;
   final VoidCallback onCategoryFilterPressed;
   final VoidCallback onSyncPressed;
+  final VoidCallback onMenuPressed;
   final AppLocalizations localizations;
 
   const HomeAppBar({
@@ -14,35 +15,23 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.onSettingsPressed,
     required this.onCategoryFilterPressed,
     required this.onSyncPressed,
+    required this.onMenuPressed,
     required this.localizations,
   });
 
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      centerTitle: true,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.explore),
-          onPressed: onQiblaCompassPressed,
-          tooltip: 'Qibla Compass',
-        ),
-        IconButton(
-          icon: const Icon(Icons.sync),
-          onPressed: onSyncPressed,
-          tooltip: 'Synchronisation',
-        ),
-        IconButton(
-          icon: const Icon(Icons.settings),
-          onPressed: onSettingsPressed,
-          tooltip: localizations.settings,
-        ),
-        IconButton(
-          icon: const Icon(Icons.filter_list),
-          onPressed: onCategoryFilterPressed,
-          tooltip: localizations.filterCategories,
-        ),
-      ],
+      centerTitle: false,
+      title: const Text(
+        'Muslim Calendar',
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+      leading: IconButton(
+        icon: const Icon(Icons.menu),
+        onPressed: onMenuPressed,
+      ),
+      elevation: 0,
     );
   }
 

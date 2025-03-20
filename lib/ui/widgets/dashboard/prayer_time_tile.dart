@@ -83,12 +83,16 @@ class PrayerTimeTile extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  e.key,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: accentTextColor,
+                Flexible(
+                  child: Text(
+                    e.key,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: accentTextColor,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Text(
                   e.value,
                   style: theme.textTheme.bodySmall?.copyWith(

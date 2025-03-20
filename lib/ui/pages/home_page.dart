@@ -149,6 +149,9 @@ class HomePageState extends State<HomePage> {
   // Variablen am Anfang der HomePageState-Klasse hinzufügen
   bool _isLoadingAppointments = false;
 
+  // Schlüssel für den Scaffold, um den Drawer zu öffnen
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   void initState() {
     super.initState();
@@ -961,6 +964,7 @@ class HomePageState extends State<HomePage> {
     final bool isLandscape = mediaQuery.orientation == Orientation.landscape;
 
     return Scaffold(
+      key: _scaffoldKey,
       appBar: _selectedNavIndex != 0
           ? HomeAppBar(
               onQiblaCompassPressed: () => _openQiblaCompass(),
@@ -971,9 +975,11 @@ class HomePageState extends State<HomePage> {
                     context.findRenderObject() as RenderBox;
                 _showSyncOptionsMenu(context, button);
               },
+              onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
               localizations: localizations,
             )
           : null,
+      drawer: _buildDrawer(localizations),
       body: _selectedNavIndex == 0
           ? DashboardPage(
               key: const ValueKey('dashboard'),
@@ -1012,6 +1018,85 @@ class HomePageState extends State<HomePage> {
         selectedIndex: _selectedNavIndex,
         onIndexSelected: _handleNavigationChange,
         localizations: localizations,
+      ),
+    );
+  }
+
+  // Baut den Drawer mit den Menüoptionen
+  Widget _buildDrawer(AppLocalizations loc) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color headerColor =
+        isDark ? Colors.grey.shade800 : logoColor.withOpacity(0.1);
+    final Color iconColor = logoColor;
+
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          // Header
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: headerColor,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  'Muslim Calendar',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : logoColor,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Menü',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: isDark ? Colors.white70 : Colors.black54,
+                      ),
+                ),
+              ],
+            ),
+          ),
+
+          // Einstellungen
+          ListTile(
+            leading: Icon(Icons.settings, color: iconColor),
+            title: Text(loc.settings),
+            onTap: () => _openSettings(),
+          ),
+
+          // Qibla Kompass
+          ListTile(
+            leading: Icon(Icons.explore, color: iconColor),
+            title: const Text('Qibla Compass'),
+            onTap: () => _openQiblaCompass(),
+          ),
+
+          // Kategorien
+          ListTile(
+            leading: Icon(Icons.category, color: iconColor),
+            title: const Text('Kategorien'),
+            onTap: () => _showCategoryFilterDialog(context),
+          ),
+
+          const Divider(),
+
+          // Synchronisation
+          ListTile(
+            leading: Icon(Icons.sync, color: iconColor),
+            title: const Text('Synchronisation'),
+            onTap: () {
+              Navigator.pop(context); // Drawer schließen
+              final RenderBox box = context.findRenderObject() as RenderBox;
+              _showSyncOptionsMenu(context, box);
+            },
+          ),
+
+          // Weitere Trennlinie am Ende
+          const Divider(),
+        ],
       ),
     );
   }

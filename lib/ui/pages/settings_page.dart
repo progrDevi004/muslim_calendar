@@ -457,24 +457,24 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       const Divider(height: 32),
 
-      // Notifications Section
-      Text(
-        'Notifications',
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-      ),
-      const SizedBox(height: 16),
-      SwitchListTile(
-        title: Text(loc.enableNotifications),
-        subtitle: Text(loc.enableNotificationsSubtitle),
-        value: _notificationsEnabled,
-        onChanged: (value) async {
-          setState(() => _notificationsEnabled = value);
-          await _saveSettings();
-        },
-      ),
-      const Divider(height: 32),
+      // // Notifications Section
+      // Text(
+      //   'Notifications',
+      //   style: Theme.of(context).textTheme.titleMedium?.copyWith(
+      //         fontWeight: FontWeight.bold,
+      //       ),
+      // ),
+      // const SizedBox(height: 16),
+      // SwitchListTile(
+      //   title: Text(loc.enableNotifications),
+      //   subtitle: Text(loc.enableNotificationsSubtitle),
+      //   value: _notificationsEnabled,
+      //   onChanged: (value) async {
+      //     setState(() => _notificationsEnabled = value);
+      //     await _saveSettings();
+      //   },
+      // ),
+      // const Divider(height: 32),
 
       // Time Format Section
       Text(
