@@ -198,7 +198,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
     }
 
     if (_isSyncing) {
-      debugPrint("Synchronisierung läuft bereits");
+      // debugPrint("Synchronisierung läuft bereits");
       return false;
     }
 
@@ -219,8 +219,8 @@ class GoogleCalendarSyncService with ChangeNotifier {
       // Debug-Ausgabe: Wie viele Termine haben syncWithGoogleCalendar=true?
       final markedForSync =
           allAppointments.where((a) => a.syncWithGoogleCalendar).toList();
-      debugPrint(
-          "Termine markiert für Synchronisierung: ${markedForSync.length} von ${allAppointments.length}");
+      // debugPrint(
+      //     "Termine markiert für Synchronisierung: ${markedForSync.length} von ${allAppointments.length}");
 
       // Wenn keine Termine für Synchronisierung markiert sind, verwenden wir alle Termine
       List<AppointmentModel> appointmentsToSync;
@@ -238,11 +238,11 @@ class GoogleCalendarSyncService with ChangeNotifier {
               (a) => a.externalIdGoogle == null || a.externalIdGoogle!.isEmpty)
           .toList();
 
-      debugPrint("📊 ${appointmentsToSync.length} Termine für Sync markiert");
-      debugPrint(
-          "📊 ${toSyncAppointments.length} Termine zum Export (ohne von Google importierte)");
-      debugPrint(
-          "📊 ${appointmentsToSync.length - toSyncAppointments.length} Termine übersprungen (von Google importiert)");
+      // debugPrint("📊 ${appointmentsToSync.length} Termine für Sync markiert");
+      // debugPrint(
+      //     "📊 ${toSyncAppointments.length} Termine zum Export (ohne von Google importierte)");
+      // debugPrint(
+      //     "📊 ${appointmentsToSync.length - toSyncAppointments.length} Termine übersprungen (von Google importiert)");
 
       // 4. Priorisierung: Termine nach Datum sortieren (nahe Termine zuerst)
       toSyncAppointments.sort((a, b) {
@@ -369,8 +369,8 @@ class GoogleCalendarSyncService with ChangeNotifier {
         }
       }
 
-      debugPrint(
-          "🎯 Verwende Kalender: $targetCalendarId für Termin: ${appointment.subject}");
+      // debugPrint(
+      //     "🎯 Verwende Kalender: $targetCalendarId für Termin: ${appointment.subject}");
 
       // Überprüfe, ob der Termin bereits in Google existiert
       final existingMapping = await _mappingRepo.getMappingForLocalAppointment(
@@ -400,8 +400,8 @@ class GoogleCalendarSyncService with ChangeNotifier {
         await _appointmentRepo.updateSyncTimestamp(
             appointment.id!, DateTime.now().toIso8601String());
 
-        debugPrint(
-            '✅ Termin ${appointment.id} in Google aktualisiert (Google-ID: ${existingMapping.externalId})');
+        // debugPrint(
+        //     '✅ Termin ${appointment.id} in Google aktualisiert (Google-ID: ${existingMapping.externalId})');
         return true;
       }
 
@@ -437,8 +437,8 @@ class GoogleCalendarSyncService with ChangeNotifier {
           DateTime.now().toIso8601String(),
         );
 
-        debugPrint(
-            '✅ Neuer Termin ${appointment.id} in Google erstellt (Google-ID: ${createdEvent.id})');
+        // debugPrint(
+        //     '✅ Neuer Termin ${appointment.id} in Google erstellt (Google-ID: ${createdEvent.id})');
         return true;
       }
 
@@ -532,9 +532,9 @@ class GoogleCalendarSyncService with ChangeNotifier {
         return false;
       }
 
-      debugPrint(
-          "🕌 Synchronisiere gebetszeitabhängigen Termin mit Wiederholung: ${appointment.subject}");
-      debugPrint("🔄 Wiederholungsregel: ${appointment.recurrenceRule}");
+      // debugPrint(
+      //     "🕌 Synchronisiere gebetszeitabhängigen Termin mit Wiederholung: ${appointment.subject}");
+      // debugPrint("🔄 Wiederholungsregel: ${appointment.recurrenceRule}");
 
       // 1. Alle Vorkommen innerhalb des Synchronisierungszeitraums ermitteln
       final instances = await _appointmentAdapter.getAppointmentsForRange(
@@ -543,12 +543,12 @@ class GoogleCalendarSyncService with ChangeNotifier {
         syncRange.end,
       );
 
-      debugPrint(
-          "📅 ${instances.length} Instanzen im Zeitfenster ${syncRange.start.toIso8601String()} bis ${syncRange.end.toIso8601String()}");
+      // debugPrint(
+      //     "📅 ${instances.length} Instanzen im Zeitfenster ${syncRange.start.toIso8601String()} bis ${syncRange.end.toIso8601String()}");
 
       if (instances.isEmpty) {
-        debugPrint(
-            "⚠️ Keine Instanzen gefunden - überspringe Synchronisierung");
+        // debugPrint(
+        //     "⚠️ Keine Instanzen gefunden - überspringe Synchronisierung");
         return true; // Erfolgreich, da nichts zu synchronisieren
       }
 
@@ -574,9 +574,9 @@ class GoogleCalendarSyncService with ChangeNotifier {
         final existing = existingMappingsByDate[originalDate];
 
         // Debug-Ausgabe für jede Instanz
-        debugPrint('Verarbeite Instanz für $originalDate:');
-        debugPrint('- Start: ${instance.startTime}');
-        debugPrint('- Ende: ${instance.endTime}');
+        // debugPrint('Verarbeite Instanz für $originalDate:');
+        // debugPrint('- Start: ${instance.startTime}');
+        // debugPrint('- Ende: ${instance.endTime}');
 
         if (existing != null) {
           // Event aktualisieren
@@ -591,7 +591,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
             isRecurringInstance: true,
           );
 
-          debugPrint('Aktualisiere bestehende Instanz für $originalDate');
+          //  debugPrint('Aktualisiere bestehende Instanz für $originalDate');
           final operation = _calendarApi!.events
               .update(
             event,
@@ -645,14 +645,14 @@ class GoogleCalendarSyncService with ChangeNotifier {
                 .addAll({'instanceDate': originalDate});
           }
 
-          debugPrint('Erstelle neue Instanz für $originalDate');
+          // debugPrint('Erstelle neue Instanz für $originalDate');
           final operation = _calendarApi!.events
               .insert(
             event,
             _selectedCalendarId!,
           )
               .then((createdEvent) {
-            debugPrint('Event für $originalDate erstellt: ${createdEvent.id}');
+            // debugPrint('Event für $originalDate erstellt: ${createdEvent.id}');
             return _mappingRepo.saveMapping(
               GoogleEventMapping(
                 localAppointmentId: appointment.id!,
@@ -694,7 +694,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
             try {
               await _calendarApi!.events
                   .delete(_selectedCalendarId!, mapping.googleEventId);
-              debugPrint('Veraltetes Event gelöscht: ${mapping.googleEventId}');
+              // debugPrint('Veraltetes Event gelöscht: ${mapping.googleEventId}');
             } catch (e) {
               debugPrint(
                   'Fehler beim Löschen des Events ${mapping.googleEventId}: $e');
@@ -704,7 +704,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
           // Mapping aus der Datenbank löschen
           if (mapping.id != null) {
             await _mappingRepo.deleteMapping(mapping.id!);
-            debugPrint('Veraltetes Mapping gelöscht: ID ${mapping.id}');
+            // debugPrint('Veraltetes Mapping gelöscht: ID ${mapping.id}');
           }
         }
       }
@@ -894,7 +894,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
         return 'Europe/Berlin';
       }
 
-      debugPrint('Verwendete IANA-Zeitzone: $timeZone');
+      // debugPrint('Verwendete IANA-Zeitzone: $timeZone');
       return timeZone;
     } catch (e) {
       // Fallback zur Standardzeitzone des Geräts
@@ -918,7 +918,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
     try {
       // Prüfen, ob wir angemeldet sind und die API initialisiert ist
       if (_calendarApi == null || _selectedCalendarId == null) {
-        debugPrint('Google API nicht initialisiert. Initialisiere...');
+        // debugPrint('Google API nicht initialisiert. Initialisiere...');
 
         // Versuche die Initialisierung (ähnlich wie bei anderen Sync-Methoden)
         final googleSignIn = GoogleSignIn(
@@ -932,14 +932,14 @@ class GoogleCalendarSyncService with ChangeNotifier {
         final account =
             await googleSignIn.signInSilently() ?? await googleSignIn.signIn();
         if (account == null) {
-          debugPrint('Google-Anmeldung fehlgeschlagen');
+          // debugPrint('Google-Anmeldung fehlgeschlagen');
           return false;
         }
 
         // API-Client initialisieren
         final authHeaders = await account.authentication;
         if (authHeaders.accessToken == null) {
-          debugPrint('Zugriffs-Token ist null');
+          // debugPrint('Zugriffs-Token ist null');
           return false;
         }
 
@@ -951,12 +951,12 @@ class GoogleCalendarSyncService with ChangeNotifier {
 
         // Prüfen, ob wir jetzt initialisiert sind
         if (_calendarApi == null || _selectedCalendarId == null) {
-          debugPrint('Initialisierung war nicht erfolgreich');
+          // debugPrint('Initialisierung war nicht erfolgreich');
           return false;
         }
       }
 
-      debugPrint('Suche nach Terminen in Google, die lokal gelöscht wurden...');
+      // debugPrint('Suche nach Terminen in Google, die lokal gelöscht wurden...');
 
       // 1. Zeitspanne für die Synchronisierung festlegen
       final syncRange = GoogleCalendarSyncConfig.calculateSyncRange();
@@ -967,7 +967,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
       final localAppointmentIds = await _appointmentRepo.getAllAppointmentIds();
       final localIdsSet = Set<int>.from(localAppointmentIds);
 
-      debugPrint('Lokale Termin-IDs: $localIdsSet');
+      // debugPrint('Lokale Termin-IDs: $localIdsSet');
 
       // 3. Google Events im Zeitraum abrufen
       final events = await _calendarApi!.events.list(

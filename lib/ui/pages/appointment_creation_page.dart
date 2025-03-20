@@ -961,35 +961,36 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         ),
         const Divider(height: 1),
 
-        // All-Day Schalter
-        Material(
-          elevation: 0,
-          color: Colors.transparent,
-          child: SwitchListTile.adaptive(
-            secondary: const Icon(Icons.access_time),
-            title: Text(loc.allDay),
-            value: _isAllDay,
-            onChanged: (bool value) {
-              setState(() {
-                _isAllDay = value;
-                // Ganztägige Termine können nicht an Gebetszeiten gebunden sein
-                if (value) {
-                  _isRelatedToPrayerTimes = false;
-                  if (_startTime != null) {
-                    // Bei ganztägigen Terminen endet der Tag um 23:59
-                    _endTime = DateTime(
-                      _startTime!.year,
-                      _startTime!.month,
-                      _startTime!.day,
-                      23,
-                      59,
-                    );
+        // All-Day Schalter - nur anzeigen, wenn nicht an Gebetszeiten gebunden
+        if (!_isRelatedToPrayerTimes)
+          Material(
+            elevation: 0,
+            color: Colors.transparent,
+            child: SwitchListTile.adaptive(
+              secondary: const Icon(Icons.access_time),
+              title: Text(loc.allDay),
+              value: _isAllDay,
+              onChanged: (bool value) {
+                setState(() {
+                  _isAllDay = value;
+                  // Ganztägige Termine können nicht an Gebetszeiten gebunden sein
+                  if (value) {
+                    _isRelatedToPrayerTimes = false;
+                    if (_startTime != null) {
+                      // Bei ganztägigen Terminen endet der Tag um 23:59
+                      _endTime = DateTime(
+                        _startTime!.year,
+                        _startTime!.month,
+                        _startTime!.day,
+                        23,
+                        59,
+                      );
+                    }
                   }
-                }
-              });
-            },
+                });
+              },
+            ),
           ),
-        ),
 
         // Gebetszeit-Schalter (aus den fortgeschrittenen Optionen hierher verschoben)
         Material(
