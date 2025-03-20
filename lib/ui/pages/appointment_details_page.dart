@@ -8,7 +8,6 @@ import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
 import 'package:muslim_calendar/data/services/notification_service.dart';
 import 'package:muslim_calendar/data/services/google_calendar_service.dart';
 import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
-import 'package:muslim_calendar/data/services/google_calendar_sync_service.dart';
 import 'package:muslim_calendar/models/appointment_model.dart';
 import 'package:muslim_calendar/models/category_model.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
