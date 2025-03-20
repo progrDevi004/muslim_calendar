@@ -17,18 +17,25 @@ import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
 import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
 import 'package:muslim_calendar/data/repositories/category_repository.dart';
 import 'package:muslim_calendar/models/dashboard_task.dart';
+import 'package:muslim_calendar/models/category_model.dart';
 
 // Detailseite
 import 'package:muslim_calendar/ui/pages/appointment_details_page.dart';
 import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
 
-// HomePage (um _loadAllAppointments() aufzurufen)
+// Andere Pages
 import 'package:muslim_calendar/ui/pages/home_page.dart';
+import 'package:muslim_calendar/ui/pages/settings_page.dart';
+import 'package:muslim_calendar/ui/pages/qibla_compass_page.dart';
 
 // Dashboard Widgets
 import 'package:muslim_calendar/ui/widgets/dashboard/dashboard_content.dart';
+import 'package:muslim_calendar/ui/widgets/home/category_filter_dialog.dart';
 
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
+
+// Logo-Farbe für die Konsistenz der App
+const Color logoColor = Color(0xFF468178);
 
 class DashboardPage extends StatefulWidget {
   final Function(DashboardPageState)? onStateCreated;
@@ -68,13 +75,21 @@ class DashboardPageState extends State<DashboardPage> {
 
   int? _hoveredTaskId;
 
+  // Liste der Kategorien für den Kategoriefilter
+  List<CategoryModel> _allCategories = [];
+  Set<int> _selectedCategoryIds = {};
+
   // Variable für Reload-Tracking
   bool _isReloading = false;
+
+  // Schlüssel für den Scaffold, um den Drawer zu öffnen
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
     _initData();
+    _loadAllCategories();
 
     // Callback zur Weitergabe der State-Referenz
     widget.onStateCreated?.call(this);
@@ -124,6 +139,7 @@ class DashboardPageState extends State<DashboardPage> {
 
     debugPrint(
         "🔄 DashboardPage: Kategorien wurden geändert, lade Termine neu...");
+    _loadAllCategories();
     reloadData();
   }
 
@@ -146,6 +162,331 @@ class DashboardPageState extends State<DashboardPage> {
         _isReloading = false;
       }
     });
+  }
+
+  /// Lädt alle Kategorien für den Kategoriefilter
+  Future<void> _loadAllCategories() async {
+    final cats = await _categoryRepo.getAllCategories();
+    setState(() {
+      _allCategories = cats;
+      _selectedCategoryIds = cats.map((e) => e.id!).toSet();
+    });
+  }
+
+  /// Speichert die ausgewählten Kategorien in SharedPreferences.
+  Future<void> _saveSelectedCategoryIdsToPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final catList = _selectedCategoryIds.map((id) => id.toString()).toList();
+    await prefs.setStringList('selectedCategoryIds', catList);
+  }
+
+  /// Öffnet die Einstellungsseite
+  Future<void> _openSettings() async {
+    // Schließe den Drawer, falls er offen ist
+    Navigator.pop(context);
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const SettingsPage()),
+    );
+
+    // Einstellungen neu laden
+    final prefs = await SharedPreferences.getInstance();
+    _use24hFormat = prefs.getBool('use24hFormat') ?? false;
+    _showPrayerSlotsInDashboard =
+        prefs.getBool('showPrayerSlotsInDashboard') ?? true;
+
+    // Daten neu laden
+    await reloadData();
+
+    // HomePage aktualisieren falls nötig
+    final homePageState = context.findAncestorStateOfType<HomePageState>();
+    homePageState?.loadAllAppointments();
+  }
+
+  /// Öffnet den Qibla-Kompass
+  Future<void> _openQiblaCompass() async {
+    // Schließe den Drawer, falls er offen ist
+    Navigator.pop(context);
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const QiblaCompassPage()),
+    );
+  }
+
+  /// Zeigt den Dialog zum Filtern nach Kategorien an
+  void _showCategoryFilterDialog(BuildContext context) {
+    // Schließe den Drawer, falls er offen ist
+    Navigator.pop(context);
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return CategoryFilterDialog(
+          categories: _allCategories,
+          selectedCategoryIds: _selectedCategoryIds,
+          onCategoriesSelected: (selectedIds) {
+            setState(() {
+              _selectedCategoryIds = selectedIds;
+            });
+            _saveSelectedCategoryIdsToPrefs();
+
+            // Daten neu laden
+            reloadData();
+
+            // HomePage aktualisieren falls nötig
+            final homePageState =
+                context.findAncestorStateOfType<HomePageState>();
+            homePageState?.loadAllAppointments();
+          },
+          onCategoriesChanged: () {
+            _loadAllCategories();
+            reloadData();
+          },
+        );
+      },
+    );
+  }
+
+  /// Zeigt das Synchronisationsmenü an
+  void _showSyncOptionsDialog(BuildContext context) {
+    // Schließe den Drawer, falls er offen ist
+    Navigator.pop(context);
+
+    final localizations = Provider.of<AppLocalizations>(context, listen: false);
+    final scaffold = ScaffoldMessenger.of(context);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(localizations.googleCalendar),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.sync),
+              title: Text(localizations.fullSync),
+              subtitle: Text(localizations.importAndExport),
+              onTap: () async {
+                Navigator.pop(context);
+
+                try {
+                  // Fortschritt anzeigen
+                  scaffold.showSnackBar(
+                    SnackBar(
+                        content: Text(localizations.syncingWithGoogleCalendar)),
+                  );
+
+                  // Vollständige Synchronisation durchführen
+                  await _calendarSyncService.importAppointments(
+                      categoryOption: 0);
+                  await _calendarSyncService.exportAppointments();
+
+                  // Nach erfolgreicher Synchronisation neu laden
+                  await reloadData();
+
+                  // Auch HomePage aktualisieren falls nötig
+                  final homePageState =
+                      context.findAncestorStateOfType<HomePageState>();
+                  homePageState?.loadAllAppointments();
+
+                  scaffold.clearSnackBars();
+                  scaffold.showSnackBar(
+                    SnackBar(
+                      content: Text(localizations.syncCompleted),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  debugPrint('Sync-Fehler: $e');
+                  scaffold.clearSnackBars();
+                  scaffold.showSnackBar(
+                    SnackBar(
+                      content: Text(localizations.syncSyncError(e.toString())),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.download),
+              title: Text(localizations.importOnly),
+              subtitle: Text(localizations.importFromGoogleCalendar),
+              onTap: () {
+                Navigator.pop(context);
+                _showImportOptionsDialog(context);
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.upload),
+              title: Text(localizations.exportOnly),
+              subtitle: Text(localizations.exportToGoogleCalendar),
+              onTap: () async {
+                Navigator.pop(context);
+
+                try {
+                  // Fortschritt anzeigen
+                  scaffold.showSnackBar(
+                    SnackBar(
+                        content: Text(localizations.exportingToGoogleCalendar)),
+                  );
+
+                  // Export durchführen
+                  await _calendarSyncService.exportAppointments();
+
+                  scaffold.clearSnackBars();
+                  scaffold.showSnackBar(
+                    SnackBar(
+                      content: Text(localizations.syncExportCompleted ??
+                          localizations.exportCompleted),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  debugPrint('Export-Fehler: $e');
+                  scaffold.clearSnackBars();
+                  scaffold.showSnackBar(
+                    SnackBar(
+                      content: Text(localizations.exportError(e.toString())),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(localizations.cancel),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Zeigt einen Dialog für Import-Optionen an
+  void _showImportOptionsDialog(BuildContext context) {
+    final localizations = Provider.of<AppLocalizations>(context, listen: false);
+    final scaffold = ScaffoldMessenger.of(context);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(localizations.importOptions),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(localizations.howToHandleCategories),
+            ),
+            const Divider(),
+            ListTile(
+              title: Text(localizations.useExistingCategories),
+              subtitle: Text(localizations.searchForMatchingCategories),
+              onTap: () async {
+                Navigator.pop(context);
+
+                try {
+                  // Fortschritt anzeigen
+                  scaffold.showSnackBar(
+                    SnackBar(
+                        content:
+                            Text(localizations.importingFromGoogleCalendar)),
+                  );
+
+                  // Import durchführen mit Option: bestehende Kategorien verwenden
+                  await _calendarSyncService.importAppointments(
+                      categoryOption: 0);
+
+                  // Nach erfolgreichem Import neu laden
+                  await reloadData();
+
+                  // Auch HomePage aktualisieren falls nötig
+                  final homePageState =
+                      context.findAncestorStateOfType<HomePageState>();
+                  homePageState?.loadAllAppointments();
+
+                  scaffold.clearSnackBars();
+                  scaffold.showSnackBar(
+                    SnackBar(
+                      content: Text(localizations.syncImportCompleted ??
+                          localizations.importCompleted),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  debugPrint('Import-Fehler: $e');
+                  scaffold.clearSnackBars();
+                  scaffold.showSnackBar(
+                    SnackBar(
+                      content: Text(localizations.importError(e.toString())),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+            const Divider(),
+            ListTile(
+              title: Text(localizations.createNewCategories),
+              subtitle: Text(localizations.forEachNewAppointment),
+              onTap: () async {
+                Navigator.pop(context);
+
+                try {
+                  // Fortschritt anzeigen
+                  scaffold.showSnackBar(
+                    SnackBar(
+                        content:
+                            Text(localizations.importingFromGoogleCalendar)),
+                  );
+
+                  // Import durchführen mit Option: neue Kategorien erstellen
+                  await _calendarSyncService.importAppointments(
+                      categoryOption: 1);
+
+                  // Nach erfolgreichem Import neu laden
+                  await reloadData();
+
+                  // Auch HomePage aktualisieren falls nötig
+                  final homePageState =
+                      context.findAncestorStateOfType<HomePageState>();
+                  homePageState?.loadAllAppointments();
+
+                  scaffold.clearSnackBars();
+                  scaffold.showSnackBar(
+                    SnackBar(
+                      content: Text(localizations.syncImportCompleted ??
+                          localizations.importCompleted),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  debugPrint('Import-Fehler: $e');
+                  scaffold.clearSnackBars();
+                  scaffold.showSnackBar(
+                    SnackBar(
+                      content: Text(localizations.importError(e.toString())),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(localizations.cancel),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Lädt alle Daten für das Dashboard: Wetter, Gebetszeiten, heutige Termine
@@ -575,6 +916,81 @@ class DashboardPageState extends State<DashboardPage> {
     return DateFormat(pattern).format(dt);
   }
 
+  // Baut den Drawer mit den Menüoptionen
+  Widget _buildDrawer(AppLocalizations loc) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color headerColor =
+        isDark ? Colors.grey.shade800 : logoColor.withOpacity(0.1);
+    final Color iconColor = logoColor;
+
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          // Header
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: headerColor,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  'Muslim Calendar',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : logoColor,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Menü',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: isDark ? Colors.white70 : Colors.black54,
+                      ),
+                ),
+              ],
+            ),
+          ),
+
+          // Einstellungen
+          ListTile(
+            leading: Icon(Icons.settings, color: iconColor),
+            title: Text(loc.settings),
+            onTap: () => _openSettings(),
+          ),
+
+          // Qibla Kompass
+          ListTile(
+            leading: Icon(Icons.explore, color: iconColor),
+            title: Text(loc.qiblaCompass),
+            onTap: () => _openQiblaCompass(),
+          ),
+
+          // Kategorien
+          ListTile(
+            leading: Icon(Icons.category, color: iconColor),
+            title: Text(loc.categoryLabel),
+            onTap: () => _showCategoryFilterDialog(context),
+          ),
+
+          const Divider(),
+
+          // Synchronisation
+          ListTile(
+            leading: Icon(Icons.sync, color: iconColor),
+            title: Text(loc.synchronization),
+            onTap: () => _showSyncOptionsDialog(context),
+          ),
+
+          // Weitere Trennlinie am Ende
+          const Divider(),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
@@ -590,6 +1006,22 @@ class DashboardPageState extends State<DashboardPage> {
     final Color mainColor = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
+      key: _scaffoldKey,
+      appBar: AppBar(
+        title: Text(
+          loc.dashboard,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: () {
+            _scaffoldKey.currentState?.openDrawer();
+          },
+        ),
+        elevation: 0,
+        centerTitle: false,
+      ),
+      drawer: _buildDrawer(loc),
       floatingActionButton: FloatingActionButton(
         backgroundColor: mainColor,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,

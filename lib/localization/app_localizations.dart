@@ -5560,8 +5560,45 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
-  String get categoryLabel => Intl.message('Kategorie', name: 'categoryLabel');
-  String get privateCategory => Intl.message('Privat', name: 'privateCategory');
+  String get categoryLabel {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Kategorie';
+      case AppLanguage.turkish:
+        return 'Kategori';
+      case AppLanguage.arabic:
+        return 'الفئة';
+      case AppLanguage.bosnian:
+        return 'Kategorija';
+      case AppLanguage.spanish:
+        return 'Categoría';
+      case AppLanguage.persian:
+        return 'دسته‌بندی';
+      case AppLanguage.english:
+      default:
+        return 'Category';
+    }
+  }
+
+  String get privateCategory {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Privat';
+      case AppLanguage.turkish:
+        return 'Özel';
+      case AppLanguage.arabic:
+        return 'خاص';
+      case AppLanguage.bosnian:
+        return 'Privatno';
+      case AppLanguage.spanish:
+        return 'Privado';
+      case AppLanguage.persian:
+        return 'خصوصی';
+      case AppLanguage.english:
+      default:
+        return 'Private';
+    }
+  }
 
   // ------------------------------
   // Form-Validierung
