@@ -39,6 +39,7 @@ import 'package:muslim_calendar/ui/components/platform_adaptive_dialog.dart';
 import 'package:muslim_calendar/ui/components/platform_adaptive_list_tile.dart';
 import 'package:muslim_calendar/ui/components/platform_adaptive_app_bar.dart';
 import 'package:muslim_calendar/ui/components/platform_adaptive_navigation.dart';
+import 'package:muslim_calendar/ui/components/platform_adaptive_fab.dart';
 
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 
@@ -1069,39 +1070,73 @@ class DashboardPageState extends State<DashboardPage> {
         centerTitle: Platform.isIOS, // Auf iOS zentrieren, auf Android links
       ),
       drawer: _buildDrawer(loc),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: PlatformAdaptiveScaffoldFAB.buildFAB(
+        androidIcon: Icons.add,
+        iOSIcon: CupertinoIcons.add,
+        onPressed: _createQuickAppointment,
         backgroundColor: mainColor,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        onPressed: _createQuickAppointment,
-        child: const Icon(Icons.add),
       ),
       body: SafeArea(
-        child: DashboardContent(
-          // Datum
-          dateString: dateString,
-          weekdayString: weekdayString,
+        child: Stack(
+          children: [
+            DashboardContent(
+              // Datum
+              dateString: dateString,
+              weekdayString: weekdayString,
 
-          // Wetter
-          weatherTemp: _weatherTemp,
-          weatherLocation: _weatherLocation,
-          weatherSymbol: _weatherSymbol,
-          weatherErrorMessage: _weatherErrorMessage,
-          isWeatherLoading: _isWeatherLoading,
+              // Wetter
+              weatherTemp: _weatherTemp,
+              weatherLocation: _weatherLocation,
+              weatherSymbol: _weatherSymbol,
+              weatherErrorMessage: _weatherErrorMessage,
+              isWeatherLoading: _isWeatherLoading,
 
-          // Gebetszeiten
-          prayerTimesDisplay: _todayPrayerTimesDisplay,
-          prayerTimeErrorMessage: _prayerTimeErrorMessage,
-          isPrayerTimesLoading: _isPrayerTimesLoading,
+              // Gebetszeiten
+              prayerTimesDisplay: _todayPrayerTimesDisplay,
+              prayerTimeErrorMessage: _prayerTimeErrorMessage,
+              isPrayerTimesLoading: _isPrayerTimesLoading,
 
-          // Aufgaben/Termine
-          todayTasks: _todayTasks,
-          isTasksLoading: _isAppointmentsLoading,
-          hoveredTaskId: _hoveredTaskId,
+              // Aufgaben/Termine
+              todayTasks: _todayTasks,
+              isTasksLoading: _isAppointmentsLoading,
+              hoveredTaskId: _hoveredTaskId,
 
-          // Callbacks
-          onHoverEnter: _onHoverEnter,
-          onHoverExit: _onHoverExit,
-          onTaskTap: _onTaskTap,
+              // Callbacks
+              onHoverEnter: _onHoverEnter,
+              onHoverExit: _onHoverExit,
+              onTaskTap: _onTaskTap,
+            ),
+            // iOS-spezifischer FAB
+            if (Platform.isIOS)
+              Positioned(
+                right: 16,
+                bottom: 16,
+                child: Container(
+                  height: 56,
+                  width: 56,
+                  decoration: BoxDecoration(
+                    color: mainColor,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: _createQuickAppointment,
+                    child: Icon(
+                      CupertinoIcons.add,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
