@@ -259,12 +259,19 @@ class DashboardPageState extends State<DashboardPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(localizations.googleCalendar),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Vollständig synchronisieren
             ListTile(
-              leading: const Icon(Icons.sync),
-              title: Text(localizations.fullSync),
+              leading: const Icon(Icons.sync, color: logoColor),
+              title: Text(
+                localizations.fullSync,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               subtitle: Text(localizations.importAndExport),
               onTap: () async {
                 Navigator.pop(context);
@@ -309,9 +316,13 @@ class DashboardPageState extends State<DashboardPage> {
               },
             ),
             const Divider(),
+            // Nur importieren
             ListTile(
-              leading: const Icon(Icons.download),
-              title: Text(localizations.importOnly),
+              leading: const Icon(Icons.download, color: logoColor),
+              title: Text(
+                localizations.importOnly,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               subtitle: Text(localizations.importFromGoogleCalendar),
               onTap: () {
                 Navigator.pop(context);
@@ -319,9 +330,13 @@ class DashboardPageState extends State<DashboardPage> {
               },
             ),
             const Divider(),
+            // Nur exportieren
             ListTile(
-              leading: const Icon(Icons.upload),
-              title: Text(localizations.exportOnly),
+              leading: const Icon(Icons.upload, color: logoColor),
+              title: Text(
+                localizations.exportOnly,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               subtitle: Text(localizations.exportToGoogleCalendar),
               onTap: () async {
                 Navigator.pop(context);
@@ -361,6 +376,9 @@ class DashboardPageState extends State<DashboardPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: logoColor,
+            ),
             child: Text(localizations.cancel),
           ),
         ],
@@ -377,15 +395,28 @@ class DashboardPageState extends State<DashboardPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(localizations.importOptions),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              title: Text(localizations.howToHandleCategories),
+              title: Text(
+                localizations.howToHandleCategories,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
             ),
             const Divider(),
             ListTile(
-              title: Text(localizations.useExistingCategories),
+              leading: const Icon(Icons.category_outlined, color: logoColor),
+              title: Text(
+                localizations.useExistingCategories,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               subtitle: Text(localizations.searchForMatchingCategories),
               onTap: () async {
                 Navigator.pop(context);
@@ -432,7 +463,11 @@ class DashboardPageState extends State<DashboardPage> {
             ),
             const Divider(),
             ListTile(
-              title: Text(localizations.createNewCategories),
+              leading: const Icon(Icons.add_circle_outline, color: logoColor),
+              title: Text(
+                localizations.createNewCategories,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               subtitle: Text(localizations.forEachNewAppointment),
               onTap: () async {
                 Navigator.pop(context);
@@ -482,6 +517,9 @@ class DashboardPageState extends State<DashboardPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: logoColor,
+            ),
             child: Text(localizations.cancel),
           ),
         ],

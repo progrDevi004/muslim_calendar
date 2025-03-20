@@ -679,45 +679,42 @@ class HomePageState extends State<HomePage> {
 
   /// Zeigt ein Popup-Menü mit Synchronisationsoptionen an
   void _showSyncOptionsMenu(BuildContext context, RenderBox button) {
-    final RenderBox overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox;
-    final RelativeRect position = RelativeRect.fromRect(
-      Rect.fromPoints(
-        button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero),
-            ancestor: overlay),
-      ),
-      Offset.zero & overlay.size,
-    );
-
     final localizations = Provider.of<AppLocalizations>(context, listen: false);
 
-    showMenu(
+    showDialog(
       context: context,
-      position: position,
-      items: [
-        PopupMenuItem(
-          child: ListTile(
-            leading: const Icon(Icons.calendar_today),
-            title: Text(localizations.syncGoogleCalendar ??
-                localizations.googleCalendar),
-            subtitle: Text(localizations.syncImportExport),
-            onTap: () {
-              Navigator.pop(context); // Menü schließen
-              _showGoogleSyncDialog(context);
-            },
-          ),
+      builder: (context) => AlertDialog(
+        title: const Text('Kalender Synchronisation'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Google Kalender Option
+            ListTile(
+              leading: const Icon(Icons.calendar_today),
+              title: Text(localizations.googleCalendar),
+              subtitle: Text(localizations.syncImportExport),
+              onTap: () {
+                Navigator.pop(context); // Dialog schließen
+                _showGoogleSyncDialog(context);
+              },
+            ),
+            const Divider(),
+            // Outlook Option (deaktiviert)
+            ListTile(
+              enabled: false, // Deaktiviert, da noch nicht implementiert
+              leading: const Icon(Icons.calendar_month),
+              title: Text(localizations.outlookCalendar),
+              subtitle: Text(localizations.comingSoon),
+            ),
+          ],
         ),
-        PopupMenuItem(
-          enabled: false, // Deaktiviert, da noch nicht implementiert
-          child: ListTile(
-            leading: const Icon(Icons.calendar_month),
-            title: Text(localizations.syncOutlookCalendar ??
-                localizations.outlookCalendar),
-            subtitle: Text(localizations.comingSoon),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(localizations.cancel),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
