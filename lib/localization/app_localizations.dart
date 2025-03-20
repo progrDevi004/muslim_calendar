@@ -4110,6 +4110,26 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
+  String get outlookCalendarComingSoon {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Outlook-Integration bald verfügbar';
+      case AppLanguage.turkish:
+        return 'Outlook entegrasyonu yakında mevcut olacak';
+      case AppLanguage.arabic:
+        return 'تكامل Outlook قادم قريبًا';
+      case AppLanguage.bosnian:
+        return 'Outlook integracija uskoro dostupna';
+      case AppLanguage.spanish:
+        return 'Integración de Outlook próximamente';
+      case AppLanguage.persian:
+        return 'ادغام اوت‌لوک به زودی در دسترس خواهد بود';
+      case AppLanguage.english:
+      default:
+        return 'Outlook integration coming soon';
+    }
+  }
+
   String get manageOutlookCalendarConnection {
     switch (_currentLanguage) {
       case AppLanguage.german:
@@ -5358,6 +5378,26 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
+  String get useGoogleCalendarCategories {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Kategorien von Google Kalender übernehmen';
+      case AppLanguage.turkish:
+        return 'Google Takvim kategorilerini kullan';
+      case AppLanguage.arabic:
+        return 'استخدام فئات تقويم Google';
+      case AppLanguage.bosnian:
+        return 'Preuzmi kategorije iz Google Kalendara';
+      case AppLanguage.spanish:
+        return 'Usar categorías del Calendario de Google';
+      case AppLanguage.persian:
+        return 'استفاده از دسته‌بندی‌های تقویم گوگل';
+      case AppLanguage.english:
+      default:
+        return 'Use Google Calendar categories';
+    }
+  }
+
   String syncSyncError(String error) {
     switch (_currentLanguage) {
       case AppLanguage.german:
@@ -5375,6 +5415,26 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.english:
       default:
         return 'Synchronization error: $error';
+    }
+  }
+
+  String get importedAppointmentsToDefaultCategory {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Termine werden in die Standardkategorie importiert';
+      case AppLanguage.turkish:
+        return 'Randevular varsayılan kategoriye aktarılıyor';
+      case AppLanguage.arabic:
+        return 'استيراد المواعيد إلى الفئة الافتراضية';
+      case AppLanguage.bosnian:
+        return 'Uvoz termina u zadanu kategoriju';
+      case AppLanguage.spanish:
+        return 'Importar citas a la categoría predeterminada';
+      case AppLanguage.persian:
+        return 'وارد کردن قرارها به دسته‌بندی پیش‌فرض';
+      case AppLanguage.english:
+      default:
+        return 'Import appointments to default category';
     }
   }
 

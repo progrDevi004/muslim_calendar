@@ -9,14 +9,11 @@ import 'package:muslim_calendar/data/services/google_calendar_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
-import 'package:muslim_calendar/data/services/notification_service.dart';
 import 'package:muslim_calendar/providers/theme_notifier.dart';
 // Für reDownloadAndRecalcAll()
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 import '../../data/services/calendar_sync_service.dart';
-import '../../data/repositories/appointment_repository.dart';
 import 'package:muslim_calendar/ui/dialogs/calendar_selection_dialog.dart';
-import 'package:muslim_calendar/models/selected_calendar.dart';
 import 'package:muslim_calendar/data/services/location_service.dart';
 
 // Beispiel-Enum, kann auch global in app_language.dart liegen:
@@ -1052,10 +1049,10 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
 
         // Outlook account status
-        const ListTile(
-          leading: Icon(Icons.account_circle_outlined),
-          title: Text('Not connected to Outlook Calendar'),
-          contentPadding: EdgeInsets.symmetric(horizontal: 16.0),
+        ListTile(
+          leading: const Icon(Icons.account_circle_outlined),
+          title: Text(loc.outlookCalendarDisconnected),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
         ),
 
         // Connect button
@@ -1068,8 +1065,7 @@ class _SettingsPageState extends State<SettingsPage> {
               try {
                 // Placeholder für Outlook-Verbindungsimplementierung
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Outlook Integration coming soon!')),
+                  SnackBar(content: Text(loc.outlookCalendarComingSoon)),
                 );
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -1090,7 +1086,7 @@ class _SettingsPageState extends State<SettingsPage> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Text(
-            'Integration kommt in Kürze',
+            loc.outlookCalendarComingSoon,
             style: TextStyle(
               fontStyle: FontStyle.italic,
               color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -1322,7 +1318,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const Divider(),
             ListTile(
-              title: const Text("Kategorien von Google Kalender übernehmen"),
+              title: Text(loc.useGoogleCalendarCategories),
               subtitle: Text(loc.searchForMatchingCategories),
               onTap: () {
                 Navigator.pop(context);
@@ -1331,9 +1327,8 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const Divider(),
             ListTile(
-              title: const Text("In die Standardkategorie einfügen"),
-              subtitle: const Text(
-                  "Alle importierten Termine werden der Standardkategorie zugewiesen"),
+              title: Text(loc.useDefaultCategory),
+              subtitle: Text(loc.importedAppointmentsToDefaultCategory),
               onTap: () {
                 Navigator.pop(context);
                 _performGoogleImport(context, categoryOption: 2);

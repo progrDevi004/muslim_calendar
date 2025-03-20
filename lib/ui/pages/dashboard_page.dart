@@ -14,7 +14,6 @@ import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
 import 'package:muslim_calendar/models/enums.dart';
 import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
-import 'package:muslim_calendar/models/appointment_model.dart';
 import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
 import 'package:muslim_calendar/data/repositories/category_repository.dart';
 import 'package:muslim_calendar/models/dashboard_task.dart';

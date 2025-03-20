@@ -7,7 +7,6 @@ import 'package:syncfusion_flutter_calendar/calendar.dart';
 // Korrekter Import für die RecurrenceType Enum mit Präfix
 import 'package:syncfusion_flutter_calendar/src/calendar/common/enums.dart'
     as sf;
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -28,7 +27,6 @@ import 'package:muslim_calendar/models/category_model.dart';
 // Services
 import 'package:muslim_calendar/data/services/notification_service.dart';
 import 'package:muslim_calendar/data/services/automatic_category_service.dart';
-import 'package:muslim_calendar/data/services/google_calendar_service.dart';
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
 
