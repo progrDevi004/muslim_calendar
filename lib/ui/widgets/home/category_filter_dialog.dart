@@ -150,18 +150,6 @@ class _CategoryFilterDialogState extends State<CategoryFilterDialog> {
           },
           child: Text(loc.apply),
         ),
-        TextButton(
-          onPressed: () async {
-            Navigator.of(context).pop();
-            await Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => const CategoryManagementPage(),
-              ),
-            );
-            widget.onCategoriesChanged();
-          },
-          child: const Text('Kategorien verwalten'),
-        ),
       ],
     );
   }
