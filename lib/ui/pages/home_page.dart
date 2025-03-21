@@ -178,6 +178,9 @@ class HomePageState extends State<HomePage> {
       // Kategorien laden
       _loadAllCategories();
 
+      // Prüfen, ob die Import-Option bereits gesetzt wurde
+      _checkImportSettingsInitialized();
+
       // Gebetszeiten für das ganze Jahr laden, falls nötig
       _fetchYearlyPrayerTimesIfNeeded().then((_) {
         // Termine laden, nachdem alle Vorbereitungen abgeschlossen sind
@@ -774,7 +777,7 @@ class HomePageState extends State<HomePage> {
           titleStyle: const TextStyle(fontWeight: FontWeight.bold),
           onTap: () {
             Navigator.pop(context);
-            _showImportOptionsDialog(context);
+            _performGoogleImport(context);
           },
         ),
 
@@ -859,16 +862,59 @@ class HomePageState extends State<HomePage> {
     }
   }
 
-  /// Zeigt einen Dialog für Import-Optionen an
-  void _showImportOptionsDialog(BuildContext context) {
-    // Import-Optionen-Dialog aus dem gemeinsamen Service verwenden
-    ImportSettingsService.showImportOptionsDialog(
-      context,
-      onOptionSelected: () {
-        // Nach der Auswahl einer Option Termine neu laden
-        loadAllAppointments();
-      },
-    );
+  /// Führt einen direkten Import ohne weitere Dialogabfrage durch
+  /// Verwendet die bereits gespeicherte Import-Option, die gleiche Funktion wie bei der vollständigen Synchronisation
+  void _performGoogleImport(BuildContext context) async {
+    debugPrint("📥 HomePage: Google Import gestartet");
+
+    // Referenzen speichern, bevor asynchrone Operationen beginnen
+    final scaffold = ScaffoldMessenger.of(context);
+    final localizations = Provider.of<AppLocalizations>(context, listen: false);
+    final currentMounted = mounted;
+
+    try {
+      if (currentMounted) {
+        scaffold.showSnackBar(
+          SnackBar(content: Text(localizations.importingFromGoogleCalendar)),
+        );
+      }
+
+      debugPrint(
+          "📥 Starte importAppointments über den CalendarSyncService...");
+      // Import durchführen mit der zentral gespeicherten Option
+      // Verwendet die gleiche Logik wie die vollständige Synchronisationsfunktion
+      await _calendarSyncService.importAppointments();
+      debugPrint("📥 importAppointments abgeschlossen");
+
+      // Nach erfolgreichem Import Termine neu laden
+      await loadAllAppointments();
+      debugPrint("📥 Termine wurden neu geladen");
+
+      if (currentMounted) {
+        scaffold.clearSnackBars();
+        scaffold.showSnackBar(
+          SnackBar(
+            content: Text(localizations.importCompleted),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        debugPrint("📥 Import erfolgreich abgeschlossen");
+      }
+    } catch (e) {
+      debugPrint('🔄 Import-Fehler: $e');
+
+      if (currentMounted) {
+        scaffold.clearSnackBars();
+        scaffold.showSnackBar(
+          SnackBar(
+            content: Text(localizations.importError(e.toString())),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   /// Führt einen Export nach Google Calendar durch
@@ -913,6 +959,126 @@ class HomePageState extends State<HomePage> {
         );
       }
     }
+  }
+
+  /// Prüft, ob die Import-Option bereits initialisiert wurde und zeigt ggf. eine Abfrage an
+  Future<void> _checkImportSettingsInitialized() async {
+    final importOption = await ImportSettingsService.getImportOption();
+    final hasBeenInitialized = await _hasImportOptionBeenInitialized();
+
+    // Wenn wir noch keine Import-Option gespeichert haben oder diese noch nicht
+    // explizit initialisiert wurde, zeigen wir den Dialog an
+    if (!hasBeenInitialized) {
+      if (mounted) {
+        // Warte kurz, damit die UI vollständig geladen ist
+        await Future.delayed(const Duration(milliseconds: 500));
+        // Dialog anzeigen
+        _showInitialImportOptionsDialog(context);
+      }
+    }
+  }
+
+  /// Prüft, ob die Import-Option bereits explizit initialisiert wurde
+  Future<bool> _hasImportOptionBeenInitialized() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('import_option_initialized') ?? false;
+  }
+
+  /// Markiert die Import-Option als initialisiert
+  Future<void> _markImportOptionAsInitialized() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('import_option_initialized', true);
+  }
+
+  /// Zeigt den initialen Dialog für Import-Optionen an (nur bei erster App-Nutzung)
+  void _showInitialImportOptionsDialog(BuildContext context) {
+    debugPrint("HomePage: Initialer Import-Options-Dialog wird angezeigt");
+
+    final localizations = Provider.of<AppLocalizations>(context, listen: false);
+
+    // Dialog-Inhalt erstellen, der für beide Plattformen passt
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PlatformAdaptiveListTile(
+          title: localizations.howToHandleCategories,
+          titleStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+
+        // Bestehende Kategorien verwenden
+        PlatformAdaptiveListTile(
+          leading: Icon(
+            Platform.isIOS ? CupertinoIcons.tag : Icons.category_outlined,
+            color: logoColor,
+          ),
+          title: localizations.useGoogleCalendarCategories,
+          subtitle: localizations.searchForMatchingCategories,
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onTap: () async {
+            Navigator.pop(context);
+            // Option 2 = Kalendernamen als Kategorien verwenden
+            await ImportSettingsService.saveImportOption(2);
+            await _markImportOptionAsInitialized();
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(localizations.importOptionSaved)),
+              );
+              debugPrint("🛠️ Import-Option 2 gespeichert und initialisiert");
+            }
+          },
+        ),
+
+        // Neue Kategorien erstellen
+        PlatformAdaptiveListTile(
+          leading: Icon(
+            Platform.isIOS
+                ? CupertinoIcons.add_circled
+                : Icons.add_circle_outline,
+            color: logoColor,
+          ),
+          title: localizations.useDefaultCategory,
+          subtitle: localizations.importedAppointmentsToDefaultCategory,
+          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          onTap: () async {
+            Navigator.pop(context);
+            // Option 0 = Standardkategorie verwenden
+            await ImportSettingsService.saveImportOption(0);
+            await _markImportOptionAsInitialized();
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(localizations.importOptionSaved)),
+              );
+              debugPrint("🛠️ Import-Option 0 gespeichert und initialisiert");
+            }
+          },
+        ),
+      ],
+    );
+
+    // Dialog-Aktionen erstellen
+    final actions = [
+      PlatformAdaptiveDialog.adaptiveDialogAction(
+        context: context,
+        text: localizations.cancel,
+        onPressed: () {
+          Navigator.pop(context);
+          // Bei Abbruch trotzdem als initialisiert markieren (Option 0 standardmäßig verwenden)
+          _markImportOptionAsInitialized();
+        },
+        color: logoColor,
+      ),
+    ];
+
+    // Plattformspezifischen Dialog anzeigen
+    PlatformAdaptiveDialog.showAdaptiveDialog(
+      context: context,
+      title: localizations.importOptions,
+      content: content,
+      actions: actions,
+    );
   }
 
   @override

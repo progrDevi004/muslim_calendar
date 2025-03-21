@@ -33,6 +33,8 @@ class ImportSettingsService {
   /// Wird sowohl von HomePage als auch von SettingsPage verwendet
   static void showImportOptionsDialog(BuildContext context,
       {VoidCallback? onOptionSelected}) {
+    debugPrint(
+        "📂 ImportSettingsService: showImportOptionsDialog aufgerufen, Callback vorhanden: ${onOptionSelected != null}");
     final localizations = Provider.of<AppLocalizations>(context, listen: false);
 
     // Dialog-Inhalt erstellen, der für beide Plattformen passt
@@ -68,7 +70,14 @@ class ImportSettingsService {
                   "🛠️ Import-Option gespeichert: 2 (Kategorien von Google Kalender übernehmen)");
 
               // Callback aufrufen, wenn vorhanden
-              onOptionSelected?.call();
+              if (onOptionSelected != null) {
+                debugPrint(
+                    "📲 ImportSettingsService: onOptionSelected Callback wird aufgerufen");
+                onOptionSelected();
+              } else {
+                debugPrint(
+                    "⚠️ ImportSettingsService: Kein onOptionSelected Callback vorhanden");
+              }
             }
           },
         ),
@@ -96,7 +105,14 @@ class ImportSettingsService {
                   "🛠️ Import-Option gespeichert: 0 (Standardkategorie verwenden)");
 
               // Callback aufrufen, wenn vorhanden
-              onOptionSelected?.call();
+              if (onOptionSelected != null) {
+                debugPrint(
+                    "📲 ImportSettingsService: onOptionSelected Callback wird aufgerufen");
+                onOptionSelected();
+              } else {
+                debugPrint(
+                    "⚠️ ImportSettingsService: Kein onOptionSelected Callback vorhanden");
+              }
             }
           },
         ),

@@ -332,7 +332,7 @@ class DashboardPageState extends State<DashboardPage> {
           titleStyle: const TextStyle(fontWeight: FontWeight.bold),
           onTap: () {
             Navigator.pop(context);
-            _showImportOptionsDialog(context);
+            _calendarSyncService.importAppointments();
           },
         ),
 

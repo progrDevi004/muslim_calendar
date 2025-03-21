@@ -148,6 +148,32 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _locationCheckFuture = _checkInitialLocation();
+
+    // Lade die gespeicherte Spracheinstellung beim App-Start
+    _loadSavedLanguage();
+  }
+
+  /// Lädt die gespeicherte Spracheinstellung aus SharedPreferences
+  /// und setzt sie im AppLocalizations-Provider
+  Future<void> _loadSavedLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedLanguageIndex = prefs.getInt('selectedLanguageIndex');
+
+    if (savedLanguageIndex != null &&
+        savedLanguageIndex >= 0 &&
+        savedLanguageIndex < AppLanguage.values.length) {
+      // Verzögerung hinzufügen, um sicherzustellen, dass der Provider verfügbar ist
+      await Future.delayed(Duration.zero);
+      if (!mounted) return;
+
+      // Setze die gespeicherte Sprache im Provider
+      final appLocalizations =
+          Provider.of<AppLocalizations>(context, listen: false);
+      appLocalizations.setLanguage(AppLanguage.values[savedLanguageIndex]);
+
+      debugPrint(
+          '🌐 Gespeicherte Spracheinstellung geladen: ${AppLanguage.values[savedLanguageIndex]}');
+    }
   }
 
   /// Prüft in SharedPreferences, ob 'wasLocationAsked' bereits true ist.

@@ -286,8 +286,8 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
       // Datum: entweder widget.selectedDate oder "heute"
       final baseDate = widget.selectedDate ??
-          DateTime(DateTime.now().day, DateTime.now().month, DateTime.now().day,
-              12, 0);
+          DateTime(DateTime.now().year, DateTime.now().month,
+              DateTime.now().day, 12, 0);
 
       // >>> Startzeit 12:00, Endzeit 12:30
       _startTime = DateTime(baseDate.year, baseDate.month, baseDate.day,
@@ -1016,23 +1016,23 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           ),
         ),
 
-        // NEU: Google Kalender Synchronisierung
-        Material(
-          elevation: 0,
-          color: Colors.transparent,
-          child: SwitchListTile.adaptive(
-            secondary: const Icon(Icons.sync),
-            title: const Text("Mit Google Kalender synchronisieren"),
-            subtitle:
-                const Text("Termin automatisch mit Google Kalender teilen"),
-            value: _syncWithGoogleCalendar,
-            onChanged: (bool value) {
-              setState(() {
-                _syncWithGoogleCalendar = value;
-              });
-            },
-          ),
-        ),
+        // // NEU: Google Kalender Synchronisierung
+        // Material(
+        //   elevation: 0,
+        //   color: Colors.transparent,
+        //   child: SwitchListTile.adaptive(
+        //     secondary: const Icon(Icons.sync),
+        //     title: const Text("Mit Google Kalender synchronisieren"),
+        //     subtitle:
+        //         const Text("Termin automatisch mit Google Kalender teilen"),
+        //     value: _syncWithGoogleCalendar,
+        //     onChanged: (bool value) {
+        //       setState(() {
+        //         _syncWithGoogleCalendar = value;
+        //       });
+        //     },
+        //   ),
+        // ),
 
         // Gebetszeit-Einstellungen direkt im Hauptbereich
         if (_isRelatedToPrayerTimes)
@@ -2184,31 +2184,31 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   },
                 ),
 
-                const SizedBox(height: 10),
+                // const SizedBox(height: 10),
 
-                // Ausnahmedaten
-                CupertinoDialogAction(
-                  child: Text(
-                    loc.recurrenceExceptionDates,
-                    style: const TextStyle(color: CupertinoColors.label),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _showExceptionDateDialog();
-                  },
-                ),
+                // // Ausnahmedaten
+                // CupertinoDialogAction(
+                //   child: Text(
+                //     loc.recurrenceExceptionDates,
+                //     style: const TextStyle(color: CupertinoColors.label),
+                //   ),
+                //   onPressed: () {
+                //     Navigator.pop(context);
+                //     _showExceptionDateDialog();
+                //   },
+                // ),
 
-                // Enddatum
-                CupertinoDialogAction(
-                  child: Text(
-                    loc.recurrenceEndDate,
-                    style: const TextStyle(color: CupertinoColors.label),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _showRecurrenceEndDateDialog();
-                  },
-                ),
+                // // Enddatum
+                // CupertinoDialogAction(
+                //   child: Text(
+                //     loc.recurrenceEndDate,
+                //     style: const TextStyle(color: CupertinoColors.label),
+                //   ),
+                //   onPressed: () {
+                //     Navigator.pop(context);
+                //     _showRecurrenceEndDateDialog();
+                //   },
+                // ),
               ],
             ),
             actions: [
@@ -2302,33 +2302,33 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                       },
                     ),
 
-                    const Divider(),
+                    // const Divider(),
 
-                    // Füge einen neuen Eintrag für Ausnahmedaten hinzu
-                    ListTile(
-                      leading: const Icon(Icons.block),
-                      title: Text(loc.recurrenceExceptionDates),
-                      subtitle: Text(_exceptionDates.isEmpty
-                          ? loc.recurrenceExceptionDatesHint
-                          : "${_exceptionDates.length} ${loc.exceptionDatesSelected}"),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showExceptionDateDialog();
-                      },
-                    ),
+                    // // Füge einen neuen Eintrag für Ausnahmedaten hinzu
+                    // ListTile(
+                    //   leading: const Icon(Icons.block),
+                    //   title: Text(loc.recurrenceExceptionDates),
+                    //   subtitle: Text(_exceptionDates.isEmpty
+                    //       ? loc.recurrenceExceptionDatesHint
+                    //       : "${_exceptionDates.length} ${loc.exceptionDatesSelected}"),
+                    //   onTap: () {
+                    //     Navigator.pop(context);
+                    //     _showExceptionDateDialog();
+                    //   },
+                    // ),
 
-                    // Füge einen neuen Eintrag für das Enddatum hinzu
-                    ListTile(
-                      leading: const Icon(Icons.event_available),
-                      title: Text(loc.recurrenceEndDate),
-                      subtitle: Text(_recurrenceEndDate != null
-                          ? _formatDate(_recurrenceEndDate!)
-                          : loc.noEndDate),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showRecurrenceEndDateDialog();
-                      },
-                    ),
+                    // // Füge einen neuen Eintrag für das Enddatum hinzu
+                    // ListTile(
+                    //   leading: const Icon(Icons.event_available),
+                    //   title: Text(loc.recurrenceEndDate),
+                    //   subtitle: Text(_recurrenceEndDate != null
+                    //       ? _formatDate(_recurrenceEndDate!)
+                    //       : loc.noEndDate),
+                    //   onTap: () {
+                    //     Navigator.pop(context);
+                    //     _showRecurrenceEndDateDialog();
+                    //   },
+                    // ),
                   ],
                 ),
               ),
