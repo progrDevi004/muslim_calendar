@@ -430,6 +430,12 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                           setState(() {
                             _useAutomaticLocation = value;
                           });
+
+                          // Wenn automatische Standorterkennung aktiviert wird,
+                          // sofort Standort ermitteln
+                          if (value) {
+                            _detectLocation();
+                          }
                         },
                       ),
 
@@ -439,20 +445,15 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                       if (_useAutomaticLocation)
                         Column(
                           children: [
-                            // Button zur automatischen Erkennung
-                            _isDetectingLocation
-                                ? const Center(
-                                    child: CircularProgressIndicator())
-                                : ElevatedButton.icon(
-                                    onPressed: _detectLocation,
-                                    icon: const Icon(Icons.my_location),
-                                    label: const Text("Standort ermitteln"),
-                                    style: ElevatedButton.styleFrom(
-                                      minimumSize:
-                                          const Size(double.infinity, 48),
-                                      backgroundColor: logoColor,
-                                    ),
-                                  ),
+                            // Anzeige Ladeindikator während der Standorterkennung
+                            if (_isDetectingLocation)
+                              Column(
+                                children: const [
+                                  CircularProgressIndicator(),
+                                  SizedBox(height: 8),
+                                  Text("Standort wird ermittelt..."),
+                                ],
+                              ),
 
                             // Anzeige des erkannten Standorts
                             if (_selectedCity != null &&
