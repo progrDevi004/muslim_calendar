@@ -695,22 +695,22 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                 ),
               ),
 
-            SizedBox(
-              width: double.infinity,
-              child: _buildAdaptiveOutlinedButton(
-                icon: _appointment!.syncWithGoogleCalendar
-                    ? Icons.sync
-                    : Icons.sync_disabled,
-                label: _appointment!.externalIdGoogle != null
-                    ? "Mit Google erneut synchronisieren"
-                    : "Mit Google synchronisieren",
-                onPressed: () async {
-                  // Direkt die Synchronisierungsmethode aufrufen
-                  debugPrint("Google Sync Button wurde gedrückt");
-                  await _syncWithGoogleCalendar();
-                },
-              ),
-            ),
+            // SizedBox(
+            //   width: double.infinity,
+            //   child: _buildAdaptiveOutlinedButton(
+            //     icon: _appointment!.syncWithGoogleCalendar
+            //         ? Icons.sync
+            //         : Icons.sync_disabled,
+            //     label: _appointment!.externalIdGoogle != null
+            //         ? "Mit Google erneut synchronisieren"
+            //         : "Mit Google synchronisieren",
+            //     onPressed: () async {
+            //       // Direkt die Synchronisierungsmethode aufrufen
+            //       debugPrint("Google Sync Button wurde gedrückt");
+            //       await _syncWithGoogleCalendar();
+            //     },
+            //   ),
+            // ),
           ],
         ),
       ],
