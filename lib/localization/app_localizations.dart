@@ -5234,7 +5234,7 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.spanish:
         return 'Opciones de importación';
       case AppLanguage.persian:
-        return 'گزینه های واردات';
+        return 'گزینه های ورود';
       case AppLanguage.english:
       default:
         return 'Import Options';
@@ -5692,4 +5692,108 @@ class AppLocalizations extends ChangeNotifier {
         name: 'importOptionSaved',
         desc: 'Meldung, wenn die Import-Option gespeichert wurde',
       );
+
+  // ------------------------------
+  // Import Options
+  // ------------------------------
+
+  String get importOptionsTitle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Import-Optionen';
+      case AppLanguage.turkish:
+        return 'İçe Aktarma Seçenekleri';
+      case AppLanguage.arabic:
+        return 'خيارات الاستيراد';
+      case AppLanguage.bosnian:
+        return 'Opcije uvoza';
+      case AppLanguage.spanish:
+        return 'Opciones de importación';
+      case AppLanguage.persian:
+        return 'گزینه‌های ورود';
+      case AppLanguage.english:
+      default:
+        return 'Import Options';
+    }
+  }
+
+  String get useDefaultCategoryOption {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Standardkategorie';
+      case AppLanguage.turkish:
+        return 'Varsayılan kategori';
+      case AppLanguage.arabic:
+        return 'الفئة الافتراضية';
+      case AppLanguage.bosnian:
+        return 'Standardna kategorija';
+      case AppLanguage.spanish:
+        return 'Categoría predeterminada';
+      case AppLanguage.persian:
+        return 'دسته پیش‌فرض';
+      case AppLanguage.english:
+      default:
+        return 'Default Category';
+    }
+  }
+
+  String get useCalendarNameOption {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Kalendername als Kategorie';
+      case AppLanguage.turkish:
+        return 'Takvim adını kategori olarak kullan';
+      case AppLanguage.arabic:
+        return 'استخدام اسم التقويم كفئة';
+      case AppLanguage.bosnian:
+        return 'Ime kalendara kao kategorija';
+      case AppLanguage.spanish:
+        return 'Nombre del calendario como categoría';
+      case AppLanguage.persian:
+        return 'نام تقویم به عنوان دسته';
+      case AppLanguage.english:
+      default:
+        return 'Calendar Name as Category';
+    }
+  }
+
+  String get importOptionsDescription {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Legt fest, wie importierte Google-Kalender-Termine in Kategorien eingeordnet werden. Wähle zwischen Standardkategorie oder Verwendung des Kalendernamens als Kategorie.';
+      case AppLanguage.turkish:
+        return 'İçe aktarılan Google Takvim etkinliklerinin nasıl kategorize edileceğini belirler. Varsayılan kategori veya takvim adını kategori olarak kullanma arasında seçim yapın.';
+      case AppLanguage.arabic:
+        return 'يحدد كيفية تصنيف أحداث تقويم Google المستوردة. اختر بين الفئة الافتراضية أو استخدام اسم التقويم كفئة.';
+      case AppLanguage.bosnian:
+        return 'Određuje kako se kategoriziraju uvezeni događaji iz Google kalendara. Odaberite između standardne kategorije ili korištenja imena kalendara kao kategorije.';
+      case AppLanguage.spanish:
+        return 'Define cómo se categorizan los eventos importados de Google Calendar. Elija entre categoría predeterminada o usar el nombre del calendario como categoría.';
+      case AppLanguage.persian:
+        return 'نحوه دسته‌بندی رویدادهای وارد شده از تقویم گوگل را تعیین می‌کند. بین دسته پیش‌فرض یا استفاده از نام تقویم به عنوان دسته انتخاب کنید.';
+      case AppLanguage.english:
+      default:
+        return 'Defines how imported Google Calendar events are categorized. Choose between default category or using the calendar name as category.';
+    }
+  }
+
+  String get runLocationDetectionFirst {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Bitte erst Standorterkennung durchführen';
+      case AppLanguage.turkish:
+        return 'Lütfen önce konum tespitini çalıştırın';
+      case AppLanguage.arabic:
+        return 'يرجى تشغيل اكتشاف الموقع أولاً';
+      case AppLanguage.bosnian:
+        return 'Prvo pokrenite detekciju lokacije';
+      case AppLanguage.spanish:
+        return 'Ejecute primero la detección de ubicación';
+      case AppLanguage.persian:
+        return 'لطفا ابتدا تشخیص مکان را اجرا کنید';
+      case AppLanguage.english:
+      default:
+        return 'Please run location detection first';
+    }
+  }
 }

@@ -251,8 +251,8 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     if (_selectedCountry == null || _selectedCity == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text(Provider.of<AppLocalizations>(context).selectCountryAndCity),
+          content: Text(Provider.of<AppLocalizations>(context, listen: false)
+              .selectCountryAndCity),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
         ),
@@ -388,11 +388,12 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
         // Bei automatischer Standortwahl: Prüfen, ob ein Standort erkannt wurde
         if (_selectedCountry == null || _selectedCity == null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(
-                  'Bitte führen Sie zuerst die automatische Standorterkennung durch'),
+                  Provider.of<AppLocalizations>(context, listen: false)
+                      .runLocationDetectionFirst),
               backgroundColor: Colors.red,
-              duration: Duration(seconds: 3),
+              duration: const Duration(seconds: 3),
             ),
           );
           return;
@@ -401,11 +402,12 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
         // Bei manueller Standortwahl: Beide Felder prüfen
         if (_selectedCountry == null || _selectedCity == null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(
-                  'Bitte wählen Sie sowohl ein Land als auch eine Stadt aus'),
+                  Provider.of<AppLocalizations>(context, listen: false)
+                      .selectCountryAndCity),
               backgroundColor: Colors.red,
-              duration: Duration(seconds: 3),
+              duration: const Duration(seconds: 3),
             ),
           );
           return;
@@ -536,14 +538,14 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
 
       // Step 3: Import-Optionen
       Step(
-        title: Text("Import-Optionen"),
+        title: Text(loc.importOptionsTitle),
         state: _currentStep > 2 ? StepState.complete : StepState.indexed,
         isActive: _currentStep >= 2,
         content: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Import-Optionen für externe Kalender",
+              loc.importOptionsTitle,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
@@ -555,13 +557,13 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                   underline: const SizedBox(),
                   value: _selectedImportOption,
                   items: [
-                    const DropdownMenuItem<int>(
+                    DropdownMenuItem<int>(
                       value: 0,
-                      child: Text("In Standardkategorie importieren"),
+                      child: Text(loc.useDefaultCategoryOption),
                     ),
-                    const DropdownMenuItem<int>(
+                    DropdownMenuItem<int>(
                       value: 2,
-                      child: Text("Kalendername als Kategorie verwenden"),
+                      child: Text(loc.useCalendarNameOption),
                     ),
                   ],
                   onChanged: (value) {
@@ -574,9 +576,9 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
               ],
             ),
             const SizedBox(height: 8),
-            const Text(
-              "Diese Einstellung bestimmt, wie importierte Termine kategorisiert werden.",
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+            Text(
+              loc.importOptionsDescription,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),

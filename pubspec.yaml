@@ -37,10 +37,11 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^4.0.0
 
-flutter_icons:
+flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/icons/icon.png"
+
 
 flutter:
   uses-material-design: true
@@ -51,3 +52,4 @@ flutter:
     - assets/country_city_ar.json
     - assets/icons/icon.png
     - assets/images/logo.png
+    - assets/images/logo_app.png
