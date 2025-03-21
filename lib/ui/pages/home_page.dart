@@ -1140,7 +1140,7 @@ class HomePageState extends State<HomePage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Menü',
+                        loc.menu,
                         style: TextStyle(
                           fontSize: 14,
                           color: CupertinoColors.secondaryLabel
@@ -1248,7 +1248,7 @@ class HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Menü',
+                    loc.menu,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: isDark ? Colors.white70 : Colors.black54,
                         ),

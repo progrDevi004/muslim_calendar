@@ -29,6 +29,10 @@ import 'data/services/google_calendar_sync_service.dart';
 import 'data/repositories/google_event_mapping_repository.dart';
 import 'ui/widgets/prayer_time_appointment_adapter.dart';
 import 'data/services/location_service.dart';
+// NEU: Importiere plattformadaptives Theme
+import 'ui/components/platform_adaptive_theme.dart';
+// Für Lokalisierung
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
   // Widgets binding sicherstellen, da asynchrone Aufrufe vor runApp durchgeführt werden sollen.
@@ -158,217 +162,45 @@ class _MyAppState extends State<MyApp> {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final themeMode = themeNotifier.currentThemeMode;
 
-    // Basiskonfiguration: Seed-Farbe (geändert zur Logo-Farbe)
-    const seedColor = Color(0xFF468178);
-
-    // -------------------------
-    // Light Theme
-    // -------------------------
-    final ThemeData lightTheme = ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(seedColor: seedColor),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 0,
-        titleTextStyle: TextStyle(
-          color: Colors.black87,
-          fontWeight: FontWeight.w600,
-          fontSize: 20,
-        ),
-        iconTheme: IconThemeData(color: Colors.black87),
-      ),
-      scaffoldBackgroundColor: Colors.white,
-      inputDecorationTheme: const InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(8)),
-        ),
-        filled: true,
-        fillColor: Color.fromARGB(255, 245, 245, 245),
-      ),
-      switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith<Color>((states) {
-          if (states.contains(WidgetState.selected)) {
-            return seedColor;
-          }
-          return Colors.grey;
-        }),
-        trackColor: WidgetStateProperty.resolveWith<Color>((states) {
-          if (states.contains(WidgetState.selected)) {
-            return seedColor.withOpacity(0.5);
-          }
-          return Colors.grey.withOpacity(0.3);
-        }),
-      ),
-      checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStateProperty.resolveWith<Color>((states) {
-          if (states.contains(WidgetState.selected)) {
-            return seedColor;
-          }
-          return Colors.grey;
-        }),
-      ),
-      radioTheme: RadioThemeData(
-        fillColor: WidgetStateProperty.resolveWith<Color>((states) {
-          if (states.contains(WidgetState.selected)) {
-            return seedColor;
-          }
-          return Colors.grey;
-        }),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: seedColor,
-          foregroundColor: Colors.white,
-          shape: const StadiumBorder(),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: seedColor,
-          side: const BorderSide(color: seedColor),
-        ),
-      ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: seedColor,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: Colors.white,
-        indicatorColor: seedColor.withOpacity(0.1),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        elevation: 0,
-        iconTheme: WidgetStateProperty.resolveWith(
-          (states) => IconThemeData(
-            color: states.contains(WidgetState.selected)
-                ? seedColor
-                : Colors.black54,
-          ),
-        ),
-        labelTextStyle: WidgetStateProperty.resolveWith(
-          (states) => TextStyle(
-            color: states.contains(WidgetState.selected)
-                ? seedColor
-                : Colors.black54,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: seedColor,
-          textStyle: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-      ),
-    );
-
-    // -------------------------
-    // Dark Theme
-    // -------------------------
-    final ThemeData darkTheme = ThemeData.dark().copyWith(
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: seedColor,
-        brightness: Brightness.dark,
-      ),
-      switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith<Color>((states) {
-          if (states.contains(WidgetState.selected)) {
-            return seedColor;
-          }
-          return Colors.grey;
-        }),
-        trackColor: WidgetStateProperty.resolveWith<Color>((states) {
-          if (states.contains(WidgetState.selected)) {
-            return seedColor.withOpacity(0.5);
-          }
-          return Colors.grey.withOpacity(0.3);
-        }),
-      ),
-      checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStateProperty.resolveWith<Color>((states) {
-          if (states.contains(WidgetState.selected)) {
-            return seedColor;
-          }
-          return Colors.grey;
-        }),
-      ),
-      radioTheme: RadioThemeData(
-        fillColor: WidgetStateProperty.resolveWith<Color>((states) {
-          if (states.contains(WidgetState.selected)) {
-            return seedColor;
-          }
-          return Colors.grey;
-        }),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: seedColor,
-          textStyle: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: seedColor,
-          foregroundColor: Colors.white,
-          shape: const StadiumBorder(),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: seedColor,
-          side: const BorderSide(color: seedColor),
-        ),
-      ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: seedColor,
-        foregroundColor: Colors.white,
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: Colors.black,
-        indicatorColor: seedColor.withOpacity(0.1),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        elevation: 0,
-        iconTheme: WidgetStateProperty.resolveWith(
-          (states) => IconThemeData(
-            color: states.contains(WidgetState.selected)
-                ? seedColor
-                : Colors.white70,
-          ),
-        ),
-        labelTextStyle: WidgetStateProperty.resolveWith(
-          (states) => TextStyle(
-            color: states.contains(WidgetState.selected)
-                ? seedColor
-                : Colors.white70,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
+    // NEU: Plattformadaptive Themes verwenden
+    final lightTheme = PlatformAdaptiveTheme.getLightTheme(context);
+    final darkTheme = PlatformAdaptiveTheme.getDarkTheme(context);
 
     return MaterialApp(
       title: 'Taqvimi',
       debugShowCheckedModeBanner: false,
+      // Übersetzungen bekannt machen
+      localizationsDelegates: const [
+        // Flutter Standard-Übersetzungen
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('de'), // Deutsch
+        Locale('en'), // Englisch
+        Locale('tr'), // Türkisch
+        Locale('ar'), // Arabisch
+      ],
+      // Light, Dark oder System-Theme verwenden
       themeMode: themeMode,
       theme: lightTheme,
       darkTheme: darkTheme,
       home: FutureBuilder<bool>(
         future: _locationCheckFuture,
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
             );
           }
-          final wasAsked = snapshot.data ?? false;
-          if (!wasAsked) {
+          final bool wasLocationAsked = snapshot.data ?? false;
+          if (!wasLocationAsked) {
             return const InitialLocationPage();
-          } else {
-            return const HomePage();
           }
+          return const HomePage();
         },
       ),
     );

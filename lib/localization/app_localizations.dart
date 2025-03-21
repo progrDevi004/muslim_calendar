@@ -15,6 +15,26 @@ class AppLocalizations extends ChangeNotifier {
     notifyListeners();
   }
 
+  String get menu {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Menü';
+      case AppLanguage.turkish:
+        return 'Menü';
+      case AppLanguage.arabic:
+        return 'قائمة';
+      case AppLanguage.bosnian:
+        return 'Meni';
+      case AppLanguage.spanish:
+        return 'Menú';
+      case AppLanguage.persian:
+        return 'منو';
+      case AppLanguage.english:
+      default:
+        return 'Menu';
+    }
+  }
+
   String getLanguageName(AppLanguage lang) {
     switch (lang) {
       case AppLanguage.german:

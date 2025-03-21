@@ -29,6 +29,8 @@ dependencies:
   google_sign_in: ^6.3.0
   googleapis: ^13.2.0
   googleapis_auth: ^1.4.2
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:

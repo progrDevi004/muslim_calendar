@@ -997,7 +997,7 @@ class DashboardPageState extends State<DashboardPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Menü',
+                  loc.menu,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: isDark ? Colors.white70 : Colors.black54,
                       ),

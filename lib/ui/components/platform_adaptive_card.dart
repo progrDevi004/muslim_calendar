@@ -1,81 +1,82 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'platform_adaptive_theme.dart';
 
-/// Eine plattformspezifische Card-Komponente
-/// Auf Android: Material Card
-/// Auf iOS: Container mit abgerundeten Ecken und Schatten im iOS-Stil
+/// Eine plattformspezifische Card-Komponente, die auf iOS und Android unterschiedlich aussieht
 class PlatformAdaptiveCard extends StatelessWidget {
   final Widget child;
-  final Color? color;
-  final EdgeInsetsGeometry? margin;
   final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+  final Color? color;
   final double? elevation;
+  final VoidCallback? onTap;
   final BorderRadius? borderRadius;
-  final bool semanticContainer;
 
   const PlatformAdaptiveCard({
     super.key,
     required this.child,
-    this.color,
-    this.margin,
     this.padding,
+    this.margin,
+    this.color,
     this.elevation,
+    this.onTap,
     this.borderRadius,
-    this.semanticContainer = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final bool isDark = theme.brightness == Brightness.dark;
+    final bool isIOS = Platform.isIOS;
+    final double defaultRadius = PlatformAdaptiveTheme.borderRadius;
 
-    // Standardwerte festlegen
-    final Color cardColor = color ?? theme.cardColor;
-    final BorderRadius radius = borderRadius ?? BorderRadius.circular(12.0);
-    final double cardElevation = elevation ?? 1.0;
-
-    if (Platform.isIOS) {
-      // iOS-Stil mit Container
-      return Container(
-        margin: margin,
-        padding: padding,
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: radius,
-          boxShadow: [
-            BoxShadow(
-              color: isDark
-                  ? Colors.black.withOpacity(0.3)
-                  : Colors.black.withOpacity(0.1),
-              blurRadius: cardElevation * 3,
-              offset: Offset(0, cardElevation),
+    // iOS-spezifisches Design
+    if (isIOS) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin:
+              margin ?? EdgeInsets.all(PlatformAdaptiveTheme.defaultSpacing),
+          padding: padding ?? const EdgeInsets.all(16.0),
+          decoration: BoxDecoration(
+            color: color ?? CupertinoColors.systemBackground,
+            borderRadius: borderRadius ?? BorderRadius.circular(defaultRadius),
+            border: Border.all(
+              color: CupertinoColors.systemGrey5.resolveFrom(context),
+              width: 0.5,
             ),
-          ],
-          border: Border.all(
-            color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
-            width: 0.5,
+            boxShadow: elevation != null && elevation! > 0
+                ? [
+                    BoxShadow(
+                      color: CupertinoColors.systemGrey5
+                          .resolveFrom(context)
+                          .withOpacity(0.3),
+                      blurRadius: elevation! * 2,
+                      offset: Offset(0, elevation! / 2),
+                    )
+                  ]
+                : null,
           ),
+          child: child,
         ),
-        child: child,
-      );
-    } else {
-      // Android-Stil mit Material Card
-      return Card(
-        color: cardColor,
-        margin: margin,
-        elevation: cardElevation,
-        shape: RoundedRectangleBorder(
-          borderRadius: radius,
-        ),
-        semanticContainer: semanticContainer,
-        child: padding != null
-            ? Padding(
-                padding: padding as EdgeInsets,
-                child: child,
-              )
-            : child,
       );
     }
+
+    // Android-spezifisches Design (Material Design)
+    return Card(
+      elevation: elevation ?? 1.0,
+      margin: margin ?? const EdgeInsets.all(8.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: borderRadius ?? BorderRadius.circular(8.0),
+      ),
+      color: color,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: borderRadius ?? BorderRadius.circular(8.0),
+        child: Padding(
+          padding: padding ?? const EdgeInsets.all(16.0),
+          child: child,
+        ),
+      ),
+    );
   }
 }
