@@ -81,6 +81,9 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
   void initState() {
     super.initState();
     _loadCountryCityData();
+
+    // Lade die gespeicherte Import-Option, falls bereits gesetzt
+    _loadSavedImportOption();
   }
 
   @override
@@ -227,8 +230,13 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     await prefs.setBool('use24hFormat', _use24hFormat);
 
     // Import-Option speichern und als initialisiert markieren
-    await prefs.setInt('importOption', _selectedImportOption);
+    // Verwende den ImportSettingsService für konsistente Speicherung
+    await ImportSettingsService.saveImportOption(_selectedImportOption);
     await prefs.setBool('import_option_initialized', true);
+
+    // Für Debug-Zwecke
+    debugPrint(
+        "🛠️ Import-Option in InitialLocationPage gespeichert: $_selectedImportOption");
 
     // Standort - Wir haben bereits geprüft, dass die Werte nicht null sind
     await prefs.setString('defaultCountry', _selectedCountry!);
@@ -423,13 +431,13 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                 DropdownButton<int>(
                   underline: const SizedBox(),
                   value: _selectedImportOption,
-                  items: [
-                    const DropdownMenuItem<int>(
-                      value: 0,
+                  items: const [
+                    DropdownMenuItem<int>(
+                      value: 0, // Wert 0 für Standardkategorie
                       child: Text("In Standardkategorie importieren"),
                     ),
-                    const DropdownMenuItem<int>(
-                      value: 2,
+                    DropdownMenuItem<int>(
+                      value: 2, // Wert 2 für Kalendername als Kategorie
                       child: Text("Kalendername als Kategorie verwenden"),
                     ),
                   ],
@@ -438,6 +446,7 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                     setState(() {
                       _selectedImportOption = value;
                     });
+                    debugPrint("📊 Import-Option in UI geändert: $value");
                   },
                 ),
               ],
@@ -691,5 +700,18 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
         ),
       ),
     );
+  }
+
+  /// Lädt die gespeicherte Import-Option
+  Future<void> _loadSavedImportOption() async {
+    try {
+      final savedOption = await ImportSettingsService.getImportOption();
+      setState(() {
+        _selectedImportOption = savedOption;
+      });
+      debugPrint("📋 Gespeicherte Import-Option geladen: $savedOption");
+    } catch (e) {
+      debugPrint("⚠️ Fehler beim Laden der Import-Option: $e");
+    }
   }
 }
