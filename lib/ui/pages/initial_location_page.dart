@@ -15,6 +15,9 @@ import 'package:muslim_calendar/localization/app_localizations.dart'
 import 'package:muslim_calendar/ui/pages/home_page.dart';
 import 'package:muslim_calendar/data/services/location_service.dart';
 import 'package:muslim_calendar/data/services/import_settings_service.dart';
+import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
+import 'package:muslim_calendar/data/services/google_calendar_service.dart';
+import 'package:muslim_calendar/models/selected_calendar.dart';
 
 // Logo-Farbe für die Konsistenz der App
 const Color logoColor = Color(0xFF468178);
@@ -61,6 +64,9 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
   bool _isDetectingLocation = false;
   LocationService? _locationService;
 
+  late CalendarSyncService _calendarSyncService;
+  late GoogleCalendarService _googleCalendarService;
+
   // Map für Berechnungsmethoden
   final Map<int, String> _calcMethodMap = {
     13: 'Diyanet (Turkey)',
@@ -81,9 +87,6 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
   void initState() {
     super.initState();
     _loadCountryCityData();
-
-    // Lade die gespeicherte Import-Option, falls bereits gesetzt
-    _loadSavedImportOption();
   }
 
   @override
@@ -96,6 +99,16 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
       } catch (e) {
         debugPrint('LocationService konnte nicht initialisiert werden: $e');
       }
+    }
+
+    // Initialisiere die Services für die Kalendersynchronisation
+    try {
+      _calendarSyncService =
+          Provider.of<CalendarSyncService>(context, listen: false);
+      _googleCalendarService =
+          Provider.of<GoogleCalendarService>(context, listen: false);
+    } catch (e) {
+      debugPrint('CalendarServices konnten nicht initialisiert werden: $e');
     }
   }
 
@@ -205,6 +218,33 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     }
   }
 
+  /// Versucht, den Nutzer bei Google anzumelden
+  Future<bool> _connectToGoogleAccount() async {
+    try {
+      // Anmeldeversuch starten
+      await _googleCalendarService.signIn();
+
+      // Prüfen, ob Anmeldung erfolgreich war
+      if (_googleCalendarService.isSignedIn) {
+        debugPrint("✅ Bei Google angemeldet");
+        return true;
+      } else {
+        debugPrint("⚠️ Google-Anmeldung fehlgeschlagen");
+        return false;
+      }
+    } catch (e) {
+      debugPrint("❌ Fehler bei Google-Anmeldung: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text("Google-Anmeldung fehlgeschlagen: $e"),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ));
+      }
+      return false;
+    }
+  }
+
   /// Speichert Einstellungen und fährt fort
   Future<void> _saveAndContinue() async {
     // Sicherheitsprüfung: Stelle sicher, dass Land und Stadt ausgewählt wurden
@@ -229,14 +269,10 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     // Zeitformat
     await prefs.setBool('use24hFormat', _use24hFormat);
 
-    // Import-Option speichern und als initialisiert markieren
-    // Verwende den ImportSettingsService für konsistente Speicherung
+    // Import-Option mit ImportSettingsService speichern
     await ImportSettingsService.saveImportOption(_selectedImportOption);
     await prefs.setBool('import_option_initialized', true);
-
-    // Für Debug-Zwecke
-    debugPrint(
-        "🛠️ Import-Option in InitialLocationPage gespeichert: $_selectedImportOption");
+    debugPrint("📋 Import-Option gespeichert: $_selectedImportOption");
 
     // Standort - Wir haben bereits geprüft, dass die Werte nicht null sind
     await prefs.setString('defaultCountry', _selectedCountry!);
@@ -247,6 +283,110 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
 
     // Markiere, dass die Einstellungen bereits erfasst wurden
     await prefs.setBool('wasLocationAsked', true);
+
+    // Stelle sicher, dass Google-Kalender verbunden ist und alle Kalender automatisch ausgewählt werden
+    try {
+      // Auto-SignIn versuchen
+      await _googleCalendarService.autoSignIn();
+
+      if (!_googleCalendarService.isSignedIn) {
+        debugPrint(
+            "⚠️ Nicht bei Google angemeldet, versuche manuelle Anmeldung");
+
+        // Anmelde-Dialog anzeigen
+        final result = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text("Google-Kalender verbinden"),
+            content: const Text(
+              "Möchten Sie sich jetzt bei Google anmelden, um Ihre Kalender zu synchronisieren?",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text("Überspringen"),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text("Anmelden"),
+              ),
+            ],
+          ),
+        );
+
+        // Wenn der Nutzer zustimmt, Anmeldung durchführen
+        if (result == true) {
+          final signedIn = await _connectToGoogleAccount();
+          if (!signedIn) {
+            debugPrint("⚠️ Manuelle Google-Anmeldung fehlgeschlagen");
+          }
+        } else {
+          debugPrint("ℹ️ Google-Anmeldung übersprungen");
+        }
+      }
+
+      if (_googleCalendarService.isSignedIn) {
+        debugPrint("🔄 Automatisch bei Google angemeldet");
+
+        // Hole alle verfügbaren Kalender
+        final calendarList = await _googleCalendarService.fetchCalendarList();
+
+        if (calendarList.isNotEmpty) {
+          // Alle Kalender als ausgewählt markieren
+          final allCalendars = calendarList
+              .map((calendar) => SelectedCalendar(
+                    id: calendar.id ?? 'primary',
+                    title: calendar.summary ?? 'Kalender',
+                    isSelected: true, // Alle als ausgewählt markieren
+                  ))
+              .toList();
+
+          // Speichere alle Kalender als ausgewählt
+          await _calendarSyncService.saveSelectedCalendars(allCalendars);
+
+          debugPrint(
+              "✅ Alle ${allCalendars.length} Google-Kalender wurden automatisch ausgewählt");
+
+          // Direkter Import aller Termine beim ersten Start durchführen
+          try {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text("Importiere Kalender..."),
+              duration: Duration(seconds: 5),
+            ));
+
+            await _calendarSyncService.importAppointments();
+            debugPrint("✅ Kalenderimport abgeschlossen");
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text("Kalender erfolgreich importiert"),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 3),
+              ));
+            }
+          } catch (importError) {
+            debugPrint("❌ Fehler beim Importieren der Kalender: $importError");
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text("Fehler beim Import: $importError"),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 5),
+              ));
+            }
+          }
+        } else {
+          debugPrint("⚠️ Keine Google-Kalender gefunden");
+        }
+      } else {
+        debugPrint(
+            "⚠️ Nicht bei Google angemeldet, Kalender können nicht ausgewählt werden");
+      }
+    } catch (e) {
+      debugPrint("❌ Fehler beim Auswählen der Google-Kalender: $e");
+      // Fehler bei der Kalenderauswahl sollten nicht den gesamten Initialisierungsprozess blockieren
+    }
 
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
@@ -431,13 +571,13 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                 DropdownButton<int>(
                   underline: const SizedBox(),
                   value: _selectedImportOption,
-                  items: const [
-                    DropdownMenuItem<int>(
-                      value: 0, // Wert 0 für Standardkategorie
+                  items: [
+                    const DropdownMenuItem<int>(
+                      value: 0,
                       child: Text("In Standardkategorie importieren"),
                     ),
-                    DropdownMenuItem<int>(
-                      value: 2, // Wert 2 für Kalendername als Kategorie
+                    const DropdownMenuItem<int>(
+                      value: 2,
                       child: Text("Kalendername als Kategorie verwenden"),
                     ),
                   ],
@@ -446,7 +586,6 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                     setState(() {
                       _selectedImportOption = value;
                     });
-                    debugPrint("📊 Import-Option in UI geändert: $value");
                   },
                 ),
               ],
@@ -700,18 +839,5 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
         ),
       ),
     );
-  }
-
-  /// Lädt die gespeicherte Import-Option
-  Future<void> _loadSavedImportOption() async {
-    try {
-      final savedOption = await ImportSettingsService.getImportOption();
-      setState(() {
-        _selectedImportOption = savedOption;
-      });
-      debugPrint("📋 Gespeicherte Import-Option geladen: $savedOption");
-    } catch (e) {
-      debugPrint("⚠️ Fehler beim Laden der Import-Option: $e");
-    }
   }
 }
