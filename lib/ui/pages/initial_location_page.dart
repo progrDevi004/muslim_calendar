@@ -14,6 +14,7 @@ import 'package:muslim_calendar/localization/app_localizations.dart'
     show AppLanguage, AppLocalizations;
 import 'package:muslim_calendar/ui/pages/home_page.dart';
 import 'package:muslim_calendar/data/services/location_service.dart';
+import 'package:muslim_calendar/data/services/import_settings_service.dart';
 
 // Logo-Farbe für die Konsistenz der App
 const Color logoColor = Color(0xFF468178);
@@ -49,6 +50,9 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
   AppLanguage _selectedLanguage = AppLanguage.english;
   int _selectedCalcMethod = 13;
   bool _use24hFormat = false;
+
+  // Import-Option (0 = Standardkategorie, 2 = Kalendername als Kategorie)
+  int _selectedImportOption = 2;
 
   // Standort
   String? _selectedCountry;
@@ -221,6 +225,10 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     await prefs.setInt('calculationMethod', _selectedCalcMethod);
     // Zeitformat
     await prefs.setBool('use24hFormat', _use24hFormat);
+
+    // Import-Option speichern und als initialisiert markieren
+    await prefs.setInt('importOption', _selectedImportOption);
+    await prefs.setBool('import_option_initialized', true);
 
     // Standort - Wir haben bereits geprüft, dass die Werte nicht null sind
     await prefs.setString('defaultCountry', _selectedCountry!);
@@ -395,11 +403,59 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
         ),
       ),
 
-      // Step 3: Standort (überarbeitete Version)
+      // Step 3: Import-Optionen
+      Step(
+        title: Text("Import-Optionen"),
+        state: _currentStep > 2 ? StepState.complete : StepState.indexed,
+        isActive: _currentStep >= 2,
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Import-Optionen für externe Kalender",
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.import_export),
+                const SizedBox(width: 8),
+                DropdownButton<int>(
+                  underline: const SizedBox(),
+                  value: _selectedImportOption,
+                  items: [
+                    const DropdownMenuItem<int>(
+                      value: 0,
+                      child: Text("In Standardkategorie importieren"),
+                    ),
+                    const DropdownMenuItem<int>(
+                      value: 2,
+                      child: Text("Kalendername als Kategorie verwenden"),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _selectedImportOption = value;
+                    });
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Diese Einstellung bestimmt, wie importierte Termine kategorisiert werden.",
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+
+      // Step 4: Standort (überarbeitete Version)
       Step(
         title: Text(loc.locationSettings),
         state: StepState.indexed,
-        isActive: _currentStep >= 2,
+        isActive: _currentStep >= 3,
         content: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
@@ -431,8 +487,7 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                             _useAutomaticLocation = value;
                           });
 
-                          // Wenn automatische Standorterkennung aktiviert wird,
-                          // sofort Standort ermitteln
+                          // Wenn automatische Erkennung aktiviert wird, direkt Standort ermitteln
                           if (value) {
                             _detectLocation();
                           }
@@ -445,13 +500,17 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                       if (_useAutomaticLocation)
                         Column(
                           children: [
-                            // Anzeige Ladeindikator während der Standorterkennung
+                            // Anzeige während der Standorterkennung
                             if (_isDetectingLocation)
                               Column(
-                                children: const [
-                                  CircularProgressIndicator(),
-                                  SizedBox(height: 8),
-                                  Text("Standort wird ermittelt..."),
+                                children: [
+                                  const CircularProgressIndicator(),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    "Standort wird ermittelt...",
+                                    style:
+                                        Theme.of(context).textTheme.bodyMedium,
+                                  ),
                                 ],
                               ),
 
