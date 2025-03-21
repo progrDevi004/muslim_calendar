@@ -1309,61 +1309,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   /// Zeigt einen Dialog für Import-Optionen an
   void _showImportOptionsDialog(BuildContext context) {
-    final loc = Provider.of<AppLocalizations>(context, listen: false);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(loc.importOptions),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text(loc.howToHandleCategories),
-            ),
-            const Divider(),
-            ListTile(
-              title: Text(loc.useGoogleCalendarCategories),
-              subtitle: Text(loc.searchForMatchingCategories),
-              onTap: () async {
-                Navigator.pop(context);
-                // Option 2 = Kalendernamen als Kategorien verwenden
-                await ImportSettingsService.saveImportOption(2);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(loc.importOptionSaved)),
-                  );
-                  debugPrint(
-                      "🛠️ Import-Option gespeichert: 2 (Kategorien von Google Kalender übernehmen)");
-                }
-              },
-            ),
-            const Divider(),
-            ListTile(
-              title: Text(loc.useDefaultCategory),
-              subtitle: Text(loc.importedAppointmentsToDefaultCategory),
-              onTap: () async {
-                Navigator.pop(context);
-                // Option 0 = Standardkategorie verwenden
-                await ImportSettingsService.saveImportOption(0);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(loc.importOptionSaved)),
-                  );
-                  debugPrint(
-                      "🛠️ Import-Option gespeichert: 0 (Standardkategorie verwenden)");
-                }
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(loc.cancel),
-          ),
-        ],
-      ),
-    );
+    // Die gemeinsame Implementierung von ImportSettingsService verwenden
+    ImportSettingsService.showImportOptionsDialog(context);
   }
 }

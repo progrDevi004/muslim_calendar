@@ -861,86 +861,13 @@ class HomePageState extends State<HomePage> {
 
   /// Zeigt einen Dialog für Import-Optionen an
   void _showImportOptionsDialog(BuildContext context) {
-    final localizations = Provider.of<AppLocalizations>(context, listen: false);
-
-    // Dialog-Inhalt erstellen, der für beide Plattformen passt
-    final content = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        PlatformAdaptiveListTile(
-          title: localizations.howToHandleCategories,
-          titleStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-        ),
-
-        // Bestehende Kategorien verwenden
-        PlatformAdaptiveListTile(
-          leading: Icon(
-            Platform.isIOS ? CupertinoIcons.tag : Icons.category_outlined,
-            color: logoColor,
-          ),
-          title: localizations.useExistingCategories,
-          subtitle: localizations.searchForMatchingCategories,
-          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
-          onTap: () async {
-            Navigator.pop(context);
-            // Option 2 = Kalendernamen als Kategorien verwenden
-            await ImportSettingsService.saveImportOption(2);
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(localizations.importOptionSaved)),
-              );
-              debugPrint(
-                  "🛠️ Import-Option gespeichert: 2 (Kategorien von Google Kalender übernehmen)");
-            }
-          },
-        ),
-
-        // Neue Kategorien erstellen
-        PlatformAdaptiveListTile(
-          leading: Icon(
-            Platform.isIOS
-                ? CupertinoIcons.add_circled
-                : Icons.add_circle_outline,
-            color: logoColor,
-          ),
-          title: localizations.createNewCategories,
-          subtitle: localizations.forEachNewAppointment,
-          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
-          onTap: () async {
-            Navigator.pop(context);
-            // Option 0 = Standardkategorie verwenden
-            await ImportSettingsService.saveImportOption(0);
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(localizations.importOptionSaved)),
-              );
-              debugPrint(
-                  "🛠️ Import-Option gespeichert: 0 (Standardkategorie verwenden)");
-            }
-          },
-        ),
-      ],
-    );
-
-    // Dialog-Aktionen erstellen
-    final actions = [
-      PlatformAdaptiveDialog.adaptiveDialogAction(
-        context: context,
-        text: localizations.cancel,
-        onPressed: () => Navigator.pop(context),
-        color: logoColor,
-      ),
-    ];
-
-    // Plattformspezifischen Dialog anzeigen
-    PlatformAdaptiveDialog.showAdaptiveDialog(
-      context: context,
-      title: localizations.importOptions,
-      content: content,
-      actions: actions,
+    // Import-Optionen-Dialog aus dem gemeinsamen Service verwenden
+    ImportSettingsService.showImportOptionsDialog(
+      context,
+      onOptionSelected: () {
+        // Nach der Auswahl einer Option Termine neu laden
+        loadAllAppointments();
+      },
     );
   }
 
