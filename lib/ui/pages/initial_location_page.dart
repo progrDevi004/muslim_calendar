@@ -348,34 +348,17 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
           debugPrint(
               "✅ Alle ${allCalendars.length} Google-Kalender wurden automatisch ausgewählt");
 
-          // Direkter Import aller Termine beim ersten Start durchführen
-          try {
+          // Information, dass die Kalender nun bereit sind, aber kein automatischer Import
+          if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text("Importiere Kalender..."),
-              duration: Duration(seconds: 5),
+              content: Text("Alle Google-Kalender wurden ausgewählt"),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
             ));
-
-            await _calendarSyncService.importAppointments();
-            debugPrint("✅ Kalenderimport abgeschlossen");
-
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text("Kalender erfolgreich importiert"),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 3),
-              ));
-            }
-          } catch (importError) {
-            debugPrint("❌ Fehler beim Importieren der Kalender: $importError");
-
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text("Fehler beim Import: $importError"),
-                backgroundColor: Colors.red,
-                duration: const Duration(seconds: 5),
-              ));
-            }
           }
+
+          // Der automatische Import wurde entfernt, damit der Nutzer selbst entscheiden kann,
+          // wann er den Import starten möchte
         } else {
           debugPrint("⚠️ Keine Google-Kalender gefunden");
         }
