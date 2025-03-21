@@ -4014,6 +4014,26 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
+  String get selectCountryAndCity {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Bitte wählen Sie sowohl ein Land als auch eine Stadt aus';
+      case AppLanguage.turkish:
+        return 'Lütfen hem bir ülke hem bir şehir seçin';
+      case AppLanguage.arabic:
+        return 'يرجى اختيار كل من البلد والمدينة';
+      case AppLanguage.bosnian:
+        return 'Molimo odaberite i državu i grad';
+      case AppLanguage.spanish:
+        return 'Por favor seleccione tanto un país como una ciudad';
+      case AppLanguage.persian:
+        return 'لطفاً هم یک کشور و هم یک شهر را انتخاب کنید';
+      case AppLanguage.english:
+      default:
+        return 'Please select both a country and a city';
+    }
+  }
+
   String get selectWhichCalendarsToSync {
     switch (_currentLanguage) {
       case AppLanguage.german:

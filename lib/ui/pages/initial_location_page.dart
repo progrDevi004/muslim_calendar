@@ -250,11 +250,11 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     // Sicherheitsprüfung: Stelle sicher, dass Land und Stadt ausgewählt wurden
     if (_selectedCountry == null || _selectedCity == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content:
-              Text('Bitte wählen Sie sowohl ein Land als auch eine Stadt aus'),
+              Text(Provider.of<AppLocalizations>(context).selectCountryAndCity),
           backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
+          duration: const Duration(seconds: 3),
         ),
       );
       return; // Nicht fortfahren
