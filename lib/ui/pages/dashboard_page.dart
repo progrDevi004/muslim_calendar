@@ -42,6 +42,7 @@ import 'package:muslim_calendar/ui/components/platform_adaptive_navigation.dart'
 import 'package:muslim_calendar/ui/components/platform_adaptive_fab.dart';
 
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
+import 'package:muslim_calendar/data/services/import_settings_service.dart';
 
 // Logo-Farbe für die Konsistenz der App
 const Color logoColor = Color(0xFF468178);
@@ -289,8 +290,7 @@ class DashboardPageState extends State<DashboardPage> {
               );
 
               // Vollständige Synchronisation durchführen
-              await _calendarSyncService.importAppointments(categoryOption: 0);
-              await _calendarSyncService.exportAppointments();
+              await _calendarSyncService.syncGoogleCalendarNow();
 
               // Nach erfolgreicher Synchronisation neu laden
               await reloadData();
@@ -430,40 +430,13 @@ class DashboardPageState extends State<DashboardPage> {
             Navigator.pop(context);
 
             try {
-              // Fortschritt anzeigen
-              scaffold.showSnackBar(
-                SnackBar(
-                    content: Text(localizations.importingFromGoogleCalendar)),
-              );
-
-              // Import durchführen mit Option: bestehende Kategorien verwenden
-              await _calendarSyncService.importAppointments(categoryOption: 0);
-
-              // Nach erfolgreichem Import neu laden
-              await reloadData();
-
-              // Auch HomePage aktualisieren falls nötig
-              final homePageState =
-                  context.findAncestorStateOfType<HomePageState>();
-              homePageState?.loadAllAppointments();
-
-              scaffold.clearSnackBars();
-              scaffold.showSnackBar(
-                SnackBar(
-                  content: Text(localizations.syncImportCompleted ??
-                      localizations.importCompleted),
-                  backgroundColor: Colors.green,
-                ),
+              // Speichere zuerst die Import-Option
+              await ImportSettingsService.saveImportOption(2);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(localizations.importOptionSaved)),
               );
             } catch (e) {
-              debugPrint('Import-Fehler: $e');
-              scaffold.clearSnackBars();
-              scaffold.showSnackBar(
-                SnackBar(
-                  content: Text(localizations.importError(e.toString())),
-                  backgroundColor: Colors.red,
-                ),
-              );
+              debugPrint('Fehler beim Speichern der Import-Option: $e');
             }
           },
         ),
@@ -482,40 +455,13 @@ class DashboardPageState extends State<DashboardPage> {
             Navigator.pop(context);
 
             try {
-              // Fortschritt anzeigen
-              scaffold.showSnackBar(
-                SnackBar(
-                    content: Text(localizations.importingFromGoogleCalendar)),
-              );
-
-              // Import durchführen mit Option: neue Kategorien erstellen
-              await _calendarSyncService.importAppointments(categoryOption: 1);
-
-              // Nach erfolgreichem Import neu laden
-              await reloadData();
-
-              // Auch HomePage aktualisieren falls nötig
-              final homePageState =
-                  context.findAncestorStateOfType<HomePageState>();
-              homePageState?.loadAllAppointments();
-
-              scaffold.clearSnackBars();
-              scaffold.showSnackBar(
-                SnackBar(
-                  content: Text(localizations.syncImportCompleted ??
-                      localizations.importCompleted),
-                  backgroundColor: Colors.green,
-                ),
+              // Speichere zuerst die Import-Option
+              await ImportSettingsService.saveImportOption(0);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(localizations.importOptionSaved)),
               );
             } catch (e) {
-              debugPrint('Import-Fehler: $e');
-              scaffold.clearSnackBars();
-              scaffold.showSnackBar(
-                SnackBar(
-                  content: Text(localizations.importError(e.toString())),
-                  backgroundColor: Colors.red,
-                ),
-              );
+              debugPrint('Fehler beim Speichern der Import-Option: $e');
             }
           },
         ),

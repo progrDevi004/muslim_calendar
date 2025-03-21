@@ -15,6 +15,7 @@ import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 import '../../data/services/calendar_sync_service.dart';
 import 'package:muslim_calendar/ui/dialogs/calendar_selection_dialog.dart';
 import 'package:muslim_calendar/data/services/location_service.dart';
+import 'package:muslim_calendar/data/services/import_settings_service.dart';
 
 // Beispiel-Enum, kann auch global in app_language.dart liegen:
 
@@ -1324,18 +1325,34 @@ class _SettingsPageState extends State<SettingsPage> {
             ListTile(
               title: Text(loc.useGoogleCalendarCategories),
               subtitle: Text(loc.searchForMatchingCategories),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                _performGoogleImport(context, categoryOption: 0);
+                // Option 2 = Kalendernamen als Kategorien verwenden
+                await ImportSettingsService.saveImportOption(2);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(loc.importOptionSaved)),
+                  );
+                  debugPrint(
+                      "🛠️ Import-Option gespeichert: 2 (Kategorien von Google Kalender übernehmen)");
+                }
               },
             ),
             const Divider(),
             ListTile(
               title: Text(loc.useDefaultCategory),
               subtitle: Text(loc.importedAppointmentsToDefaultCategory),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                _performGoogleImport(context, categoryOption: 2);
+                // Option 0 = Standardkategorie verwenden
+                await ImportSettingsService.saveImportOption(0);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(loc.importOptionSaved)),
+                  );
+                  debugPrint(
+                      "🛠️ Import-Option gespeichert: 0 (Standardkategorie verwenden)");
+                }
               },
             ),
           ],
@@ -1348,50 +1365,5 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
-  }
-
-  /// Führt einen Import von Google Calendar durch
-  void _performGoogleImport(BuildContext context,
-      {required int categoryOption}) async {
-    // Referenzen speichern, bevor asynchrone Operationen beginnen
-    final scaffold = ScaffoldMessenger.of(context);
-    final loc = Provider.of<AppLocalizations>(context, listen: false);
-    final currentMounted = mounted;
-
-    try {
-      if (currentMounted) {
-        scaffold.showSnackBar(
-          SnackBar(content: Text(loc.importingFromGoogleCalendar)),
-        );
-      }
-
-      // Import durchführen
-      await _calendarSyncService.importAppointments(
-          categoryOption: categoryOption);
-
-      if (currentMounted) {
-        scaffold.clearSnackBars(); // Bestehende Snackbars löschen
-        scaffold.showSnackBar(
-          SnackBar(
-            content: Text(loc.syncImportCompleted ?? loc.importCompleted),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('🔄 Import-Fehler: $e');
-
-      if (currentMounted) {
-        scaffold.clearSnackBars(); // Bestehende Snackbars löschen
-        scaffold.showSnackBar(
-          SnackBar(
-            content: Text(loc.importError(e.toString())),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
   }
 }

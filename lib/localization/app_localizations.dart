@@ -5666,4 +5666,10 @@ class AppLocalizations extends ChangeNotifier {
         return 'Appointment title';
     }
   }
+
+  String get importOptionSaved => Intl.message(
+        'Import-Option wurde gespeichert',
+        name: 'importOptionSaved',
+        desc: 'Meldung, wenn die Import-Option gespeichert wurde',
+      );
 }

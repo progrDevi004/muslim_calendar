@@ -18,6 +18,7 @@ import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
 import 'package:muslim_calendar/data/services/prayer_time_service.dart';
 import 'package:muslim_calendar/data/services/recurrence_service.dart';
 import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
+import 'package:muslim_calendar/data/services/import_settings_service.dart';
 
 // Models & Widgets
 import 'package:muslim_calendar/models/appointment_model.dart';
@@ -827,33 +828,31 @@ class HomePageState extends State<HomePage> {
         );
       }
 
-      // Vollständige Synchronisation durchführen
-      await _calendarSyncService.importAppointments(categoryOption: 0);
-      await _calendarSyncService.exportAppointments();
+      // Vollständige Synchronisation durchführen ohne expliziten categoryOption-Wert,
+      // damit die gespeicherte Option aus den SharedPreferences verwendet wird
+      await _calendarSyncService.syncGoogleCalendarNow();
 
       // Nach erfolgreicher Synchronisation Termine neu laden
       await loadAllAppointments();
 
       if (currentMounted) {
-        scaffold.clearSnackBars(); // Bestehende Snackbars löschen
+        scaffold.clearSnackBars();
         scaffold.showSnackBar(
           SnackBar(
             content: Text(localizations.syncCompleted),
             backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
           ),
         );
       }
     } catch (e) {
-      debugPrint('🔄 Sync-Fehler: $e');
+      debugPrint('Sync-Fehler: $e');
 
       if (currentMounted) {
-        scaffold.clearSnackBars(); // Bestehende Snackbars löschen
+        scaffold.clearSnackBars();
         scaffold.showSnackBar(
           SnackBar(
             content: Text(localizations.syncSyncError(e.toString())),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -885,9 +884,17 @@ class HomePageState extends State<HomePage> {
           title: localizations.useExistingCategories,
           subtitle: localizations.searchForMatchingCategories,
           titleStyle: const TextStyle(fontWeight: FontWeight.bold),
-          onTap: () {
+          onTap: () async {
             Navigator.pop(context);
-            _performGoogleImport(context, categoryOption: 0);
+            // Option 2 = Kalendernamen als Kategorien verwenden
+            await ImportSettingsService.saveImportOption(2);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(localizations.importOptionSaved)),
+              );
+              debugPrint(
+                  "🛠️ Import-Option gespeichert: 2 (Kategorien von Google Kalender übernehmen)");
+            }
           },
         ),
 
@@ -902,9 +909,17 @@ class HomePageState extends State<HomePage> {
           title: localizations.createNewCategories,
           subtitle: localizations.forEachNewAppointment,
           titleStyle: const TextStyle(fontWeight: FontWeight.bold),
-          onTap: () {
+          onTap: () async {
             Navigator.pop(context);
-            _performGoogleImport(context, categoryOption: 1);
+            // Option 0 = Standardkategorie verwenden
+            await ImportSettingsService.saveImportOption(0);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(localizations.importOptionSaved)),
+              );
+              debugPrint(
+                  "🛠️ Import-Option gespeichert: 0 (Standardkategorie verwenden)");
+            }
           },
         ),
       ],
@@ -927,55 +942,6 @@ class HomePageState extends State<HomePage> {
       content: content,
       actions: actions,
     );
-  }
-
-  /// Führt einen Import von Google Calendar durch
-  void _performGoogleImport(BuildContext context,
-      {required int categoryOption}) async {
-    // Referenzen speichern, bevor asynchrone Operationen beginnen
-    final scaffold = ScaffoldMessenger.of(context);
-    final localizations = Provider.of<AppLocalizations>(context, listen: false);
-    final currentMounted = mounted;
-
-    try {
-      if (currentMounted) {
-        scaffold.showSnackBar(
-          SnackBar(content: Text(localizations.importingFromGoogleCalendar)),
-        );
-      }
-
-      // Import durchführen
-      await _calendarSyncService.importAppointments(
-          categoryOption: categoryOption);
-
-      // Nach erfolgreichem Import Termine neu laden
-      await loadAllAppointments();
-
-      if (currentMounted) {
-        scaffold.clearSnackBars(); // Bestehende Snackbars löschen
-        scaffold.showSnackBar(
-          SnackBar(
-            content: Text(localizations.syncImportCompleted ??
-                localizations.importCompleted),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('🔄 Import-Fehler: $e');
-
-      if (currentMounted) {
-        scaffold.clearSnackBars(); // Bestehende Snackbars löschen
-        scaffold.showSnackBar(
-          SnackBar(
-            content: Text(localizations.importError(e.toString())),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
   }
 
   /// Führt einen Export nach Google Calendar durch

@@ -15,6 +15,7 @@ import 'package:muslim_calendar/utils/recurrence_rule_converter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:muslim_calendar/data/services/google_calendar_sync_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:muslim_calendar/data/services/import_settings_service.dart';
 
 /// CalendarSyncService - Fassade (Facade) für alle Kalendersynchronisierungsdienste
 ///
@@ -94,10 +95,14 @@ class CalendarSyncService extends ChangeNotifier {
   }
 
   /// Gemeinsame Import-Funktion: Ruft Events vom Anbieter (z.B. Google) ab und fügt sie in die lokale Datenbank ein.
-  Future<void> importAppointments({int categoryOption = 0}) async {
+  Future<void> importAppointments({int? categoryOption}) async {
     // Debug-Ausgabe für den Beginn des Imports
-    debugPrint(
-        "🔄 Importiere Termine aus Google Calendar (Kategorie-Option: $categoryOption)");
+    debugPrint("🔄 Importiere Termine aus Google Calendar");
+
+    // Wenn keine categoryOption übergeben wurde, lade die gespeicherte Option
+    final importOption =
+        categoryOption ?? await ImportSettingsService.getImportOption();
+    debugPrint("📋 Verwende Import-Option: $importOption");
 
     await calendarProvider.autoSignIn();
 
@@ -261,7 +266,7 @@ class CalendarSyncService extends ChangeNotifier {
       // Kategorie-ID je nach gewählter Option ermitteln
       int appointmentCategoryId = defaultCategoryId;
 
-      if (categoryOption == 1) {
+      if (importOption == 1) {
         // Option 1: Google Calendar Farben als Kategorien verwenden
         if (event.colorId != null) {
           final colorIndex = int.tryParse(event.colorId!);
@@ -272,7 +277,7 @@ class CalendarSyncService extends ChangeNotifier {
             debugPrint("🎨 Verwende Google-Farbe als Kategorie: $colorIndex");
           }
         }
-      } else if (categoryOption == 2) {
+      } else if (importOption == 2) {
         // Option 2: Verwende den Kalendernamen als Kategorie
         // Source-Kalender-ID des Events ermitteln
         String calendarId = event.source?.title ?? 'primary';
@@ -780,7 +785,7 @@ class CalendarSyncService extends ChangeNotifier {
   /// Wenn categoryOption=2 verwendet wird, werden Kategorien beim Import basierend auf den Kalendernamen erstellt.
   /// Beim Export werden Termine in die entsprechenden Google-Kalender eingefügt, deren Namen mit den Kategorien übereinstimmen.
   Future<void> syncGoogleCalendarNow(
-      {int categoryOption = 0, bool useCategoryMapping = true}) async {
+      {int? categoryOption, bool useCategoryMapping = true}) async {
     debugPrint("Starte vollständige Synchronisierung mit Google Calendar");
 
     // Zuerst fehlerhafte Wiederholungsregeln korrigieren
@@ -841,7 +846,7 @@ class CalendarSyncService extends ChangeNotifier {
   }
 
   /// Führt nur einen Import von Google Calendar durch
-  Future<void> importFromGoogleCalendarOnly({int categoryOption = 0}) async {
+  Future<void> importFromGoogleCalendarOnly({int? categoryOption}) async {
     debugPrint("Starte Import von Google Calendar");
 
     try {
