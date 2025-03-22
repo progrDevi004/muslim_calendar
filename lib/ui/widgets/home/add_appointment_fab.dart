@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
-import 'package:muslim_calendar/localization/app_localizations.dart';
+import 'package:taqvimi/ui/pages/appointment_creation_page.dart';
+import 'package:taqvimi/localization/app_localizations.dart';
 
 class AddAppointmentFAB extends StatelessWidget {
   final DateTime? selectedDate;

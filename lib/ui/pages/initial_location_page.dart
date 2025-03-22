@@ -10,14 +10,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 
 // Lokalisierung & HomePage
-import 'package:muslim_calendar/localization/app_localizations.dart'
+import 'package:taqvimi/localization/app_localizations.dart'
     show AppLanguage, AppLocalizations;
-import 'package:muslim_calendar/ui/pages/home_page.dart';
-import 'package:muslim_calendar/data/services/location_service.dart';
-import 'package:muslim_calendar/data/services/import_settings_service.dart';
-import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
-import 'package:muslim_calendar/data/services/google_calendar_service.dart';
-import 'package:muslim_calendar/models/selected_calendar.dart';
+import 'package:taqvimi/ui/pages/home_page.dart';
+import 'package:taqvimi/data/services/location_service.dart';
+import 'package:taqvimi/data/services/import_settings_service.dart';
+import 'package:taqvimi/data/services/calendar_sync_service.dart';
+import 'package:taqvimi/data/services/google_calendar_service.dart';
+import 'package:taqvimi/models/selected_calendar.dart';
 
 // Logo-Farbe für die Konsistenz der App
 const Color logoColor = Color(0xFF468178);

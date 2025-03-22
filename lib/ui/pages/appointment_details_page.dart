@@ -4,23 +4,23 @@ import 'dart:io' show Platform;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
-import 'package:muslim_calendar/data/services/notification_service.dart';
-import 'package:muslim_calendar/data/services/google_calendar_service.dart';
-import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
-import 'package:muslim_calendar/models/appointment_model.dart';
-import 'package:muslim_calendar/models/category_model.dart';
-import 'package:muslim_calendar/localization/app_localizations.dart';
-import 'package:muslim_calendar/ui/pages/appointment_creation_page.dart';
+import 'package:taqvimi/data/repositories/appointment_repository.dart';
+import 'package:taqvimi/data/services/notification_service.dart';
+import 'package:taqvimi/data/services/google_calendar_service.dart';
+import 'package:taqvimi/data/services/calendar_sync_service.dart';
+import 'package:taqvimi/models/appointment_model.dart';
+import 'package:taqvimi/models/category_model.dart';
+import 'package:taqvimi/localization/app_localizations.dart';
+import 'package:taqvimi/ui/pages/appointment_creation_page.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // NEU: Für berechnete Start-/Endzeiten
-import 'package:muslim_calendar/data/services/prayer_time_service.dart';
-import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
+import 'package:taqvimi/data/services/prayer_time_service.dart';
+import 'package:taqvimi/data/repositories/prayer_time_repository.dart';
 
 // Repository
-import 'package:muslim_calendar/data/repositories/category_repository.dart';
+import 'package:taqvimi/data/repositories/category_repository.dart';
 
 class AppointmentDetailsPage extends StatefulWidget {
   final int appointmentId;

@@ -7,7 +7,7 @@ import 'package:flutter_qiblah/flutter_qiblah.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart'; // Für Ladeanimation
 import 'dart:math' as math;
 import 'package:provider/provider.dart';
-import 'package:muslim_calendar/localization/app_localizations.dart';
+import 'package:taqvimi/localization/app_localizations.dart';
 
 // Logo-Farbe für die Konsistenz der App
 const Color logoColor = Color(0xFF468178);

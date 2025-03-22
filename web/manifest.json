@@ -1,6 +1,6 @@
 {
-    "name": "muslim_calendar",
-    "short_name": "muslim_calendar",
+    "name": "taqvimi",
+    "short_name": "taqvimi",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

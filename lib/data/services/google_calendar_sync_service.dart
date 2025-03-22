@@ -5,14 +5,14 @@ import 'package:googleapis/calendar/v3.dart' as gCal;
 import 'package:googleapis/calendar/v3.dart' as calendar;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:muslim_calendar/models/appointment_model.dart';
-import 'package:muslim_calendar/data/repositories/appointment_repository.dart';
-import 'package:muslim_calendar/data/services/prayer_time_service.dart';
-import 'package:muslim_calendar/ui/widgets/prayer_time_appointment_adapter.dart';
-import 'package:muslim_calendar/data/repositories/google_event_mapping_repository.dart';
-import 'package:muslim_calendar/data/services/google_calendar_service.dart';
+import 'package:taqvimi/models/appointment_model.dart';
+import 'package:taqvimi/data/repositories/appointment_repository.dart';
+import 'package:taqvimi/data/services/prayer_time_service.dart';
+import 'package:taqvimi/ui/widgets/prayer_time_appointment_adapter.dart';
+import 'package:taqvimi/data/repositories/google_event_mapping_repository.dart';
+import 'package:taqvimi/data/services/google_calendar_service.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'package:muslim_calendar/data/repositories/category_repository.dart';
+import 'package:taqvimi/data/repositories/category_repository.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 // Wir verwenden die GoogleHttpClient-Klasse direkt aus GoogleCalendarService

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:muslim_calendar/localization/app_localizations.dart';
-import 'package:muslim_calendar/models/selected_calendar.dart';
+import 'package:taqvimi/localization/app_localizations.dart';
+import 'package:taqvimi/models/selected_calendar.dart';
 
 class CalendarSelectionDialog extends StatefulWidget {
   final List<SelectedCalendar> calendars;

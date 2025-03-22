@@ -1,8 +1,8 @@
 //lib/data/services/recurrence_service.dart
 import 'package:flutter/foundation.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
-import 'package:muslim_calendar/models/appointment_model.dart';
-import 'package:muslim_calendar/utils/recurrence_rule_converter.dart';
+import 'package:taqvimi/models/appointment_model.dart';
+import 'package:taqvimi/utils/recurrence_rule_converter.dart';
 
 /// RecurrenceService - Zentraler Dienst für Wiederholungslogik
 ///

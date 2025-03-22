@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:muslim_calendar/localization/app_localizations.dart';
-import 'package:muslim_calendar/ui/components/platform_adaptive_app_bar.dart';
+import 'package:taqvimi/localization/app_localizations.dart';
+import 'package:taqvimi/ui/components/platform_adaptive_app_bar.dart';
 import 'package:provider/provider.dart';
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {

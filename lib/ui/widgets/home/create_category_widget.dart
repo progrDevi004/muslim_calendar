@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:muslim_calendar/localization/app_localizations.dart';
-import 'package:muslim_calendar/models/category_model.dart';
-import 'package:muslim_calendar/data/repositories/category_repository.dart';
+import 'package:taqvimi/localization/app_localizations.dart';
+import 'package:taqvimi/models/category_model.dart';
+import 'package:taqvimi/data/repositories/category_repository.dart';
 
 class CreateCategoryWidget extends StatefulWidget {
   final Function() onCategoryCreated;

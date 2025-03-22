@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:muslim_calendar/ui/widgets/category_list_widget.dart';
-import 'package:muslim_calendar/data/repositories/category_repository.dart';
-import 'package:muslim_calendar/models/category_model.dart';
+import 'package:taqvimi/ui/widgets/category_list_widget.dart';
+import 'package:taqvimi/data/repositories/category_repository.dart';
+import 'package:taqvimi/models/category_model.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:provider/provider.dart';
-import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
+import 'package:taqvimi/data/services/calendar_sync_service.dart';
 
 class CategoryManagementPage extends StatefulWidget {
   const CategoryManagementPage({super.key});

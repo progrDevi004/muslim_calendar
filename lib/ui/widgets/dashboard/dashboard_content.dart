@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:muslim_calendar/models/dashboard_task.dart';
-import 'package:muslim_calendar/ui/widgets/dashboard/dashboard_header.dart';
-import 'package:muslim_calendar/ui/widgets/dashboard/prayer_time_tile.dart';
-import 'package:muslim_calendar/ui/widgets/dashboard/task_list.dart';
-import 'package:muslim_calendar/ui/widgets/dashboard/weather_tile.dart';
+import 'package:taqvimi/models/dashboard_task.dart';
+import 'package:taqvimi/ui/widgets/dashboard/dashboard_header.dart';
+import 'package:taqvimi/ui/widgets/dashboard/prayer_time_tile.dart';
+import 'package:taqvimi/ui/widgets/dashboard/task_list.dart';
+import 'package:taqvimi/ui/widgets/dashboard/weather_tile.dart';
 
 class DashboardContent extends StatelessWidget {
   // Datum

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:muslim_calendar/models/category_model.dart';
-import 'package:muslim_calendar/data/repositories/category_repository.dart';
-import 'package:muslim_calendar/ui/dialogs/category_edit_dialog.dart';
-import 'package:muslim_calendar/data/services/calendar_sync_service.dart';
+import 'package:taqvimi/models/category_model.dart';
+import 'package:taqvimi/data/repositories/category_repository.dart';
+import 'package:taqvimi/ui/dialogs/category_edit_dialog.dart';
+import 'package:taqvimi/data/services/calendar_sync_service.dart';
 import 'package:provider/provider.dart';
 
 class CategoryListWidget extends StatefulWidget {

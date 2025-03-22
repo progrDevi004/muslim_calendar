@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:io';
 import 'package:provider/provider.dart';
-import 'package:muslim_calendar/localization/app_localizations.dart';
-import 'package:muslim_calendar/ui/components/platform_adaptive_dialog.dart';
-import 'package:muslim_calendar/ui/components/platform_adaptive_list_tile.dart';
+import 'package:taqvimi/localization/app_localizations.dart';
+import 'package:taqvimi/ui/components/platform_adaptive_dialog.dart';
+import 'package:taqvimi/ui/components/platform_adaptive_list_tile.dart';
 
 class ImportSettingsService {
   // Logo-Farbe für die Konsistenz der App

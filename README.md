@@ -1,4 +1,4 @@
-# muslim_calendar
+# taqvimi
 
 A new Flutter project.
 

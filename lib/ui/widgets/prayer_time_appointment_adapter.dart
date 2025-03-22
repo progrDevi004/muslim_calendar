@@ -1,11 +1,11 @@
 //lib/widgets/prayer_time_appointment_adapter.dart
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
-import 'package:muslim_calendar/models/appointment_model.dart';
-import 'package:muslim_calendar/data/services/prayer_time_service.dart';
-import 'package:muslim_calendar/data/services/recurrence_service.dart';
-import 'package:muslim_calendar/data/repositories/category_repository.dart';
-import 'package:muslim_calendar/models/category_model.dart';
+import 'package:taqvimi/models/appointment_model.dart';
+import 'package:taqvimi/data/services/prayer_time_service.dart';
+import 'package:taqvimi/data/services/recurrence_service.dart';
+import 'package:taqvimi/data/repositories/category_repository.dart';
+import 'package:taqvimi/models/category_model.dart';
 
 class PrayerTimeAppointmentAdapter {
   final PrayerTimeService prayerTimeService;

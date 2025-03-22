@@ -5,23 +5,23 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Localization
-import 'package:muslim_calendar/localization/app_localizations.dart';
+import 'package:taqvimi/localization/app_localizations.dart';
 // ThemeNotifier
-import 'package:muslim_calendar/providers/theme_notifier.dart';
+import 'package:taqvimi/providers/theme_notifier.dart';
 // HomePage
-import 'package:muslim_calendar/ui/pages/home_page.dart';
+import 'package:taqvimi/ui/pages/home_page.dart';
 // InitialLocationPage
-import 'package:muslim_calendar/ui/pages/initial_location_page.dart';
+import 'package:taqvimi/ui/pages/initial_location_page.dart';
 
 // NotificationService
-import 'package:muslim_calendar/data/services/notification_service.dart';
+import 'package:taqvimi/data/services/notification_service.dart';
 // PrayerTimeService und zugehöriges Repository
-import 'package:muslim_calendar/data/services/prayer_time_service.dart';
-import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
+import 'package:taqvimi/data/services/prayer_time_service.dart';
+import 'package:taqvimi/data/repositories/prayer_time_repository.dart';
 
 import 'data/repositories/appointment_repository.dart';
 import 'data/repositories/prayer_time_repository.dart';
-import 'package:muslim_calendar/data/repositories/category_repository.dart';
+import 'package:taqvimi/data/repositories/category_repository.dart';
 import 'data/repositories/category_repository.dart';
 import 'data/services/calendar_sync_service.dart';
 import 'data/services/google_calendar_service.dart';

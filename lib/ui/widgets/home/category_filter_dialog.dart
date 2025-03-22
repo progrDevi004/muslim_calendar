@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:muslim_calendar/models/category_model.dart';
-import 'package:muslim_calendar/ui/dialogs/category_edit_dialog.dart';
-import 'package:muslim_calendar/localization/app_localizations.dart';
-import 'package:muslim_calendar/ui/widgets/home/create_category_widget.dart';
+import 'package:taqvimi/models/category_model.dart';
+import 'package:taqvimi/ui/dialogs/category_edit_dialog.dart';
+import 'package:taqvimi/localization/app_localizations.dart';
+import 'package:taqvimi/ui/widgets/home/create_category_widget.dart';
 import 'package:provider/provider.dart';
-import 'package:muslim_calendar/data/repositories/category_repository.dart';
+import 'package:taqvimi/data/repositories/category_repository.dart';
 
 class CategoryFilterDialog extends StatefulWidget {
   final List<CategoryModel> categories;

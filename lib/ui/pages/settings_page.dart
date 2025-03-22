@@ -5,17 +5,17 @@ import 'dart:io' show Platform;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:muslim_calendar/data/services/google_calendar_service.dart';
+import 'package:taqvimi/data/services/google_calendar_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:muslim_calendar/localization/app_localizations.dart';
-import 'package:muslim_calendar/providers/theme_notifier.dart';
+import 'package:taqvimi/localization/app_localizations.dart';
+import 'package:taqvimi/providers/theme_notifier.dart';
 // Für reDownloadAndRecalcAll()
-import 'package:muslim_calendar/data/services/prayer_time_service.dart';
+import 'package:taqvimi/data/services/prayer_time_service.dart';
 import '../../data/services/calendar_sync_service.dart';
-import 'package:muslim_calendar/ui/dialogs/calendar_selection_dialog.dart';
-import 'package:muslim_calendar/data/services/location_service.dart';
-import 'package:muslim_calendar/data/services/import_settings_service.dart';
+import 'package:taqvimi/ui/dialogs/calendar_selection_dialog.dart';
+import 'package:taqvimi/data/services/location_service.dart';
+import 'package:taqvimi/data/services/import_settings_service.dart';
 
 // Beispiel-Enum, kann auch global in app_language.dart liegen:
 
