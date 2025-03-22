@@ -193,7 +193,7 @@ class _MyAppState extends State<MyApp> {
     final darkTheme = PlatformAdaptiveTheme.getDarkTheme(context);
 
     return MaterialApp(
-      title: 'Taqvimi',
+      title: Provider.of<AppLocalizations>(context).appTitle,
       debugShowCheckedModeBanner: false,
       // Übersetzungen bekannt machen
       localizationsDelegates: const [

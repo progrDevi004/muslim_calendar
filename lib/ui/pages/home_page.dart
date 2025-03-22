@@ -1190,7 +1190,9 @@ class HomePageState extends State<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Image.asset(
-                        'assets/images/logo_app.png',
+                        Theme.of(context).brightness == Brightness.dark
+                            ? 'assets/images/text_dark.png'
+                            : 'assets/images/text_light.png',
                         height: 32,
                         fit: BoxFit.contain,
                       ),
@@ -1296,7 +1298,9 @@ class HomePageState extends State<HomePage> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Image.asset(
-                    'assets/images/logo_app.png',
+                    Theme.of(context).brightness == Brightness.dark
+                        ? 'assets/images/text_dark.png'
+                        : 'assets/images/text_light.png',
                     height: 40,
                     fit: BoxFit.contain,
                   ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:muslim_calendar/localization/app_localizations.dart';
 import 'package:muslim_calendar/ui/components/platform_adaptive_app_bar.dart';
+import 'package:provider/provider.dart';
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onQiblaCompassPressed;
@@ -42,8 +43,8 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         : []; // Auf Android nutzen wir den Drawer, daher keine Actions
 
     return PlatformAdaptiveAppBar(
-      title:
-          'Taqvimi', // Festen Titel verwenden, da unser Schlüssel nicht existiert
+      title: Provider.of<AppLocalizations>(context)
+          .appTitle, // Festen Titel verwenden, da unser Schlüssel nicht existiert
       leading: GestureDetector(
         onTap: onMenuPressed,
         child: menuIcon,

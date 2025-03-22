@@ -934,12 +934,12 @@ class DashboardPageState extends State<DashboardPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Text(
-                  loc.appTitle,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : logoColor,
-                      ),
+                Image.asset(
+                  Theme.of(context).brightness == Brightness.dark
+                      ? 'assets/images/text_dark.png'
+                      : 'assets/images/text_light.png',
+                  height: 40,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 8),
                 Text(
