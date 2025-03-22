@@ -1189,13 +1189,10 @@ class HomePageState extends State<HomePage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        loc.appTitle,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: CupertinoColors.label.resolveFrom(context),
-                        ),
+                      Image.asset(
+                        'assets/images/logo_app.png',
+                        height: 32,
+                        fit: BoxFit.contain,
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -1298,12 +1295,10 @@ class HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Text(
-                    loc.appTitle,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : logoColor,
-                        ),
+                  Image.asset(
+                    'assets/images/logo_app.png',
+                    height: 40,
+                    fit: BoxFit.contain,
                   ),
                   const SizedBox(height: 8),
                   Text(

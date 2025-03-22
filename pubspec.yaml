@@ -52,4 +52,7 @@ flutter:
     - assets/country_city_ar.json
     - assets/icons/icon.png
     - assets/images/logo.png
-    - assets/images/logo_app.png
+    - assets/images/logo_light.png
+    - assets/images/logo_dark.png
+    - assets/images/text_light.png
+    - assets/images/text_dark.png
