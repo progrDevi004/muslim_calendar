@@ -16,7 +16,7 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
-        android:label="taqvimi"
+        android:label="Taqvimi"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -1,7 +1,7 @@
 // lib/localization/app_localizations.dart
 
 import 'package:flutter/material.dart';
-import 'package:taqvimi/models/enums.dart';
+import 'package:Taqvimi/models/enums.dart';
 import 'package:intl/intl.dart';
 
 enum AppLanguage { english, german, turkish, arabic, bosnian, spanish, persian }

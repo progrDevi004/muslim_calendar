@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:taqvimi/models/category_model.dart';
-import 'package:taqvimi/ui/dialogs/category_edit_dialog.dart';
-import 'package:taqvimi/localization/app_localizations.dart';
-import 'package:taqvimi/ui/widgets/home/create_category_widget.dart';
+import 'package:Taqvimi/models/category_model.dart';
+import 'package:Taqvimi/ui/dialogs/category_edit_dialog.dart';
+import 'package:Taqvimi/localization/app_localizations.dart';
+import 'package:Taqvimi/ui/widgets/home/create_category_widget.dart';
 import 'package:provider/provider.dart';
-import 'package:taqvimi/data/repositories/category_repository.dart';
+import 'package:Taqvimi/data/repositories/category_repository.dart';
 
 class CategoryFilterDialog extends StatefulWidget {
   final List<CategoryModel> categories;

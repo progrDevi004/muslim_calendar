@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
-import 'package:taqvimi/data/services/google_calendar_sync_service.dart';
-import 'package:taqvimi/data/repositories/appointment_repository.dart';
-import 'package:taqvimi/models/appointment_model.dart';
+import 'package:Taqvimi/data/services/google_calendar_sync_service.dart';
+import 'package:Taqvimi/data/repositories/appointment_repository.dart';
+import 'package:Taqvimi/models/appointment_model.dart';
 
 class GoogleCalendarSyncWidget extends StatefulWidget {
   final AppointmentModel? appointment;

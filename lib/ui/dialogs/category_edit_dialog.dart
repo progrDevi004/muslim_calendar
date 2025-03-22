@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:taqvimi/models/category_model.dart';
-import 'package:taqvimi/data/repositories/category_repository.dart';
+import 'package:Taqvimi/models/category_model.dart';
+import 'package:Taqvimi/data/repositories/category_repository.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:taqvimi/data/services/calendar_sync_service.dart';
+import 'package:Taqvimi/data/services/calendar_sync_service.dart';
 import 'package:provider/provider.dart';
 
 class CategoryEditDialog extends StatefulWidget {

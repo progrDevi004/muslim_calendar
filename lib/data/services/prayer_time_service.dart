@@ -1,11 +1,11 @@
 // lib/data/services/prayer_time_service.dart
 
 import 'package:flutter/foundation.dart'; // Für ChangeNotifier
-import 'package:taqvimi/models/enums.dart';
-import 'package:taqvimi/models/appointment_model.dart';
+import 'package:Taqvimi/models/enums.dart';
+import 'package:Taqvimi/models/appointment_model.dart';
 import '../repositories/prayer_time_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:taqvimi/data/repositories/appointment_repository.dart';
+import 'package:Taqvimi/data/repositories/appointment_repository.dart';
 
 class PrayerTimeService with ChangeNotifier {
   final PrayerTimeRepository prayerTimeRepo;

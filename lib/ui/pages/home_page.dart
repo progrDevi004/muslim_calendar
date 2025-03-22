@@ -7,41 +7,41 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
-import 'package:taqvimi/ui/components/platform_adaptive_dialog.dart';
-import 'package:taqvimi/ui/components/platform_adaptive_list_tile.dart';
-import 'package:taqvimi/ui/components/platform_adaptive_navigation.dart';
+import 'package:Taqvimi/ui/components/platform_adaptive_dialog.dart';
+import 'package:Taqvimi/ui/components/platform_adaptive_list_tile.dart';
+import 'package:Taqvimi/ui/components/platform_adaptive_navigation.dart';
 
 // Repositories & Services
-import 'package:taqvimi/data/repositories/appointment_repository.dart';
-import 'package:taqvimi/data/repositories/category_repository.dart';
-import 'package:taqvimi/data/repositories/prayer_time_repository.dart';
-import 'package:taqvimi/data/services/prayer_time_service.dart';
-import 'package:taqvimi/data/services/recurrence_service.dart';
-import 'package:taqvimi/data/services/calendar_sync_service.dart';
-import 'package:taqvimi/data/services/import_settings_service.dart';
+import 'package:Taqvimi/data/repositories/appointment_repository.dart';
+import 'package:Taqvimi/data/repositories/category_repository.dart';
+import 'package:Taqvimi/data/repositories/prayer_time_repository.dart';
+import 'package:Taqvimi/data/services/prayer_time_service.dart';
+import 'package:Taqvimi/data/services/recurrence_service.dart';
+import 'package:Taqvimi/data/services/calendar_sync_service.dart';
+import 'package:Taqvimi/data/services/import_settings_service.dart';
 
 // Models & Widgets
-import 'package:taqvimi/models/appointment_model.dart';
-import 'package:taqvimi/models/category_model.dart';
-import 'package:taqvimi/models/enums.dart';
-import 'package:taqvimi/ui/widgets/prayer_time_appointment_adapter.dart';
+import 'package:Taqvimi/models/appointment_model.dart';
+import 'package:Taqvimi/models/category_model.dart';
+import 'package:Taqvimi/models/enums.dart';
+import 'package:Taqvimi/ui/widgets/prayer_time_appointment_adapter.dart';
 
 // Ausgelagerte Widgets
-import 'package:taqvimi/ui/widgets/home/calendar_view_widget.dart';
-import 'package:taqvimi/ui/widgets/home/category_filter_dialog.dart';
-import 'package:taqvimi/ui/widgets/home/navigation_bar_widget.dart';
-import 'package:taqvimi/ui/widgets/home/home_app_bar_widget.dart';
-import 'package:taqvimi/ui/widgets/home/add_appointment_fab.dart';
+import 'package:Taqvimi/ui/widgets/home/calendar_view_widget.dart';
+import 'package:Taqvimi/ui/widgets/home/category_filter_dialog.dart';
+import 'package:Taqvimi/ui/widgets/home/navigation_bar_widget.dart';
+import 'package:Taqvimi/ui/widgets/home/home_app_bar_widget.dart';
+import 'package:Taqvimi/ui/widgets/home/add_appointment_fab.dart';
 
 // Pages
-import 'package:taqvimi/ui/pages/settings_page.dart';
-import 'package:taqvimi/ui/pages/dashboard_page.dart';
-import 'package:taqvimi/ui/pages/qibla_compass_page.dart';
+import 'package:Taqvimi/ui/pages/settings_page.dart';
+import 'package:Taqvimi/ui/pages/dashboard_page.dart';
+import 'package:Taqvimi/ui/pages/qibla_compass_page.dart';
 
 // Dialogs
 
 // Localization
-import 'package:taqvimi/localization/app_localizations.dart';
+import 'package:Taqvimi/localization/app_localizations.dart';
 
 // Erweiterung für AppointmentModel - copyWith Methode hinzufügen
 extension AppointmentModelExtension on AppointmentModel {

@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import '../database_helper.dart';
-import 'package:taqvimi/models/category_model.dart';
+import 'package:Taqvimi/models/category_model.dart';
 
 class CategoryRepository {
   final DatabaseHelper dbHelper = DatabaseHelper();

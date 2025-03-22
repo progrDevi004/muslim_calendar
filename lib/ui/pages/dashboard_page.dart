@@ -12,37 +12,37 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
 // Localization & Models
-import 'package:taqvimi/localization/app_localizations.dart';
-import 'package:taqvimi/data/repositories/prayer_time_repository.dart';
-import 'package:taqvimi/models/enums.dart';
-import 'package:taqvimi/data/repositories/appointment_repository.dart';
-import 'package:taqvimi/data/services/calendar_sync_service.dart';
-import 'package:taqvimi/data/repositories/category_repository.dart';
-import 'package:taqvimi/models/dashboard_task.dart';
-import 'package:taqvimi/models/category_model.dart';
+import 'package:Taqvimi/localization/app_localizations.dart';
+import 'package:Taqvimi/data/repositories/prayer_time_repository.dart';
+import 'package:Taqvimi/models/enums.dart';
+import 'package:Taqvimi/data/repositories/appointment_repository.dart';
+import 'package:Taqvimi/data/services/calendar_sync_service.dart';
+import 'package:Taqvimi/data/repositories/category_repository.dart';
+import 'package:Taqvimi/models/dashboard_task.dart';
+import 'package:Taqvimi/models/category_model.dart';
 
 // Detailseite
-import 'package:taqvimi/ui/pages/appointment_details_page.dart';
-import 'package:taqvimi/ui/pages/appointment_creation_page.dart';
+import 'package:Taqvimi/ui/pages/appointment_details_page.dart';
+import 'package:Taqvimi/ui/pages/appointment_creation_page.dart';
 
 // Andere Pages
-import 'package:taqvimi/ui/pages/home_page.dart';
-import 'package:taqvimi/ui/pages/settings_page.dart';
-import 'package:taqvimi/ui/pages/qibla_compass_page.dart';
+import 'package:Taqvimi/ui/pages/home_page.dart';
+import 'package:Taqvimi/ui/pages/settings_page.dart';
+import 'package:Taqvimi/ui/pages/qibla_compass_page.dart';
 
 // Dashboard Widgets
-import 'package:taqvimi/ui/widgets/dashboard/dashboard_content.dart';
-import 'package:taqvimi/ui/widgets/home/category_filter_dialog.dart';
+import 'package:Taqvimi/ui/widgets/dashboard/dashboard_content.dart';
+import 'package:Taqvimi/ui/widgets/home/category_filter_dialog.dart';
 
 // Platform-Adaptive Komponenten
-import 'package:taqvimi/ui/components/platform_adaptive_dialog.dart';
-import 'package:taqvimi/ui/components/platform_adaptive_list_tile.dart';
-import 'package:taqvimi/ui/components/platform_adaptive_app_bar.dart';
-import 'package:taqvimi/ui/components/platform_adaptive_navigation.dart';
-import 'package:taqvimi/ui/components/platform_adaptive_fab.dart';
+import 'package:Taqvimi/ui/components/platform_adaptive_dialog.dart';
+import 'package:Taqvimi/ui/components/platform_adaptive_list_tile.dart';
+import 'package:Taqvimi/ui/components/platform_adaptive_app_bar.dart';
+import 'package:Taqvimi/ui/components/platform_adaptive_navigation.dart';
+import 'package:Taqvimi/ui/components/platform_adaptive_fab.dart';
 
-import 'package:taqvimi/data/services/prayer_time_service.dart';
-import 'package:taqvimi/data/services/import_settings_service.dart';
+import 'package:Taqvimi/data/services/prayer_time_service.dart';
+import 'package:Taqvimi/data/services/import_settings_service.dart';
 
 // Logo-Farbe für die Konsistenz der App
 const Color logoColor = Color(0xFF468178);

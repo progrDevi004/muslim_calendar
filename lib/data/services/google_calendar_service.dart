@@ -5,14 +5,14 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/calendar/v3.dart' as calendar;
 import 'package:http/http.dart' as http;
-import 'package:taqvimi/localization/app_localizations.dart';
-import 'package:taqvimi/models/appointment_model.dart';
+import 'package:Taqvimi/localization/app_localizations.dart';
+import 'package:Taqvimi/models/appointment_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:taqvimi/data/services/prayer_time_service.dart';
+import 'package:Taqvimi/data/services/prayer_time_service.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:syncfusion_flutter_calendar/src/calendar/common/enums.dart'
     as sf;
-import 'package:taqvimi/utils/recurrence_rule_converter.dart';
+import 'package:Taqvimi/utils/recurrence_rule_converter.dart';
 
 /// GoogleCalendarService - Low-Level API-Schnittstelle
 ///

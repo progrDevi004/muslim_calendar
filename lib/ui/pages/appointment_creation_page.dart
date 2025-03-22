@@ -11,30 +11,30 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Models & Enums - Benutze Präfix für eigene Enums
-import 'package:taqvimi/models/appointment_model.dart';
-import 'package:taqvimi/models/enums.dart';
+import 'package:Taqvimi/models/appointment_model.dart';
+import 'package:Taqvimi/models/enums.dart';
 
 // Localization
-import 'package:taqvimi/localization/app_localizations.dart';
+import 'package:Taqvimi/localization/app_localizations.dart';
 
 // Repositories
-import 'package:taqvimi/data/repositories/appointment_repository.dart';
-import 'package:taqvimi/data/repositories/category_repository.dart';
+import 'package:Taqvimi/data/repositories/appointment_repository.dart';
+import 'package:Taqvimi/data/repositories/category_repository.dart';
 
 // Models
-import 'package:taqvimi/models/category_model.dart';
+import 'package:Taqvimi/models/category_model.dart';
 
 // Services
-import 'package:taqvimi/data/services/notification_service.dart';
-import 'package:taqvimi/data/services/automatic_category_service.dart';
-import 'package:taqvimi/data/services/prayer_time_service.dart';
-import 'package:taqvimi/data/repositories/prayer_time_repository.dart';
+import 'package:Taqvimi/data/services/notification_service.dart';
+import 'package:Taqvimi/data/services/automatic_category_service.dart';
+import 'package:Taqvimi/data/services/prayer_time_service.dart';
+import 'package:Taqvimi/data/repositories/prayer_time_repository.dart';
 
 // Für das Zeitformat
 import 'package:intl/intl.dart';
 
 // CalendarSyncService
-import 'package:taqvimi/data/services/calendar_sync_service.dart';
+import 'package:Taqvimi/data/services/calendar_sync_service.dart';
 
 class AppointmentCreationPage extends StatefulWidget {
   final int? appointmentId;

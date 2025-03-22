@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:taqvimi/localization/app_localizations.dart';
+import 'package:Taqvimi/localization/app_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:taqvimi/models/dashboard_task.dart';
-import 'package:taqvimi/ui/components/platform_adaptive_card.dart';
+import 'package:Taqvimi/models/dashboard_task.dart';
+import 'package:Taqvimi/ui/components/platform_adaptive_card.dart';
 
 class TaskItem extends StatelessWidget {
   final DashboardTask task;

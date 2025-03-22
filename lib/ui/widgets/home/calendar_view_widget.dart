@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:intl/intl.dart';
 
-import 'package:taqvimi/ui/pages/appointment_details_page.dart';
-import 'package:taqvimi/ui/pages/appointment_creation_page.dart';
+import 'package:Taqvimi/ui/pages/appointment_details_page.dart';
+import 'package:Taqvimi/ui/pages/appointment_creation_page.dart';
 
 class CalendarViewWidget extends StatelessWidget {
   final CalendarView selectedView;

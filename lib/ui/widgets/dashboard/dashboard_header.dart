@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:taqvimi/ui/components/platform_adaptive_card.dart';
+import 'package:Taqvimi/ui/components/platform_adaptive_card.dart';
 
 class DashboardHeader extends StatelessWidget {
   final String dateString;

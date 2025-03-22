@@ -5,23 +5,23 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Localization
-import 'package:taqvimi/localization/app_localizations.dart';
+import 'package:Taqvimi/localization/app_localizations.dart';
 // ThemeNotifier
-import 'package:taqvimi/providers/theme_notifier.dart';
+import 'package:Taqvimi/providers/theme_notifier.dart';
 // HomePage
-import 'package:taqvimi/ui/pages/home_page.dart';
+import 'package:Taqvimi/ui/pages/home_page.dart';
 // InitialLocationPage
-import 'package:taqvimi/ui/pages/initial_location_page.dart';
+import 'package:Taqvimi/ui/pages/initial_location_page.dart';
 
 // NotificationService
-import 'package:taqvimi/data/services/notification_service.dart';
+import 'package:Taqvimi/data/services/notification_service.dart';
 // PrayerTimeService und zugehöriges Repository
-import 'package:taqvimi/data/services/prayer_time_service.dart';
-import 'package:taqvimi/data/repositories/prayer_time_repository.dart';
+import 'package:Taqvimi/data/services/prayer_time_service.dart';
+import 'package:Taqvimi/data/repositories/prayer_time_repository.dart';
 
 import 'data/repositories/appointment_repository.dart';
 import 'data/repositories/prayer_time_repository.dart';
-import 'package:taqvimi/data/repositories/category_repository.dart';
+import 'package:Taqvimi/data/repositories/category_repository.dart';
 import 'data/repositories/category_repository.dart';
 import 'data/services/calendar_sync_service.dart';
 import 'data/services/google_calendar_service.dart';

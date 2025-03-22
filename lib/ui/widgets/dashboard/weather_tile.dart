@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:taqvimi/localization/app_localizations.dart';
+import 'package:Taqvimi/localization/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 class WeatherTile extends StatelessWidget {

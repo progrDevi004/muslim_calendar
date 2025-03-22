@@ -5,7 +5,7 @@
 In der `appointment_creation_page.dart` Datei füge folgenden Import hinzu:
 
 ```dart
-import 'package:taqvimi/ui/widgets/google_calendar_sync_widget.dart';
+import 'package:Taqvimi/ui/widgets/google_calendar_sync_widget.dart';
 ```
 
 Dann füge das Widget an der passenden Stelle im Formular hinzu, zum Beispiel nach den Erinnerungseinstellungen:
@@ -25,7 +25,7 @@ GoogleCalendarSyncWidget(
 In der `settings_page.dart` Datei füge folgenden Import hinzu:
 
 ```dart
-import 'package:taqvimi/ui/widgets/google_calendar_sync_widget.dart';
+import 'package:Taqvimi/ui/widgets/google_calendar_sync_widget.dart';
 ```
 
 Dann füge das Widget in der Einstellungsliste hinzu, zum Beispiel nach den Theme-Einstellungen:
