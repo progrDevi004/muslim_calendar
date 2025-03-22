@@ -92,9 +92,6 @@ class DashboardPageState extends State<DashboardPage> {
   // Variable für Reload-Tracking
   bool _isReloading = false;
 
-  // Schlüssel für den Scaffold, um den Drawer zu öffnen
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
   @override
   void initState() {
     super.initState();
@@ -278,7 +275,8 @@ class DashboardPageState extends State<DashboardPage> {
               color: iconColor),
           title: localizations.fullSync,
           subtitle: localizations.importAndExport,
-          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          titleStyle:
+              const TextStyle(fontWeight: FontWeight.bold, inherit: true),
           onTap: () async {
             Navigator.pop(context);
 
@@ -329,7 +327,8 @@ class DashboardPageState extends State<DashboardPage> {
               color: iconColor),
           title: localizations.importOnly,
           subtitle: localizations.importFromGoogleCalendar,
-          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          titleStyle:
+              const TextStyle(fontWeight: FontWeight.bold, inherit: true),
           onTap: () {
             Navigator.pop(context);
             _calendarSyncService.importAppointments();
@@ -343,7 +342,8 @@ class DashboardPageState extends State<DashboardPage> {
               color: iconColor),
           title: localizations.exportOnly,
           subtitle: localizations.exportToGoogleCalendar,
-          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          titleStyle:
+              const TextStyle(fontWeight: FontWeight.bold, inherit: true),
           onTap: () async {
             Navigator.pop(context);
 
@@ -415,6 +415,7 @@ class DashboardPageState extends State<DashboardPage> {
           titleStyle: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
+            inherit: true,
           ),
         ),
 
@@ -425,7 +426,8 @@ class DashboardPageState extends State<DashboardPage> {
               color: iconColor),
           title: localizations.useExistingCategories,
           subtitle: localizations.searchForMatchingCategories,
-          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          titleStyle:
+              const TextStyle(fontWeight: FontWeight.bold, inherit: true),
           onTap: () async {
             Navigator.pop(context);
 
@@ -450,7 +452,8 @@ class DashboardPageState extends State<DashboardPage> {
               color: iconColor),
           title: localizations.createNewCategories,
           subtitle: localizations.forEachNewAppointment,
-          titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+          titleStyle:
+              const TextStyle(fontWeight: FontWeight.bold, inherit: true),
           onTap: () async {
             Navigator.pop(context);
 
@@ -946,6 +949,7 @@ class DashboardPageState extends State<DashboardPage> {
                   loc.menu,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: isDark ? Colors.white70 : Colors.black54,
+                        inherit: true,
                       ),
                 ),
               ],
@@ -1003,15 +1007,18 @@ class DashboardPageState extends State<DashboardPage> {
 
     final Color mainColor = Theme.of(context).colorScheme.primary;
 
+    // Erstelle einen lokalen Key, der nur für dieses Build gültig ist
+    final scaffoldKey = GlobalKey<ScaffoldState>();
+
     return Scaffold(
-      key: _scaffoldKey,
+      key: scaffoldKey,
       appBar: PlatformAdaptiveAppBar(
         title: loc.dashboard,
         leading: Icon(
           Platform.isIOS ? CupertinoIcons.line_horizontal_3 : Icons.menu,
         ),
         onLeadingPressed: () {
-          _scaffoldKey.currentState?.openDrawer();
+          scaffoldKey.currentState?.openDrawer();
         },
         centerTitle: Platform.isIOS, // Auf iOS zentrieren, auf Android links
       ),

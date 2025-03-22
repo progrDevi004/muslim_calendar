@@ -39,13 +39,16 @@ class TaskList extends StatelessWidget {
             fontWeight: FontWeight.w600,
             fontSize: 16,
             color: isDark ? Colors.white : Colors.black,
+            inherit: true,
           )
         : Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
+                  inherit: true,
                 ) ??
             const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
+              inherit: true,
             );
 
     final TextStyle emptyMessageStyle = Platform.isIOS
@@ -53,10 +56,12 @@ class TaskList extends StatelessWidget {
             color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
             fontStyle: FontStyle.italic,
             fontSize: 14,
+            inherit: true,
           )
         : TextStyle(
             color: Colors.grey.shade600,
             fontStyle: FontStyle.italic,
+            inherit: true,
           );
 
     // Header für die Aufgabenliste

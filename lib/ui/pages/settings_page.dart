@@ -441,7 +441,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return [
       // Appearance Section
       Text(
-        'Appearance',
+        loc.appearance,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -1065,7 +1065,10 @@ class _SettingsPageState extends State<SettingsPage> {
           padding: const EdgeInsets.all(16.0),
           child: TextButton.icon(
             icon: const Icon(Icons.add),
-            label: Text(loc.connectWithOutlookCalendar),
+            label: Text(loc.connectWithOutlookCalendar,
+                style: const TextStyle(
+                  inherit: true,
+                )),
             onPressed: () async {
               try {
                 // Placeholder für Outlook-Verbindungsimplementierung

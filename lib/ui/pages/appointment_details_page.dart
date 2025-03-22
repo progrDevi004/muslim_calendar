@@ -661,7 +661,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                 Expanded(
                   child: _buildAdaptiveFilledButton(
                     icon: Icons.edit,
-                    label: loc.editAppointment,
+                    label: loc.edit,
                     onPressed: _editAppointment,
                   ),
                 ),

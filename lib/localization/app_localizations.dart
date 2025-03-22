@@ -1496,6 +1496,26 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
+  String get appearance {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Aussehen';
+      case AppLanguage.turkish:
+        return 'Görünüm';
+      case AppLanguage.arabic:
+        return 'المظهر';
+      case AppLanguage.bosnian:
+        return 'Izgled';
+      case AppLanguage.spanish:
+        return 'Apariencia';
+      case AppLanguage.persian:
+        return 'ظاهر';
+      case AppLanguage.english:
+      default:
+        return 'Appearance';
+    }
+  }
+
   // >>> Getter für "apply"
   String get apply {
     switch (_currentLanguage) {

@@ -81,11 +81,13 @@ class RegularTaskItem extends StatelessWidget {
             fontWeight: FontWeight.w600,
             fontSize: 16,
             color: textColor,
+            inherit: true,
           )
         : TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
             color: textColor,
+            inherit: true,
           );
 
     final TextStyle durationStyle = Platform.isIOS
@@ -93,21 +95,25 @@ class RegularTaskItem extends StatelessWidget {
             fontWeight: FontWeight.w600,
             fontSize: 15,
             color: textColor,
+            inherit: true,
           )
         : TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
             color: textColor,
+            inherit: true,
           );
 
     final TextStyle timeStyle = TextStyle(
       color: textColor.withOpacity(0.9),
       fontSize: Platform.isIOS ? 9 : 10,
+      inherit: true,
     );
 
     final TextStyle descriptionStyle = TextStyle(
       color: textColor.withOpacity(0.9),
       fontSize: Platform.isIOS ? 13 : 14,
+      inherit: true,
     );
 
     return MouseRegion(
@@ -213,11 +219,13 @@ class AllDayTaskItem extends StatelessWidget {
             fontWeight: FontWeight.w600,
             fontSize: 16,
             color: textColor,
+            inherit: true,
           )
         : TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
             color: textColor,
+            inherit: true,
           );
 
     return MouseRegion(
@@ -293,12 +301,14 @@ class PrayerSlotItem extends StatelessWidget {
       fontWeight: Platform.isIOS ? FontWeight.w600 : FontWeight.bold,
       fontSize: Platform.isIOS ? 13 : 14,
       color: Colors.teal.shade700,
+      inherit: true,
     );
 
     final TextStyle titleStyle = TextStyle(
       fontWeight: Platform.isIOS ? FontWeight.w600 : FontWeight.bold,
       fontSize: Platform.isIOS ? 15 : 16,
       color: isDark ? Colors.white : Colors.black87,
+      inherit: true,
     );
 
     return Container(

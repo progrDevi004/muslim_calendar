@@ -40,15 +40,18 @@ class WeatherTile extends StatelessWidget {
             fontWeight: FontWeight.w600,
             fontSize: 16,
             color: accentTextColor,
+            inherit: true,
           )
         : theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: accentTextColor,
+              inherit: true,
             ) ??
             TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
               color: accentTextColor,
+              inherit: true,
             );
 
     final TextStyle temperatureStyle = Platform.isIOS
@@ -56,28 +59,34 @@ class WeatherTile extends StatelessWidget {
             fontWeight: FontWeight.w700,
             fontSize: 28,
             color: accentTextColor,
+            inherit: true,
           )
         : theme.textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: accentTextColor,
+              inherit: true,
             ) ??
             TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 28,
               color: accentTextColor,
+              inherit: true,
             );
 
     final TextStyle locationStyle = Platform.isIOS
         ? TextStyle(
             fontSize: 12,
             color: accentTextColor.withOpacity(0.8),
+            inherit: true,
           )
         : theme.textTheme.bodySmall?.copyWith(
               color: accentTextColor,
+              inherit: true,
             ) ??
             TextStyle(
               fontSize: 12,
               color: accentTextColor,
+              inherit: true,
             );
 
     if (isLoading) {
@@ -102,13 +111,17 @@ class WeatherTile extends StatelessWidget {
             Text(
               loc.networkError,
               style: TextStyle(
-                  color: errorColor, fontWeight: FontWeight.bold, fontSize: 16),
+                  color: errorColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  inherit: true),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 4),
             Text(
               loc.weatherFetchError,
-              style: TextStyle(color: Colors.red.shade300, fontSize: 12),
+              style: TextStyle(
+                  color: Colors.red.shade300, fontSize: 12, inherit: true),
               textAlign: TextAlign.center,
             ),
           ],
@@ -140,6 +153,7 @@ class WeatherTile extends StatelessWidget {
           style: TextStyle(
             fontSize: Platform.isIOS ? 30 : 28,
             color: accentTextColor,
+            inherit: true,
           ),
         ),
         const Spacer(),

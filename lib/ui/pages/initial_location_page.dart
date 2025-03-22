@@ -771,7 +771,6 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     ];
   }
 
-  @override
   Widget buildStep(BuildContext context, int index) {
     // Falls du einzelne Step-Widgets individuell aufbauen willst
     // (z. B. aus Performancegründen).
@@ -779,7 +778,6 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     throw UnimplementedError();
   }
 
-  @override
   Widget _buildAdaptiveStepper(BuildContext context) {
     final steps = _buildSteps();
     final loc = Provider.of<AppLocalizations>(context);
@@ -819,7 +817,7 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     return SafeArea(
       child: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 32.0),
           child: _buildAdaptiveStepper(context),
         ),
       ),

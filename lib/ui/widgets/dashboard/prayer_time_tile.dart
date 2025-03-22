@@ -36,15 +36,18 @@ class PrayerTimeTile extends StatelessWidget {
             fontWeight: FontWeight.w600,
             fontSize: 16,
             color: accentTextColor,
+            inherit: true,
           )
         : theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: accentTextColor,
+              inherit: true,
             ) ??
             TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
               color: accentTextColor,
+              inherit: true,
             );
 
     final TextStyle timeTextStyle = Platform.isIOS
@@ -52,13 +55,16 @@ class PrayerTimeTile extends StatelessWidget {
             fontSize: 12,
             color: accentTextColor,
             fontWeight: FontWeight.w500,
+            inherit: true,
           )
         : theme.textTheme.bodySmall?.copyWith(
               color: accentTextColor,
+              inherit: true,
             ) ??
             TextStyle(
               fontSize: 12,
               color: accentTextColor,
+              inherit: true,
             );
 
     if (isLoading) {
@@ -83,13 +89,17 @@ class PrayerTimeTile extends StatelessWidget {
             Text(
               loc.networkError,
               style: TextStyle(
-                  color: errorColor, fontWeight: FontWeight.bold, fontSize: 16),
+                  color: errorColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  inherit: true),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 4),
             Text(
               loc.prayerTimesFetchError,
-              style: TextStyle(color: Colors.red.shade300, fontSize: 12),
+              style: TextStyle(
+                  color: Colors.red.shade300, fontSize: 12, inherit: true),
               textAlign: TextAlign.center,
             ),
           ],
