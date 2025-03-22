@@ -21,6 +21,7 @@ import 'package:muslim_calendar/data/repositories/prayer_time_repository.dart';
 
 import 'data/repositories/appointment_repository.dart';
 import 'data/repositories/prayer_time_repository.dart';
+import 'package:muslim_calendar/data/repositories/category_repository.dart';
 import 'data/repositories/category_repository.dart';
 import 'data/services/calendar_sync_service.dart';
 import 'data/services/google_calendar_service.dart';
@@ -98,6 +99,10 @@ void main() async {
         // ThemeNotifier-Provider
         ChangeNotifierProvider(
           create: (_) => ThemeNotifier(),
+        ),
+        // CategoryRepository als Provider
+        Provider<CategoryRepository>(
+          create: (_) => categoryRepository,
         ),
         // LocationService bereitstellen
         ChangeNotifierProvider<LocationService>(

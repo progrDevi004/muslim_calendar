@@ -182,17 +182,17 @@ class _CategoryEditDialogState extends State<CategoryEditDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (_isStandardCategory)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 16.0),
-                child: Text(
-                  'Hinweis: Bei Standardkategorien kann nur die Farbe geändert werden.',
-                  style: TextStyle(
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey,
-                  ),
-                ),
-              ),
+            // if (_isStandardCategory)
+            //   const Padding(
+            //     padding: EdgeInsets.only(bottom: 16.0),
+            //     child: Text(
+            //       'Hinweis: Bei Standardkategorien kann nur die Farbe geändert werden.',
+            //       style: TextStyle(
+            //         fontStyle: FontStyle.italic,
+            //         color: Colors.grey,
+            //       ),
+            //     ),
+            //   ),
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(

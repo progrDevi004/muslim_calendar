@@ -55,6 +55,46 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
+  String get edit {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Bearbeiten';
+      case AppLanguage.turkish:
+        return 'Düzenle';
+      case AppLanguage.arabic:
+        return 'تعديل';
+      case AppLanguage.bosnian:
+        return 'Uredi';
+      case AppLanguage.spanish:
+        return 'Editar';
+      case AppLanguage.persian:
+        return 'ویرایش';
+      case AppLanguage.english:
+      default:
+        return 'Edit';
+    }
+  }
+
+  String getDeleteCategoryConfirmation(AppLanguage lang, String catName) {
+    switch (lang) {
+      case AppLanguage.german:
+        return 'Möchten Sie die Kategorie "$catName" wirklich löschen?';
+      case AppLanguage.turkish:
+        return 'Kategori "$catName" silinsin mi?';
+      case AppLanguage.arabic:
+        return 'هل تريد حذف الفئة "$catName"؟';
+      case AppLanguage.bosnian:
+        return 'Želite li zaista izbrisati kategoriju "$catName"?';
+      case AppLanguage.spanish:
+        return '¿Realmente desea eliminar la categoría "$catName"?';
+      case AppLanguage.persian:
+        return 'آیا واقعاً می‌خواهید دسته "$catName" را حذف کنید؟';
+      case AppLanguage.english:
+      default:
+        return 'Do you really want to delete the category "$catName"?';
+    }
+  }
+
   String mapAppLanguageToCode(AppLanguage lang) {
     switch (lang) {
       case AppLanguage.german:
@@ -3668,6 +3708,26 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.english:
       default:
         return "Import Categories";
+    }
+  }
+
+  String get deleteCategory {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Kategorie löschen";
+      case AppLanguage.turkish:
+        return "Kategoriyi Sil";
+      case AppLanguage.arabic:
+        return "حذف الفئة";
+      case AppLanguage.bosnian:
+        return "Izbriši kategoriju";
+      case AppLanguage.spanish:
+        return "Eliminar categoría";
+      case AppLanguage.persian:
+        return "حذف دسته‌بندی";
+      case AppLanguage.english:
+      default:
+        return "Delete Category";
     }
   }
 
