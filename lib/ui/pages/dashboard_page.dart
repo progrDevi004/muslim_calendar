@@ -40,6 +40,7 @@ import 'package:Taqvimi/ui/components/platform_adaptive_list_tile.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_app_bar.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_navigation.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_fab.dart';
+import 'package:Taqvimi/ui/components/app_drawer.dart';
 
 import 'package:Taqvimi/data/services/prayer_time_service.dart';
 import 'package:Taqvimi/data/services/import_settings_service.dart';
@@ -223,271 +224,327 @@ class DashboardPageState extends State<DashboardPage> {
   /// Zeigt den Dialog zum Filtern nach Kategorien an
   void _showCategoryFilterDialog(BuildContext context) {
     // Schließe den Drawer, falls er offen ist
-    Navigator.pop(context);
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
 
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return CategoryFilterDialog(
-          categories: _allCategories,
-          selectedCategoryIds: _selectedCategoryIds,
-          onCategoriesSelected: (selectedIds) {
-            setState(() {
-              _selectedCategoryIds = selectedIds;
-            });
-            _saveSelectedCategoryIdsToPrefs();
+    // Wichtig: Längere Verzögerung hinzufügen, um sicherzustellen, dass der Drawer-Kontext
+    // vollständig entsorgt wurde, bevor der Dialog geöffnet wird
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
 
-            // Daten neu laden
-            reloadData();
+      // Explizit den aktuellen Fokus zurücksetzen
+      FocusManager.instance.primaryFocus?.unfocus();
 
-            // HomePage aktualisieren falls nötig
-            final homePageState =
-                context.findAncestorStateOfType<HomePageState>();
-            homePageState?.loadAllAppointments();
-          },
-          onCategoriesChanged: () {
-            _loadAllCategories();
-            reloadData();
+      // WidgetsBinding verwenden, um sicherzustellen, dass der Fokus-Reset abgeschlossen ist
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (ctx) {
+            return CategoryFilterDialog(
+              categories: _allCategories,
+              selectedCategoryIds: _selectedCategoryIds,
+              onCategoriesSelected: (selectedIds) {
+                if (!mounted) return;
+                setState(() {
+                  _selectedCategoryIds = selectedIds;
+                });
+                _saveSelectedCategoryIdsToPrefs();
+
+                // Daten neu laden
+                reloadData();
+
+                // HomePage aktualisieren falls nötig
+                final homePageState =
+                    context.findAncestorStateOfType<HomePageState>();
+                homePageState?.loadAllAppointments();
+              },
+              onCategoriesChanged: () {
+                if (!mounted) return;
+                _loadAllCategories();
+                reloadData();
+              },
+            );
           },
         );
-      },
-    );
+      });
+    });
   }
 
   /// Zeigt das Synchronisationsmenü an
   void _showSyncOptionsDialog(BuildContext context) {
     // Schließe den Drawer, falls er offen ist
-    Navigator.pop(context);
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
 
-    final localizations = Provider.of<AppLocalizations>(context, listen: false);
-    final scaffold = ScaffoldMessenger.of(context);
+    // Wichtig: Längere Verzögerung hinzufügen, um sicherzustellen dass die Fokus-Probleme vermieden werden
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
 
-    final Color iconColor = logoColor;
+      // Explizit den aktuellen Fokus zurücksetzen
+      FocusManager.instance.primaryFocus?.unfocus();
 
-    // Dialog-Inhalt erstellen, der für beide Plattformen passt
-    final content = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Vollständig synchronisieren
-        PlatformAdaptiveListTile(
-          leading: Icon(
-              Platform.isIOS ? CupertinoIcons.arrow_2_circlepath : Icons.sync,
-              color: iconColor),
-          title: localizations.fullSync,
-          subtitle: localizations.importAndExport,
-          titleStyle:
-              const TextStyle(fontWeight: FontWeight.bold, inherit: true),
-          onTap: () async {
-            Navigator.pop(context);
+      // WidgetsBinding verwenden, um sicherzustellen, dass der Fokus-Reset abgeschlossen ist
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
 
-            try {
-              // Fortschritt anzeigen
-              scaffold.showSnackBar(
-                SnackBar(
-                    content: Text(localizations.syncingWithGoogleCalendar)),
-              );
+        final localizations =
+            Provider.of<AppLocalizations>(context, listen: false);
+        final scaffold = ScaffoldMessenger.of(context);
+        final Color iconColor = logoColor;
 
-              // Vollständige Synchronisation durchführen
-              await _calendarSyncService.syncGoogleCalendarNow();
+        // Dialog-Inhalt erstellen, der für beide Plattformen passt
+        final content = Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Vollständig synchronisieren
+            PlatformAdaptiveListTile(
+              leading: Icon(
+                  Platform.isIOS
+                      ? CupertinoIcons.arrow_2_circlepath
+                      : Icons.sync,
+                  color: iconColor),
+              title: localizations.fullSync,
+              subtitle: localizations.importAndExport,
+              titleStyle:
+                  const TextStyle(fontWeight: FontWeight.bold, inherit: true),
+              onTap: () async {
+                Navigator.pop(context);
 
-              // Nach erfolgreicher Synchronisation neu laden
-              await reloadData();
+                try {
+                  // Fortschritt anzeigen
+                  scaffold.showSnackBar(
+                    SnackBar(
+                        content: Text(localizations.syncingWithGoogleCalendar)),
+                  );
 
-              // Auch HomePage aktualisieren falls nötig
-              final homePageState =
-                  context.findAncestorStateOfType<HomePageState>();
-              homePageState?.loadAllAppointments();
+                  // Vollständige Synchronisation durchführen
+                  await _calendarSyncService.syncGoogleCalendarNow();
 
-              scaffold.clearSnackBars();
-              scaffold.showSnackBar(
-                SnackBar(
-                  content: Text(localizations.syncCompleted),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            } catch (e) {
-              debugPrint('Sync-Fehler: $e');
-              scaffold.clearSnackBars();
-              scaffold.showSnackBar(
-                SnackBar(
-                  content: Text(localizations.syncSyncError(e.toString())),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          },
-        ),
+                  // Nach erfolgreicher Synchronisation neu laden
+                  await reloadData();
 
-        // Nur importieren
-        PlatformAdaptiveListTile(
-          leading: Icon(
-              Platform.isIOS
-                  ? CupertinoIcons.arrow_down_circle
-                  : Icons.download,
-              color: iconColor),
-          title: localizations.importOnly,
-          subtitle: localizations.importFromGoogleCalendar,
-          titleStyle:
-              const TextStyle(fontWeight: FontWeight.bold, inherit: true),
-          onTap: () {
-            Navigator.pop(context);
-            _calendarSyncService.importAppointments();
-          },
-        ),
+                  // Auch HomePage aktualisieren falls nötig
+                  final homePageState =
+                      context.findAncestorStateOfType<HomePageState>();
+                  homePageState?.loadAllAppointments();
 
-        // Nur exportieren
-        PlatformAdaptiveListTile(
-          leading: Icon(
-              Platform.isIOS ? CupertinoIcons.arrow_up_circle : Icons.upload,
-              color: iconColor),
-          title: localizations.exportOnly,
-          subtitle: localizations.exportToGoogleCalendar,
-          titleStyle:
-              const TextStyle(fontWeight: FontWeight.bold, inherit: true),
-          onTap: () async {
-            Navigator.pop(context);
+                  scaffold.clearSnackBars();
+                  scaffold.showSnackBar(
+                    SnackBar(
+                      content: Text(localizations.syncCompleted),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  debugPrint('Sync-Fehler: $e');
+                  scaffold.clearSnackBars();
+                  scaffold.showSnackBar(
+                    SnackBar(
+                      content: Text(localizations.syncSyncError(e.toString())),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
 
-            try {
-              // Fortschritt anzeigen
-              scaffold.showSnackBar(
-                SnackBar(
-                    content: Text(localizations.exportingToGoogleCalendar)),
-              );
+            // Nur importieren
+            PlatformAdaptiveListTile(
+              leading: Icon(
+                  Platform.isIOS
+                      ? CupertinoIcons.arrow_down_circle
+                      : Icons.download,
+                  color: iconColor),
+              title: localizations.importOnly,
+              subtitle: localizations.importFromGoogleCalendar,
+              titleStyle:
+                  const TextStyle(fontWeight: FontWeight.bold, inherit: true),
+              onTap: () {
+                Navigator.pop(context);
+                _calendarSyncService.importAppointments();
+              },
+            ),
 
-              // Export durchführen
-              await _calendarSyncService.exportAppointments();
+            // Nur exportieren
+            PlatformAdaptiveListTile(
+              leading: Icon(
+                  Platform.isIOS
+                      ? CupertinoIcons.arrow_up_circle
+                      : Icons.upload,
+                  color: iconColor),
+              title: localizations.exportOnly,
+              subtitle: localizations.exportToGoogleCalendar,
+              titleStyle:
+                  const TextStyle(fontWeight: FontWeight.bold, inherit: true),
+              onTap: () async {
+                Navigator.pop(context);
 
-              scaffold.clearSnackBars();
-              scaffold.showSnackBar(
-                SnackBar(
-                  content: Text(localizations.syncExportCompleted ??
-                      localizations.exportCompleted),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            } catch (e) {
-              debugPrint('Export-Fehler: $e');
-              scaffold.clearSnackBars();
-              scaffold.showSnackBar(
-                SnackBar(
-                  content: Text(localizations.exportError(e.toString())),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          },
-        ),
-      ],
-    );
+                try {
+                  // Fortschritt anzeigen
+                  scaffold.showSnackBar(
+                    SnackBar(
+                        content: Text(localizations.exportingToGoogleCalendar)),
+                  );
 
-    // Dialog-Aktionen erstellen
-    final actions = [
-      PlatformAdaptiveDialog.adaptiveDialogAction(
-        context: context,
-        text: localizations.cancel,
-        onPressed: () => Navigator.pop(context),
-        color: logoColor,
-      ),
-    ];
+                  // Export durchführen
+                  await _calendarSyncService.exportAppointments();
 
-    // Plattformspezifischen Dialog anzeigen
-    PlatformAdaptiveDialog.showAdaptiveDialog(
-      context: context,
-      title: localizations.googleCalendar,
-      content: content,
-      actions: actions,
-    );
+                  scaffold.clearSnackBars();
+                  scaffold.showSnackBar(
+                    SnackBar(
+                      content: Text(localizations.syncExportCompleted ??
+                          localizations.exportCompleted),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  debugPrint('Export-Fehler: $e');
+                  scaffold.clearSnackBars();
+                  scaffold.showSnackBar(
+                    SnackBar(
+                      content: Text(localizations.exportError(e.toString())),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        );
+
+        // Dialog-Aktionen erstellen
+        final actions = [
+          PlatformAdaptiveDialog.adaptiveDialogAction(
+            context: context,
+            text: localizations.cancel,
+            onPressed: () => Navigator.pop(context),
+            color: logoColor,
+          ),
+        ];
+
+        // Plattformspezifischen Dialog anzeigen
+        PlatformAdaptiveDialog.showAdaptiveDialog(
+          context: context,
+          title: localizations.googleCalendar,
+          content: content,
+          actions: actions,
+        );
+      });
+    });
   }
 
   /// Zeigt einen Dialog für Import-Optionen an
   void _showImportOptionsDialog(BuildContext context) {
-    final localizations = Provider.of<AppLocalizations>(context, listen: false);
-    final scaffold = ScaffoldMessenger.of(context);
+    // Schließe den Drawer, falls er offen ist
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
 
-    final Color iconColor = logoColor;
+    // Wichtig: Längere Verzögerung hinzufügen, um Fokus-Probleme zu vermeiden
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
 
-    // Dialog-Inhalt erstellen, der für beide Plattformen passt
-    final content = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        PlatformAdaptiveListTile(
-          title: localizations.howToHandleCategories,
-          titleStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            inherit: true,
+      // Explizit den aktuellen Fokus zurücksetzen
+      FocusManager.instance.primaryFocus?.unfocus();
+
+      // WidgetsBinding verwenden, um sicherzustellen, dass der Fokus-Reset abgeschlossen ist
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        final localizations =
+            Provider.of<AppLocalizations>(context, listen: false);
+        final scaffold = ScaffoldMessenger.of(context);
+        final Color iconColor = logoColor;
+
+        // Dialog-Inhalt erstellen, der für beide Plattformen passt
+        final content = Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PlatformAdaptiveListTile(
+              title: localizations.howToHandleCategories,
+              titleStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                inherit: true,
+              ),
+            ),
+
+            // Bestehende Kategorien verwenden
+            PlatformAdaptiveListTile(
+              leading: Icon(
+                  Platform.isIOS ? CupertinoIcons.tag : Icons.category_outlined,
+                  color: iconColor),
+              title: localizations.useExistingCategories,
+              subtitle: localizations.searchForMatchingCategories,
+              titleStyle:
+                  const TextStyle(fontWeight: FontWeight.bold, inherit: true),
+              onTap: () async {
+                Navigator.pop(context);
+
+                try {
+                  // Speichere zuerst die Import-Option
+                  await ImportSettingsService.saveImportOption(2);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(localizations.importOptionSaved)),
+                  );
+                } catch (e) {
+                  debugPrint('Fehler beim Speichern der Import-Option: $e');
+                }
+              },
+            ),
+
+            // Neue Kategorien erstellen
+            PlatformAdaptiveListTile(
+              leading: Icon(
+                  Platform.isIOS
+                      ? CupertinoIcons.add_circled
+                      : Icons.add_circle_outline,
+                  color: iconColor),
+              title: localizations.createNewCategories,
+              subtitle: localizations.forEachNewAppointment,
+              titleStyle:
+                  const TextStyle(fontWeight: FontWeight.bold, inherit: true),
+              onTap: () async {
+                Navigator.pop(context);
+
+                try {
+                  // Speichere zuerst die Import-Option
+                  await ImportSettingsService.saveImportOption(0);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(localizations.importOptionSaved)),
+                  );
+                } catch (e) {
+                  debugPrint('Fehler beim Speichern der Import-Option: $e');
+                }
+              },
+            ),
+          ],
+        );
+
+        // Dialog-Aktionen erstellen
+        final actions = [
+          PlatformAdaptiveDialog.adaptiveDialogAction(
+            context: context,
+            text: localizations.cancel,
+            onPressed: () => Navigator.pop(context),
+            color: logoColor,
           ),
-        ),
+        ];
 
-        // Bestehende Kategorien verwenden
-        PlatformAdaptiveListTile(
-          leading: Icon(
-              Platform.isIOS ? CupertinoIcons.tag : Icons.category_outlined,
-              color: iconColor),
-          title: localizations.useExistingCategories,
-          subtitle: localizations.searchForMatchingCategories,
-          titleStyle:
-              const TextStyle(fontWeight: FontWeight.bold, inherit: true),
-          onTap: () async {
-            Navigator.pop(context);
-
-            try {
-              // Speichere zuerst die Import-Option
-              await ImportSettingsService.saveImportOption(2);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(localizations.importOptionSaved)),
-              );
-            } catch (e) {
-              debugPrint('Fehler beim Speichern der Import-Option: $e');
-            }
-          },
-        ),
-
-        // Neue Kategorien erstellen
-        PlatformAdaptiveListTile(
-          leading: Icon(
-              Platform.isIOS
-                  ? CupertinoIcons.add_circled
-                  : Icons.add_circle_outline,
-              color: iconColor),
-          title: localizations.createNewCategories,
-          subtitle: localizations.forEachNewAppointment,
-          titleStyle:
-              const TextStyle(fontWeight: FontWeight.bold, inherit: true),
-          onTap: () async {
-            Navigator.pop(context);
-
-            try {
-              // Speichere zuerst die Import-Option
-              await ImportSettingsService.saveImportOption(0);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(localizations.importOptionSaved)),
-              );
-            } catch (e) {
-              debugPrint('Fehler beim Speichern der Import-Option: $e');
-            }
-          },
-        ),
-      ],
-    );
-
-    // Dialog-Aktionen erstellen
-    final actions = [
-      PlatformAdaptiveDialog.adaptiveDialogAction(
-        context: context,
-        text: localizations.cancel,
-        onPressed: () => Navigator.pop(context),
-        color: logoColor,
-      ),
-    ];
-
-    // Plattformspezifischen Dialog anzeigen
-    PlatformAdaptiveDialog.showAdaptiveDialog(
-      context: context,
-      title: localizations.importOptions,
-      content: content,
-      actions: actions,
-    );
+        // Plattformspezifischen Dialog anzeigen
+        PlatformAdaptiveDialog.showAdaptiveDialog(
+          context: context,
+          title: localizations.importOptions,
+          content: content,
+          actions: actions,
+        );
+      });
+    });
   }
 
   /// Lädt alle Daten für das Dashboard: Wetter, Gebetszeiten, heutige Termine
@@ -917,82 +974,6 @@ class DashboardPageState extends State<DashboardPage> {
     return DateFormat(pattern).format(dt);
   }
 
-  // Baut den Drawer mit den Menüoptionen
-  Widget _buildDrawer(AppLocalizations loc) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color headerColor =
-        isDark ? Colors.grey.shade800 : logoColor.withOpacity(0.1);
-    final Color iconColor = logoColor;
-
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: <Widget>[
-          // Header
-          DrawerHeader(
-            decoration: BoxDecoration(
-              color: headerColor,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Image.asset(
-                  Theme.of(context).brightness == Brightness.dark
-                      ? 'assets/images/text_dark.png'
-                      : 'assets/images/text_light.png',
-                  height: 40,
-                  fit: BoxFit.contain,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  loc.menu,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: isDark ? Colors.white70 : Colors.black54,
-                        inherit: true,
-                      ),
-                ),
-              ],
-            ),
-          ),
-
-          // Einstellungen
-          ListTile(
-            leading: Icon(Icons.settings, color: iconColor),
-            title: Text(loc.settings),
-            onTap: () => _openSettings(),
-          ),
-
-          // Qibla Kompass
-          ListTile(
-            leading: Icon(Icons.explore, color: iconColor),
-            title: Text(loc.qiblaCompass),
-            onTap: () => _openQiblaCompass(),
-          ),
-
-          // Kategorien
-          ListTile(
-            leading: Icon(Icons.category, color: iconColor),
-            title: Text(loc.categoryLabel),
-            onTap: () => _showCategoryFilterDialog(context),
-          ),
-
-          const Divider(),
-
-          // Synchronisation
-          ListTile(
-            leading: Icon(Icons.sync, color: iconColor),
-            title: Text(loc.synchronization),
-            onTap: () => _showSyncOptionsDialog(context),
-          ),
-
-          // Weitere Trennlinie am Ende
-          const Divider(),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
@@ -1022,7 +1003,47 @@ class DashboardPageState extends State<DashboardPage> {
         },
         centerTitle: Platform.isIOS, // Auf iOS zentrieren, auf Android links
       ),
-      drawer: _buildDrawer(loc),
+      drawer: AppDrawer(
+        onSettingsOpen: () async {
+          // Einstellungen neu laden
+          final prefs = await SharedPreferences.getInstance();
+          _use24hFormat = prefs.getBool('use24hFormat') ?? false;
+          _showPrayerSlotsInDashboard =
+              prefs.getBool('showPrayerSlotsInDashboard') ?? true;
+
+          // Daten neu laden
+          await reloadData();
+
+          // HomePage aktualisieren falls nötig
+          final homePageState =
+              context.findAncestorStateOfType<HomePageState>();
+          homePageState?.loadAllAppointments();
+        },
+        onCategoriesSelected: (selectedIds) {
+          setState(() {
+            _selectedCategoryIds = selectedIds;
+          });
+          _saveSelectedCategoryIdsToPrefs();
+
+          // Daten neu laden
+          reloadData();
+
+          // HomePage aktualisieren falls nötig
+          final homePageState =
+              context.findAncestorStateOfType<HomePageState>();
+          homePageState?.loadAllAppointments();
+        },
+        onReloadAppointments: () {
+          _loadAllCategories();
+          reloadData();
+          // HomePage aktualisieren falls nötig
+          final homePageState =
+              context.findAncestorStateOfType<HomePageState>();
+          homePageState?.loadAllAppointments();
+        },
+        categories: _allCategories,
+        selectedCategoryIds: _selectedCategoryIds,
+      ),
       floatingActionButton: PlatformAdaptiveScaffoldFAB.buildFAB(
         androidIcon: Icons.add,
         iOSIcon: CupertinoIcons.add,
