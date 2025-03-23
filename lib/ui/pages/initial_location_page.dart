@@ -781,45 +781,67 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
   Widget _buildAdaptiveStepper(BuildContext context) {
     final steps = _buildSteps();
     final loc = Provider.of<AppLocalizations>(context);
-    return Stepper(
-      currentStep: _currentStep,
-      onStepTapped: (index) {
-        setState(() {
-          _currentStep = index;
-        });
-      },
-      onStepContinue: _onStepContinue,
-      onStepCancel: _onStepCancel,
-      steps: steps,
-      controlsBuilder: (BuildContext context, ControlsDetails details) {
-        final isLastStep = _currentStep == steps.length - 1;
-        final canGoBack = _currentStep > 0;
 
-        return Row(
-          children: [
-            ElevatedButton(
-              onPressed: details.onStepContinue,
-              child: Text(isLastStep ? loc.finish : loc.next),
+    // Hier wird das Layout angepasst, um Scrollbarkeit zu verbessern
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        // Minimale Höhe, aber wächst mit Inhalt
+        minHeight: 200,
+        maxHeight: MediaQuery.of(context).size.height - 150,
+      ),
+      child: Stepper(
+        currentStep: _currentStep,
+        onStepTapped: (index) {
+          setState(() {
+            _currentStep = index;
+          });
+        },
+        onStepContinue: _onStepContinue,
+        onStepCancel: _onStepCancel,
+        steps: steps,
+        physics: const ClampingScrollPhysics(), // Wichtig für die Scrollbarkeit
+        controlsBuilder: (BuildContext context, ControlsDetails details) {
+          final isLastStep = _currentStep == steps.length - 1;
+          final canGoBack = _currentStep > 0;
+
+          // Füge zusätzlichen Padding am Ende hinzu, damit die Buttons besser erreichbar sind
+          return Padding(
+            padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
+            child: Row(
+              children: [
+                ElevatedButton(
+                  onPressed: details.onStepContinue,
+                  child: Text(isLastStep ? loc.finish : loc.next),
+                ),
+                const SizedBox(width: 8),
+                if (canGoBack)
+                  OutlinedButton(
+                    onPressed: details.onStepCancel,
+                    child: Text(loc.back),
+                  ),
+              ],
             ),
-            const SizedBox(width: 8),
-            if (canGoBack)
-              OutlinedButton(
-                onPressed: details.onStepCancel,
-                child: Text(loc.back),
-              ),
-          ],
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
   Widget _buildMainContent(AppLocalizations loc) {
     return SafeArea(
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0),
-          child: _buildAdaptiveStepper(context),
-        ),
+      child: CustomScrollView(
+        // AlwaysScrollableScrollPhysics erzwingt Scrollbarkeit auch bei kleinem Inhalt
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverFillRemaining(
+            hasScrollBody:
+                true, // Dies ist wichtig, um das Scrollen zu ermöglichen
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: _buildAdaptiveStepper(context),
+            ),
+          ),
+        ],
       ),
     );
   }
