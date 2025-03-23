@@ -338,10 +338,34 @@ class HomePageState extends State<HomePage> {
 
   Future<void> _loadAllCategories() async {
     final cats = await _categoryRepo.getAllCategories();
-    setState(() {
-      _allCategories = cats;
-      _selectedCategoryIds = cats.map((e) => e.id!).toSet();
-    });
+
+    // Gespeicherte Kategorieauswahl aus SharedPreferences laden
+    final prefs = await SharedPreferences.getInstance();
+    final savedCategoryList = prefs.getStringList('selectedCategoryIds');
+
+    Set<int> selectedIds;
+    if (savedCategoryList != null && savedCategoryList.isNotEmpty) {
+      // Konvertiere die gespeicherten String-IDs zurück zu ints
+      selectedIds = savedCategoryList
+          .map((idStr) => int.tryParse(idStr))
+          .where((id) => id != null)
+          .map((id) => id!)
+          .toSet();
+
+      // Stelle sicher, dass nur gültige Kategorien ausgewählt sind
+      selectedIds =
+          selectedIds.where((id) => cats.any((cat) => cat.id == id)).toSet();
+    } else {
+      // Standard: Alle Kategorien auswählen
+      selectedIds = cats.map((e) => e.id!).toSet();
+    }
+
+    if (mounted) {
+      setState(() {
+        _allCategories = cats;
+        _selectedCategoryIds = selectedIds;
+      });
+    }
   }
 
   // Wandelt einen DB-Wert in int? um.
@@ -366,12 +390,16 @@ class HomePageState extends State<HomePage> {
 
       // Adapter verwenden, um Termine zu konvertieren
       for (var appointment in appointments) {
-        final appointmentList = await _adapter.getAppointmentsForRange(
-          appointment,
-          DateTime.now().subtract(const Duration(days: 365)),
-          DateTime.now().add(const Duration(days: 365)),
-        );
-        allAppointments.addAll(appointmentList);
+        // Nur Termine der ausgewählten Kategorien hinzufügen
+        if (appointment.categoryId != null &&
+            _selectedCategoryIds.contains(appointment.categoryId)) {
+          final appointmentList = await _adapter.getAppointmentsForRange(
+            appointment,
+            DateTime.now().subtract(const Duration(days: 365)),
+            DateTime.now().add(const Duration(days: 365)),
+          );
+          allAppointments.addAll(appointmentList);
+        }
       }
 
       // Die aktuelle Kalenderansicht bestimmen

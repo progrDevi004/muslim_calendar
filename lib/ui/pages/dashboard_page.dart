@@ -175,9 +175,31 @@ class DashboardPageState extends State<DashboardPage> {
   /// Lädt alle Kategorien für den Kategoriefilter
   Future<void> _loadAllCategories() async {
     final cats = await _categoryRepo.getAllCategories();
+
+    // Gespeicherte Kategorieauswahl aus SharedPreferences laden
+    final prefs = await SharedPreferences.getInstance();
+    final savedCategoryList = prefs.getStringList('selectedCategoryIds');
+
+    Set<int> selectedIds;
+    if (savedCategoryList != null && savedCategoryList.isNotEmpty) {
+      // Konvertiere die gespeicherten String-IDs zurück zu ints
+      selectedIds = savedCategoryList
+          .map((idStr) => int.tryParse(idStr))
+          .where((id) => id != null)
+          .map((id) => id!)
+          .toSet();
+
+      // Stelle sicher, dass nur gültige Kategorien ausgewählt sind
+      selectedIds =
+          selectedIds.where((id) => cats.any((cat) => cat.id == id)).toSet();
+    } else {
+      // Standard: Alle Kategorien auswählen
+      selectedIds = cats.map((e) => e.id!).toSet();
+    }
+
     setState(() {
       _allCategories = cats;
-      _selectedCategoryIds = cats.map((e) => e.id!).toSet();
+      _selectedCategoryIds = selectedIds;
     });
   }
 
@@ -228,20 +250,23 @@ class DashboardPageState extends State<DashboardPage> {
       Navigator.pop(context);
     }
 
-    // Wichtig: Längere Verzögerung hinzufügen, um sicherzustellen, dass der Drawer-Kontext
-    // vollständig entsorgt wurde, bevor der Dialog geöffnet wird
+    // Zuerst den BuildContext für später speichern, da der ursprüngliche Kontext nach Navigator.pop()
+    // nicht mehr gültig sein könnte
+    final globalContext = Navigator.of(context).context;
+
+    // Verzögerung hinzufügen, um sicherzustellen, dass der Drawer vollständig geschlossen ist
     Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
 
       // Explizit den aktuellen Fokus zurücksetzen
       FocusManager.instance.primaryFocus?.unfocus();
 
-      // WidgetsBinding verwenden, um sicherzustellen, dass der Fokus-Reset abgeschlossen ist
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Dialog in einem separaten Future.microtask anzeigen, um die Trennung vom vorherigen Frame zu gewährleisten
+      Future.microtask(() {
         if (!mounted) return;
 
         showDialog(
-          context: context,
+          context: globalContext,
           barrierDismissible: true,
           builder: (ctx) {
             return CategoryFilterDialog(
@@ -259,7 +284,7 @@ class DashboardPageState extends State<DashboardPage> {
 
                 // HomePage aktualisieren falls nötig
                 final homePageState =
-                    context.findAncestorStateOfType<HomePageState>();
+                    globalContext.findAncestorStateOfType<HomePageState>();
                 homePageState?.loadAllAppointments();
               },
               onCategoriesChanged: () {
@@ -281,20 +306,24 @@ class DashboardPageState extends State<DashboardPage> {
       Navigator.pop(context);
     }
 
-    // Wichtig: Längere Verzögerung hinzufügen, um sicherzustellen dass die Fokus-Probleme vermieden werden
+    // Zuerst den BuildContext für später speichern, da der ursprüngliche Kontext nach Navigator.pop()
+    // nicht mehr gültig sein könnte
+    final globalContext = Navigator.of(context).context;
+
+    // Verzögerung hinzufügen, um sicherzustellen, dass der Drawer vollständig geschlossen ist
     Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
 
       // Explizit den aktuellen Fokus zurücksetzen
       FocusManager.instance.primaryFocus?.unfocus();
 
-      // WidgetsBinding verwenden, um sicherzustellen, dass der Fokus-Reset abgeschlossen ist
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Dialog in einem separaten Future.microtask anzeigen, um die Trennung vom vorherigen Frame zu gewährleisten
+      Future.microtask(() {
         if (!mounted) return;
 
         final localizations =
-            Provider.of<AppLocalizations>(context, listen: false);
-        final scaffold = ScaffoldMessenger.of(context);
+            Provider.of<AppLocalizations>(globalContext, listen: false);
+        final scaffold = ScaffoldMessenger.of(globalContext);
         final Color iconColor = logoColor;
 
         // Dialog-Inhalt erstellen, der für beide Plattformen passt
@@ -313,7 +342,7 @@ class DashboardPageState extends State<DashboardPage> {
               titleStyle:
                   const TextStyle(fontWeight: FontWeight.bold, inherit: true),
               onTap: () async {
-                Navigator.pop(context);
+                Navigator.pop(globalContext);
 
                 try {
                   // Fortschritt anzeigen
@@ -330,7 +359,7 @@ class DashboardPageState extends State<DashboardPage> {
 
                   // Auch HomePage aktualisieren falls nötig
                   final homePageState =
-                      context.findAncestorStateOfType<HomePageState>();
+                      globalContext.findAncestorStateOfType<HomePageState>();
                   homePageState?.loadAllAppointments();
 
                   scaffold.clearSnackBars();
@@ -365,7 +394,7 @@ class DashboardPageState extends State<DashboardPage> {
               titleStyle:
                   const TextStyle(fontWeight: FontWeight.bold, inherit: true),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(globalContext);
                 _calendarSyncService.importAppointments();
               },
             ),
@@ -382,7 +411,7 @@ class DashboardPageState extends State<DashboardPage> {
               titleStyle:
                   const TextStyle(fontWeight: FontWeight.bold, inherit: true),
               onTap: () async {
-                Navigator.pop(context);
+                Navigator.pop(globalContext);
 
                 try {
                   // Fortschritt anzeigen
@@ -420,16 +449,16 @@ class DashboardPageState extends State<DashboardPage> {
         // Dialog-Aktionen erstellen
         final actions = [
           PlatformAdaptiveDialog.adaptiveDialogAction(
-            context: context,
+            context: globalContext,
             text: localizations.cancel,
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(globalContext),
             color: logoColor,
           ),
         ];
 
         // Plattformspezifischen Dialog anzeigen
         PlatformAdaptiveDialog.showAdaptiveDialog(
-          context: context,
+          context: globalContext,
           title: localizations.googleCalendar,
           content: content,
           actions: actions,
@@ -445,20 +474,24 @@ class DashboardPageState extends State<DashboardPage> {
       Navigator.pop(context);
     }
 
-    // Wichtig: Längere Verzögerung hinzufügen, um Fokus-Probleme zu vermeiden
+    // Zuerst den BuildContext für später speichern, da der ursprüngliche Kontext nach Navigator.pop()
+    // nicht mehr gültig sein könnte
+    final globalContext = Navigator.of(context).context;
+
+    // Verzögerung hinzufügen, um sicherzustellen, dass der Drawer vollständig geschlossen ist
     Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
 
       // Explizit den aktuellen Fokus zurücksetzen
       FocusManager.instance.primaryFocus?.unfocus();
 
-      // WidgetsBinding verwenden, um sicherzustellen, dass der Fokus-Reset abgeschlossen ist
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Dialog in einem separaten Future.microtask anzeigen, um die Trennung vom vorherigen Frame zu gewährleisten
+      Future.microtask(() {
         if (!mounted) return;
 
         final localizations =
-            Provider.of<AppLocalizations>(context, listen: false);
-        final scaffold = ScaffoldMessenger.of(context);
+            Provider.of<AppLocalizations>(globalContext, listen: false);
+        final scaffold = ScaffoldMessenger.of(globalContext);
         final Color iconColor = logoColor;
 
         // Dialog-Inhalt erstellen, der für beide Plattformen passt
@@ -484,12 +517,12 @@ class DashboardPageState extends State<DashboardPage> {
               titleStyle:
                   const TextStyle(fontWeight: FontWeight.bold, inherit: true),
               onTap: () async {
-                Navigator.pop(context);
+                Navigator.pop(globalContext);
 
                 try {
                   // Speichere zuerst die Import-Option
                   await ImportSettingsService.saveImportOption(2);
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(globalContext).showSnackBar(
                     SnackBar(content: Text(localizations.importOptionSaved)),
                   );
                 } catch (e) {
@@ -510,12 +543,12 @@ class DashboardPageState extends State<DashboardPage> {
               titleStyle:
                   const TextStyle(fontWeight: FontWeight.bold, inherit: true),
               onTap: () async {
-                Navigator.pop(context);
+                Navigator.pop(globalContext);
 
                 try {
                   // Speichere zuerst die Import-Option
                   await ImportSettingsService.saveImportOption(0);
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  ScaffoldMessenger.of(globalContext).showSnackBar(
                     SnackBar(content: Text(localizations.importOptionSaved)),
                   );
                 } catch (e) {
@@ -529,16 +562,16 @@ class DashboardPageState extends State<DashboardPage> {
         // Dialog-Aktionen erstellen
         final actions = [
           PlatformAdaptiveDialog.adaptiveDialogAction(
-            context: context,
+            context: globalContext,
             text: localizations.cancel,
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(globalContext),
             color: logoColor,
           ),
         ];
 
         // Plattformspezifischen Dialog anzeigen
         PlatformAdaptiveDialog.showAdaptiveDialog(
-          context: context,
+          context: globalContext,
           title: localizations.importOptions,
           content: content,
           actions: actions,
@@ -767,6 +800,12 @@ class DashboardPageState extends State<DashboardPage> {
 
       // Überspringe Termine, die bereits hinzugefügt wurden
       if (addedAppointmentIds.contains(ap.id)) {
+        continue;
+      }
+
+      // Überspringe Termine, deren Kategorie nicht ausgewählt ist
+      if (ap.categoryId != null &&
+          !_selectedCategoryIds.contains(ap.categoryId)) {
         continue;
       }
 

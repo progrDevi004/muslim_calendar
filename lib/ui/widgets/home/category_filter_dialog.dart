@@ -141,6 +141,10 @@ class _CategoryFilterDialogState extends State<CategoryFilterDialog> {
                     } else {
                       _selectedIds.remove(cat.id!);
                     }
+
+                    // Sofort die Änderung weitergeben, ohne auf den "Anwenden"-Button zu warten
+                    // Dadurch ist die Auswahl sofort sichtbar
+                    widget.onCategoriesSelected(_selectedIds);
                   });
                 },
               ),
@@ -169,9 +173,8 @@ class _CategoryFilterDialogState extends State<CategoryFilterDialog> {
         ),
         ElevatedButton(
           onPressed: () {
-            setState(() {
-              widget.onCategoriesSelected(_selectedIds);
-            });
+            // Sicherheitshalber nochmal aufrufen, falls es während des Dialogs weitere Änderungen gab
+            widget.onCategoriesSelected(_selectedIds);
             Navigator.of(context).pop();
           },
           child: Text(loc.apply),
