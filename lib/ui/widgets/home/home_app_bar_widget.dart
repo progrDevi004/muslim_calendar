@@ -45,14 +45,11 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
     return PlatformAdaptiveAppBar(
       title: Provider.of<AppLocalizations>(context)
           .appTitle, // Festen Titel verwenden, da unser Schlüssel nicht existiert
-      leading: GestureDetector(
-        onTap: onMenuPressed,
-        child: menuIcon,
-      ),
+      leading: Platform.isIOS ? null : menuIcon,
       actions: actions,
       centerTitle:
           Platform.isIOS, // Auf iOS zentrieren, auf Android links ausrichten
-      onLeadingPressed: onMenuPressed,
+      onLeadingPressed: Platform.isIOS ? null : onMenuPressed,
     );
   }
 

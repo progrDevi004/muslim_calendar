@@ -349,15 +349,24 @@ Color _getContrastingTextColor(Color bgColor) {
 }
 
 String _formatDuration(int minutes) {
-  if (minutes < 60) {
-    return '$minutes ${minutes == 1 ? 'min' : 'mins'}';
-  } else {
+  // Für iOS-Geräte immer im Format "hh:mm h" anzeigen
+  if (Platform.isIOS) {
     final hours = minutes ~/ 60;
     final mins = minutes % 60;
-    if (mins == 0) {
-      return '$hours ${hours == 1 ? 'hour' : 'hours'}';
+    return '${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')} h';
+  }
+  // Für Android die ursprüngliche Formatierung beibehalten
+  else {
+    if (minutes < 60) {
+      return '$minutes ${minutes == 1 ? 'min' : 'mins'}';
     } else {
-      return '$hours:${mins.toString().padLeft(2, '0')}h';
+      final hours = minutes ~/ 60;
+      final mins = minutes % 60;
+      if (mins == 0) {
+        return '$hours ${hours == 1 ? 'hour' : 'hours'}';
+      } else {
+        return '$hours:${mins.toString().padLeft(2, '0')}h';
+      }
     }
   }
 }
