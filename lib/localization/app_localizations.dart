@@ -3070,6 +3070,46 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
+  String get importFromGoogleCalendar {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "Von Google Kalender importieren";
+      case AppLanguage.turkish:
+        return "Google Takvim'den içe aktar";
+      case AppLanguage.arabic:
+        return "استيراد من تقويم جوجل";
+      case AppLanguage.bosnian:
+        return "Uvoz iz Google kalendara";
+      case AppLanguage.spanish:
+        return "Importar desde Google Calendar";
+      case AppLanguage.persian:
+        return "وارد کردن از تقویم گوگل";
+      case AppLanguage.english:
+      default:
+        return "Import from Google Calendar";
+    }
+  }
+
+  String get exportToGoogleCalendar {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return "In Google Kalender exportieren";
+      case AppLanguage.turkish:
+        return "Google Takvim'e dışa aktar";
+      case AppLanguage.arabic:
+        return "تصدير إلى تقويم جوجل";
+      case AppLanguage.bosnian:
+        return "Izvoz u Google kalendar";
+      case AppLanguage.spanish:
+        return "Exportar a Google Calendar";
+      case AppLanguage.persian:
+        return "صادر کردن به تقویم گوگل";
+      case AppLanguage.english:
+      default:
+        return "Export to Google Calendar";
+    }
+  }
+
   String get outlookCalendar {
     switch (_currentLanguage) {
       case AppLanguage.german:
