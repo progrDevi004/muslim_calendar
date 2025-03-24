@@ -942,23 +942,40 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
   // --------------------------------------------------------------------------
   // NEU: Aufbau des UI – Google Kalender–Stil
   Widget _buildGoogleCalendarForm(AppLocalizations loc) {
+    final bool isIOS = Platform.isIOS;
+
     return ListView(
       padding: const EdgeInsets.only(bottom: 20),
       children: [
         // Titel (groß, ohne Rahmen)
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: TextFormField(
-            controller: _titleController,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            decoration: InputDecoration(
-              hintText: loc.titleLabel,
-              border: InputBorder.none,
-            ),
-            validator: (value) => (value == null || value.trim().isEmpty)
-                ? 'Titel ist erforderlich'
-                : null,
-          ),
+          child: isIOS
+              ? CupertinoTextFormFieldRow(
+                  controller: _titleController,
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold),
+                  placeholder: loc.titleLabel,
+                  padding: EdgeInsets.zero,
+                  decoration: const BoxDecoration(
+                    border: null,
+                  ),
+                  validator: (value) => (value == null || value.trim().isEmpty)
+                      ? 'Titel ist erforderlich'
+                      : null,
+                )
+              : TextFormField(
+                  controller: _titleController,
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold),
+                  decoration: InputDecoration(
+                    hintText: loc.titleLabel,
+                    border: InputBorder.none,
+                  ),
+                  validator: (value) => (value == null || value.trim().isEmpty)
+                      ? 'Titel ist erforderlich'
+                      : null,
+                ),
         ),
         const Divider(height: 1),
 
@@ -1123,56 +1140,91 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: TextFormField(
-                          initialValue: _minutesBeforeAfter?.toString() ?? '15',
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: loc.minutesBeforeAfter,
-                            border: const OutlineInputBorder(),
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12.0, vertical: 8.0),
-                          ),
-                          onChanged: (value) {
-                            setState(() {
-                              _minutesBeforeAfter = int.tryParse(value) ?? 15;
-                              // Aktualisiere auch bei Änderung der Minuten die berechnete Endzeit
-                              if (_isRelatedToPrayerTimes &&
-                                  _startTime != null &&
-                                  _duration != null) {
-                                // Wir versuchen, die Startzeit neu zu berechnen
-                                _updateCalculatedTimes();
-                              }
-                            });
-                          },
-                        ),
+                        child: isIOS
+                            ? CupertinoTextFormFieldRow(
+                                initialValue:
+                                    _minutesBeforeAfter?.toString() ?? '15',
+                                keyboardType: TextInputType.number,
+                                prefix: Text(loc.minutesBeforeAfter),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _minutesBeforeAfter =
+                                        int.tryParse(value) ?? 15;
+                                    if (_isRelatedToPrayerTimes &&
+                                        _startTime != null &&
+                                        _duration != null) {
+                                      _updateCalculatedTimes();
+                                    }
+                                  });
+                                },
+                              )
+                            : TextFormField(
+                                initialValue:
+                                    _minutesBeforeAfter?.toString() ?? '15',
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  labelText: loc.minutesBeforeAfter,
+                                  border: const OutlineInputBorder(),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12.0, vertical: 8.0),
+                                ),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _minutesBeforeAfter =
+                                        int.tryParse(value) ?? 15;
+                                    if (_isRelatedToPrayerTimes &&
+                                        _startTime != null &&
+                                        _duration != null) {
+                                      _updateCalculatedTimes();
+                                    }
+                                  });
+                                },
+                              ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: TextFormField(
-                          initialValue: _duration?.inMinutes.toString() ?? '30',
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: loc.durationMinutes,
-                            border: const OutlineInputBorder(),
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12.0, vertical: 8.0),
-                          ),
-                          onChanged: (value) {
-                            setState(() {
-                              _duration =
-                                  Duration(minutes: int.tryParse(value) ?? 30);
-                              // Aktualisiere auch die Endzeit basierend auf der neuen Dauer
-                              if (_isRelatedToPrayerTimes &&
-                                  _startTime != null) {
-                                // Bei gebetszeitabhängigen Terminen die Endzeit automatisch aktualisieren
-                                _updateCalculatedTimes();
-                              } else if (_startTime != null) {
-                                // Bei normalen Terminen die Endzeit berechnen
-                                _endTime = _startTime!.add(_duration!);
-                              }
-                            });
-                          },
-                        ),
+                        child: isIOS
+                            ? CupertinoTextFormFieldRow(
+                                initialValue:
+                                    _duration?.inMinutes.toString() ?? '30',
+                                keyboardType: TextInputType.number,
+                                prefix: Text(loc.durationMinutes),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _duration = Duration(
+                                        minutes: int.tryParse(value) ?? 30);
+                                    if (_isRelatedToPrayerTimes &&
+                                        _startTime != null) {
+                                      _updateCalculatedTimes();
+                                    } else if (_startTime != null) {
+                                      _endTime = _startTime!.add(_duration!);
+                                    }
+                                  });
+                                },
+                              )
+                            : TextFormField(
+                                initialValue:
+                                    _duration?.inMinutes.toString() ?? '30',
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  labelText: loc.durationMinutes,
+                                  border: const OutlineInputBorder(),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12.0, vertical: 8.0),
+                                ),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _duration = Duration(
+                                        minutes: int.tryParse(value) ?? 30);
+                                    if (_isRelatedToPrayerTimes &&
+                                        _startTime != null) {
+                                      _updateCalculatedTimes();
+                                    } else if (_startTime != null) {
+                                      _endTime = _startTime!.add(_duration!);
+                                    }
+                                  });
+                                },
+                              ),
                       ),
                     ],
                   ),
@@ -1396,12 +1448,20 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         // Beschreibung
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-          child: TextFormField(
-            controller: _descriptionController,
-            decoration: InputDecoration(labelText: loc.description),
-            minLines: 1,
-            maxLines: 3,
-          ),
+          child: isIOS
+              ? CupertinoTextFormFieldRow(
+                  controller: _descriptionController,
+                  placeholder: loc.description,
+                  prefix: Text(loc.description),
+                  minLines: 1,
+                  maxLines: 3,
+                )
+              : TextFormField(
+                  controller: _descriptionController,
+                  decoration: InputDecoration(labelText: loc.description),
+                  minLines: 1,
+                  maxLines: 3,
+                ),
         ),
 
         const Divider(height: 1),
@@ -1493,9 +1553,12 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           ),
         ),
         child: SafeArea(
-          child: Form(
-            key: _formKey,
-            child: _buildGoogleCalendarForm(loc),
+          child: Material(
+            type: MaterialType.transparency,
+            child: Form(
+              key: _formKey,
+              child: _buildGoogleCalendarForm(loc),
+            ),
           ),
         ),
       );
