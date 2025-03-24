@@ -729,7 +729,7 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    "Stadt",
+                                    loc.city,
                                     style:
                                         Theme.of(context).textTheme.titleMedium,
                                   ),
@@ -748,10 +748,10 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                                       showSearchBox: true,
                                     ),
                                     dropdownDecoratorProps:
-                                        const DropDownDecoratorProps(
+                                        DropDownDecoratorProps(
                                       dropdownSearchDecoration: InputDecoration(
-                                        hintText: "Stadt auswählen",
-                                        border: OutlineInputBorder(),
+                                        hintText: loc.selectCity,
+                                        border: const OutlineInputBorder(),
                                       ),
                                     ),
                                   ),
@@ -759,9 +759,9 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                               ),
 
                             if (_selectedCountry == null)
-                              const Text(
-                                "Bitte wählen Sie erst ein Land aus",
-                                style: TextStyle(color: Colors.orange),
+                              Text(
+                                loc.selectCountry,
+                                style: const TextStyle(color: Colors.orange),
                               ),
                           ],
                         ),

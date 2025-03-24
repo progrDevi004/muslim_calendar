@@ -1237,40 +1237,60 @@ class AppLocalizations extends ChangeNotifier {
   String get recurrenceEndDate {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return 'Enddatum der Wiederholung';
+        return 'Enddatum';
       case AppLanguage.turkish:
-        return 'Tekrarlama Bitiş Tarihi';
+        return 'Bitiş Tarihi';
       case AppLanguage.arabic:
-        return 'تاريخ انتهاء التكرار';
+        return 'تاريخ الانتهاء';
       case AppLanguage.bosnian:
-        return 'Datum završetka ponavljanja';
+        return 'Datum završetka';
       case AppLanguage.spanish:
-        return 'Fecha de finalización de repetición';
+        return 'Fecha final';
       case AppLanguage.persian:
-        return 'تاریخ پایان تکرار';
+        return 'تاریخ پایان';
       case AppLanguage.english:
       default:
-        return 'Recurrence End Date';
+        return 'End Date';
+    }
+  }
+
+  String get selectCountryAndCity {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Bitte wählen Sie sowohl ein Land als auch eine Stadt aus';
+      case AppLanguage.turkish:
+        return 'Lütfen hem bir ülke hem bir şehir seçin';
+      case AppLanguage.arabic:
+        return 'الرجاء تحديد كل من البلد والمدينة';
+      case AppLanguage.bosnian:
+        return 'Molimo odaberite i zemlju i grad';
+      case AppLanguage.spanish:
+        return 'Por favor seleccione tanto el país como la ciudad';
+      case AppLanguage.persian:
+        return 'لطفاً هم کشور و هم شهر را انتخاب کنید';
+      case AppLanguage.english:
+      default:
+        return 'Please select both a country and a city';
     }
   }
 
   String get recurrenceEndDateHint {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return 'Wählen Sie ein Enddatum für die Wiederholung';
+        return 'Enddatum wählen';
       case AppLanguage.turkish:
-        return 'Tekrarın sona ereceği tarihi seçin';
+        return 'Bitiş tarihi seç';
       case AppLanguage.arabic:
-        return 'اختر تاريخ انتهاء التكرار';
+        return 'اختر تاريخ النهاية';
       case AppLanguage.bosnian:
-        return 'Odaberite datum završetka ponavljanja';
+        return 'Izaberi datum';
       case AppLanguage.spanish:
-        return 'Seleccione una fecha de finalización para la repetición';
+        return 'Elegir fecha';
       case AppLanguage.persian:
-        return 'تاریخ پایان تکرار را انتخاب کنید';
+        return 'انتخاب تاریخ پایان';
       case AppLanguage.english:
       default:
-        return 'Select an end date for recurrence';
+        return 'Select date';
     }
   }
 
@@ -4091,26 +4111,6 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.english:
       default:
         return 'Not connected to Google Calendar';
-    }
-  }
-
-  String get selectCountryAndCity {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Bitte wählen Sie sowohl ein Land als auch eine Stadt aus';
-      case AppLanguage.turkish:
-        return 'Lütfen hem bir ülke hem bir şehir seçin';
-      case AppLanguage.arabic:
-        return 'يرجى اختيار كل من البلد والمدينة';
-      case AppLanguage.bosnian:
-        return 'Molimo odaberite i državu i grad';
-      case AppLanguage.spanish:
-        return 'Por favor seleccione tanto un país como una ciudad';
-      case AppLanguage.persian:
-        return 'لطفاً هم یک کشور و هم یک شهر را انتخاب کنید';
-      case AppLanguage.english:
-      default:
-        return 'Please select both a country and a city';
     }
   }
 

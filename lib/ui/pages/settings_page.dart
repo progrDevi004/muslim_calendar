@@ -142,6 +142,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
 
     // Lade die Standorteinstellungen aus SharedPreferences
     String? country = prefs.getString('defaultCountry');
@@ -334,6 +335,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    final loc = Provider.of<AppLocalizations>(context, listen: false);
 
     // Wenn automaticLocation deaktiviert ist, aber keine Stadt/Land ausgewählt wurde,
     // zeige eine Fehlermeldung an und breche ab
@@ -343,11 +345,10 @@ class _SettingsPageState extends State<SettingsPage> {
             _defaultCountry!.isEmpty ||
             _defaultCity!.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content:
-              Text('Bitte wählen Sie sowohl ein Land als auch eine Stadt aus'),
+        SnackBar(
+          content: Text(loc.selectCountryAndCity),
           backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
+          duration: const Duration(seconds: 3),
         ),
       );
       return;
@@ -370,11 +371,10 @@ class _SettingsPageState extends State<SettingsPage> {
     } else {
       // Wenn keine Werte gesetzt sind, zeige eine Fehlermeldung an
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content:
-              Text('Bitte wählen Sie sowohl ein Land als auch eine Stadt aus'),
+        SnackBar(
+          content: Text(loc.selectCountryAndCity),
           backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
+          duration: const Duration(seconds: 3),
         ),
       );
       return; // Abbrechen, bis die Einstellungen gesetzt sind
