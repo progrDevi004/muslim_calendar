@@ -1928,60 +1928,120 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
     );
   }
 
+  // Methode für Gebetszeit-Auswahl
   Future<void> _showPrayerTimeSelectionDialog(AppLocalizations loc) async {
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(loc.prayerTime),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView(
-              shrinkWrap: true,
-              children: PrayerTime.values.map((pt) {
-                return ListTile(
-                  title: Text(loc.getPrayerTimeLabel(pt)),
-                  onTap: () {
-                    setState(() {
-                      _selectedPrayerTime = pt;
-                    });
-                    Navigator.pop(context);
-                  },
-                );
-              }).toList(),
+    if (_isIos) {
+      // iOS-spezifische Implementierung mit CupertinoActionSheet
+      await showCupertinoModalPopup(
+        context: context,
+        builder: (context) {
+          return CupertinoActionSheet(
+            title: Text(loc.prayerTime),
+            actions: PrayerTime.values.map((pt) {
+              return CupertinoActionSheetAction(
+                onPressed: () {
+                  setState(() {
+                    _selectedPrayerTime = pt;
+                  });
+                  Navigator.pop(context);
+                },
+                child: Text(loc.getPrayerTimeLabel(pt)),
+              );
+            }).toList(),
+            cancelButton: CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(context),
+              isDestructiveAction: true,
+              child: Text(loc.cancel),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    } else {
+      // Original Android-Implementierung
+      await showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text(loc.prayerTime),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView(
+                shrinkWrap: true,
+                children: PrayerTime.values.map((pt) {
+                  return ListTile(
+                    title: Text(loc.getPrayerTimeLabel(pt)),
+                    onTap: () {
+                      setState(() {
+                        _selectedPrayerTime = pt;
+                      });
+                      Navigator.pop(context);
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+          );
+        },
+      );
+    }
   }
 
+  // Methode für Zeit-Relation-Auswahl (vor/nach)
   Future<void> _showTimeRelationSelectionDialog(AppLocalizations loc) async {
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(loc.timeRelation),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView(
-              shrinkWrap: true,
-              children: TimeRelation.values.map((tr) {
-                return ListTile(
-                  title: Text(loc.getTimeRelationLabel(tr)),
-                  onTap: () {
-                    setState(() {
-                      _selectedTimeRelation = tr;
-                    });
-                    Navigator.pop(context);
-                  },
-                );
-              }).toList(),
+    if (_isIos) {
+      // iOS-spezifische Implementierung mit CupertinoActionSheet
+      await showCupertinoModalPopup(
+        context: context,
+        builder: (context) {
+          return CupertinoActionSheet(
+            title: Text(loc.timeRelation),
+            actions: TimeRelation.values.map((tr) {
+              return CupertinoActionSheetAction(
+                onPressed: () {
+                  setState(() {
+                    _selectedTimeRelation = tr;
+                  });
+                  Navigator.pop(context);
+                },
+                child: Text(loc.getTimeRelationLabel(tr)),
+              );
+            }).toList(),
+            cancelButton: CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(context),
+              isDestructiveAction: true,
+              child: Text(loc.cancel),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    } else {
+      // Original Android-Implementierung
+      await showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text(loc.timeRelation),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView(
+                shrinkWrap: true,
+                children: TimeRelation.values.map((tr) {
+                  return ListTile(
+                    title: Text(loc.getTimeRelationLabel(tr)),
+                    onTap: () {
+                      setState(() {
+                        _selectedTimeRelation = tr;
+                      });
+                      Navigator.pop(context);
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+          );
+        },
+      );
+    }
   }
 
   Future<void> _showCountrySelectionDialog(AppLocalizations loc) async {
