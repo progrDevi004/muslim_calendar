@@ -1030,17 +1030,69 @@ class DashboardPageState extends State<DashboardPage> {
     // Erstelle einen lokalen Key, der nur für dieses Build gültig ist
     final scaffoldKey = GlobalKey<ScaffoldState>();
 
+    final bool isIOS = Platform.isIOS;
+
     return Scaffold(
       key: scaffoldKey,
       appBar: PlatformAdaptiveAppBar(
         title: loc.dashboard,
-        leading: Icon(
-          Platform.isIOS ? CupertinoIcons.line_horizontal_3 : Icons.menu,
-        ),
-        onLeadingPressed: () {
-          scaffoldKey.currentState?.openDrawer();
-        },
-        centerTitle: Platform.isIOS, // Auf iOS zentrieren, auf Android links
+        leading: isIOS ? null : Icon(Icons.menu),
+        onLeadingPressed: isIOS
+            ? null
+            : () {
+                scaffoldKey.currentState?.openDrawer();
+              },
+        centerTitle: isIOS, // Auf iOS zentrieren, auf Android links
+        actions: isIOS
+            ? [
+                IconButton(
+                  icon: const Icon(CupertinoIcons.ellipsis_vertical),
+                  onPressed: () {
+                    showCupertinoModalPopup(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return CupertinoActionSheet(
+                          actions: [
+                            CupertinoActionSheetAction(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _openSettings();
+                              },
+                              child: Text(loc.settings),
+                            ),
+                            CupertinoActionSheetAction(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showCategoryFilterDialog(context);
+                              },
+                              child: Text(loc.filterCategories),
+                            ),
+                            CupertinoActionSheetAction(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showSyncOptionsDialog(context);
+                              },
+                              child: Text(loc.googleCalendar),
+                            ),
+                            CupertinoActionSheetAction(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _openQiblaCompass();
+                              },
+                              child: Text(loc.qiblaCompass),
+                            ),
+                          ],
+                          cancelButton: CupertinoActionSheetAction(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(loc.cancel),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ]
+            : null,
       ),
       drawer: AppDrawer(
         onSettingsOpen: () async {
