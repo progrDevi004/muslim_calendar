@@ -405,188 +405,302 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
-    return _isIos
-        ? CupertinoPageScaffold(
-            navigationBar: const CupertinoNavigationBar(
-              middle: Text('Settings'),
-            ),
-            child: SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: _buildSettingsContent(context),
-                ),
-              ),
-            ),
-          )
-        : Scaffold(
-            appBar: AppBar(
-              title: const Text('Settings'),
-            ),
-            body: SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: _buildSettingsContent(context),
-                ),
-              ),
-            ),
-          );
+    final theme = Theme.of(context);
+
+    Widget settingsContent = SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: _buildSettingsContent(context),
+        ),
+      ),
+    );
+
+    if (_isIos) {
+      return CupertinoPageScaffold(
+        navigationBar: CupertinoNavigationBar(
+          middle: Text(loc.settings),
+          backgroundColor: theme.scaffoldBackgroundColor,
+        ),
+        backgroundColor: theme.scaffoldBackgroundColor,
+        child: Material(
+          type: MaterialType.transparency,
+          child: settingsContent,
+        ),
+      );
+    } else {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(loc.settings),
+        ),
+        body: settingsContent,
+      );
+    }
   }
 
   List<Widget> _buildSettingsContent(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
+    final theme = Theme.of(context);
+    final isIOS = Platform.isIOS;
+
     return [
       // Appearance Section
       Text(
         loc.appearance,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+        ),
       ),
       const SizedBox(height: 16),
-      SwitchListTile(
-        title: Text(loc.darkMode),
-        subtitle: Text(loc.darkModeSubtitle),
-        value: _isDarkMode,
-        onChanged: (value) async {
-          setState(() => _isDarkMode = value);
-          await _saveSettings();
-        },
-      ),
+      if (isIOS)
+        CupertinoListTile(
+          title: Text(loc.darkMode),
+          subtitle: Text(loc.darkModeSubtitle),
+          trailing: CupertinoSwitch(
+            value: _isDarkMode,
+            onChanged: (value) async {
+              setState(() => _isDarkMode = value);
+              await _saveSettings();
+            },
+          ),
+        )
+      else
+        SwitchListTile(
+          title: Text(loc.darkMode),
+          subtitle: Text(loc.darkModeSubtitle),
+          value: _isDarkMode,
+          onChanged: (value) async {
+            setState(() => _isDarkMode = value);
+            await _saveSettings();
+          },
+        ),
       const Divider(height: 32),
-
-      // // Notifications Section
-      // Text(
-      //   'Notifications',
-      //   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-      //         fontWeight: FontWeight.bold,
-      //       ),
-      // ),
-      // const SizedBox(height: 16),
-      // SwitchListTile(
-      //   title: Text(loc.enableNotifications),
-      //   subtitle: Text(loc.enableNotificationsSubtitle),
-      //   value: _notificationsEnabled,
-      //   onChanged: (value) async {
-      //     setState(() => _notificationsEnabled = value);
-      //     await _saveSettings();
-      //   },
-      // ),
-      // const Divider(height: 32),
 
       // Time Format Section
       Text(
         loc.timeFormat,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+        ),
       ),
       const SizedBox(height: 16),
-      RadioListTile<bool>(
-        title: Text(loc.timeFormat24Active),
-        value: true,
-        groupValue: _use24hFormat,
-        onChanged: (value) async {
-          if (value != null) {
-            setState(() => _use24hFormat = value);
-            await _saveSettings();
-          }
-        },
-      ),
-      RadioListTile<bool>(
-        title: Text(loc.timeFormatAmPmActive),
-        value: false,
-        groupValue: _use24hFormat,
-        onChanged: (value) async {
-          if (value != null) {
-            setState(() => _use24hFormat = value);
-            await _saveSettings();
-          }
-        },
-      ),
+      if (isIOS)
+        Column(
+          children: [
+            CupertinoListTile(
+              title: Text(loc.timeFormat24Active),
+              trailing: CupertinoRadio<bool>(
+                value: true,
+                groupValue: _use24hFormat,
+                onChanged: (value) async {
+                  if (value != null) {
+                    setState(() => _use24hFormat = value);
+                    await _saveSettings();
+                  }
+                },
+              ),
+            ),
+            CupertinoListTile(
+              title: Text(loc.timeFormatAmPmActive),
+              trailing: CupertinoRadio<bool>(
+                value: false,
+                groupValue: _use24hFormat,
+                onChanged: (value) async {
+                  if (value != null) {
+                    setState(() => _use24hFormat = value);
+                    await _saveSettings();
+                  }
+                },
+              ),
+            ),
+          ],
+        )
+      else
+        Column(
+          children: [
+            RadioListTile<bool>(
+              title: Text(loc.timeFormat24Active),
+              value: true,
+              groupValue: _use24hFormat,
+              onChanged: (value) async {
+                if (value != null) {
+                  setState(() => _use24hFormat = value);
+                  await _saveSettings();
+                }
+              },
+            ),
+            RadioListTile<bool>(
+              title: Text(loc.timeFormatAmPmActive),
+              value: false,
+              groupValue: _use24hFormat,
+              onChanged: (value) async {
+                if (value != null) {
+                  setState(() => _use24hFormat = value);
+                  await _saveSettings();
+                }
+              },
+            ),
+          ],
+        ),
       const Divider(height: 32),
 
       // Prayer Times Display Section
       Text(
         loc.prayerTimeDisplay,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+        ),
       ),
       const SizedBox(height: 16),
-      SwitchListTile(
-        title: Text(loc.showPrayerTimesInDayView),
-        subtitle: Text(loc.showPrayerTimesInDayViewSubtitle),
-        value: _showPrayerTimesInDayView,
-        onChanged: (value) async {
-          setState(() => _showPrayerTimesInDayView = value);
-          await _saveSettings();
-        },
-      ),
-      SwitchListTile(
-        title: Text(loc.showPrayerTimesInWeekView),
-        subtitle: Text(loc.showPrayerTimesInWeekViewSubtitle),
-        value: _showPrayerTimesInWeekView,
-        onChanged: (value) async {
-          setState(() => _showPrayerTimesInWeekView = value);
-          await _saveSettings();
-        },
-      ),
-      SwitchListTile(
-        title: Text(loc.showPrayerSlotsInDashboard),
-        subtitle: Text(loc.showPrayerSlotsInDashboardSubtitle),
-        value: _showPrayerSlotsInDashboard,
-        onChanged: (value) async {
-          setState(() => _showPrayerSlotsInDashboard = value);
-          await _saveSettings();
-        },
-      ),
+      if (isIOS)
+        Column(
+          children: [
+            CupertinoListTile(
+              title: Text(loc.showPrayerTimesInDayView),
+              subtitle: Text(loc.showPrayerTimesInDayViewSubtitle),
+              trailing: CupertinoSwitch(
+                value: _showPrayerTimesInDayView,
+                onChanged: (value) async {
+                  setState(() => _showPrayerTimesInDayView = value);
+                  await _saveSettings();
+                },
+              ),
+            ),
+            CupertinoListTile(
+              title: Text(loc.showPrayerTimesInWeekView),
+              subtitle: Text(loc.showPrayerTimesInWeekViewSubtitle),
+              trailing: CupertinoSwitch(
+                value: _showPrayerTimesInWeekView,
+                onChanged: (value) async {
+                  setState(() => _showPrayerTimesInWeekView = value);
+                  await _saveSettings();
+                },
+              ),
+            ),
+            CupertinoListTile(
+              title: Text(loc.showPrayerSlotsInDashboard),
+              subtitle: Text(loc.showPrayerSlotsInDashboardSubtitle),
+              trailing: CupertinoSwitch(
+                value: _showPrayerSlotsInDashboard,
+                onChanged: (value) async {
+                  setState(() => _showPrayerSlotsInDashboard = value);
+                  await _saveSettings();
+                },
+              ),
+            ),
+          ],
+        )
+      else
+        Column(
+          children: [
+            SwitchListTile(
+              title: Text(loc.showPrayerTimesInDayView),
+              subtitle: Text(loc.showPrayerTimesInDayViewSubtitle),
+              value: _showPrayerTimesInDayView,
+              onChanged: (value) async {
+                setState(() => _showPrayerTimesInDayView = value);
+                await _saveSettings();
+              },
+            ),
+            SwitchListTile(
+              title: Text(loc.showPrayerTimesInWeekView),
+              subtitle: Text(loc.showPrayerTimesInWeekViewSubtitle),
+              value: _showPrayerTimesInWeekView,
+              onChanged: (value) async {
+                setState(() => _showPrayerTimesInWeekView = value);
+                await _saveSettings();
+              },
+            ),
+            SwitchListTile(
+              title: Text(loc.showPrayerSlotsInDashboard),
+              subtitle: Text(loc.showPrayerSlotsInDashboardSubtitle),
+              value: _showPrayerSlotsInDashboard,
+              onChanged: (value) async {
+                setState(() => _showPrayerSlotsInDashboard = value);
+                await _saveSettings();
+              },
+            ),
+          ],
+        ),
       const Divider(height: 32),
 
       // Language Settings Section
       Text(
         loc.language,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+        ),
       ),
       const SizedBox(height: 16),
-      DropdownButtonFormField<AppLanguage>(
-        value: _selectedLanguage,
-        decoration: InputDecoration(
-          labelText: loc.language,
-          border: const OutlineInputBorder(),
+      if (isIOS)
+        CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: () {
+            showCupertinoModalPopup(
+              context: context,
+              builder: (context) => CupertinoActionSheet(
+                title: Text(loc.language),
+                actions: AppLanguage.values.map((lang) {
+                  return CupertinoActionSheetAction(
+                    onPressed: () async {
+                      setState(() => _selectedLanguage = lang);
+                      Provider.of<AppLocalizations>(context, listen: false)
+                          .setLanguage(lang);
+                      await _saveSettings();
+                      Navigator.pop(context);
+                    },
+                    child: Text(
+                      loc.getLanguageName(lang),
+                      style: TextStyle(
+                        color: _selectedLanguage == lang
+                            ? CupertinoColors.activeBlue
+                            : null,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            );
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(loc.getLanguageName(_selectedLanguage)),
+              const Icon(CupertinoIcons.chevron_right),
+            ],
+          ),
+        )
+      else
+        DropdownButtonFormField<AppLanguage>(
+          value: _selectedLanguage,
+          decoration: InputDecoration(
+            labelText: loc.language,
+            border: const OutlineInputBorder(),
+          ),
+          onChanged: (value) async {
+            if (value != null) {
+              setState(() => _selectedLanguage = value);
+              Provider.of<AppLocalizations>(context, listen: false)
+                  .setLanguage(value);
+              await _saveSettings();
+            }
+          },
+          items: AppLanguage.values.map((lang) {
+            return DropdownMenuItem<AppLanguage>(
+              value: lang,
+              child: Text(loc.getLanguageName(lang)),
+            );
+          }).toList(),
         ),
-        onChanged: (value) async {
-          if (value != null) {
-            setState(() => _selectedLanguage = value);
-
-            // Aktualisiere die Sprache im AppLocalizations Provider
-            Provider.of<AppLocalizations>(context, listen: false)
-                .setLanguage(value);
-
-            // Speichere die Einstellung
-            await _saveSettings();
-          }
-        },
-        items: AppLanguage.values.map((lang) {
-          return DropdownMenuItem<AppLanguage>(
-            value: lang,
-            child: Text(loc.getLanguageName(lang)),
-          );
-        }).toList(),
-      ),
       const Divider(height: 32),
 
       // Location Settings
       Text(
         loc.locationSettings,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+        ),
       ),
       const SizedBox(height: 16),
 
@@ -804,9 +918,9 @@ class _SettingsPageState extends State<SettingsPage> {
       // Prayer Time Calculation Method
       Text(
         'Prayer Time Calculation Method',
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+        ),
       ),
       const SizedBox(height: 16),
       Container(
