@@ -51,5 +51,16 @@
 	<string>The app needs access to your location to calculate prayer times for your current location and display the Qibla direction.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>The app needs access to your location to calculate prayer times for your current location and display the Qibla direction.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.778895687512-t7lq66jbs8ljd1rredheoeoqfe5g8in8</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
