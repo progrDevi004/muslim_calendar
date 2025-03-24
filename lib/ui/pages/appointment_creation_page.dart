@@ -2580,178 +2580,534 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
   // Methode für benutzerdefinierte Wiederholungen
   Future<void> _showCustomRecurrenceDialog(AppLocalizations loc) async {
+    final bool isIOS = Platform.isIOS;
+
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(loc.getRecurrenceTypeLabel("custom")),
-          content: SizedBox(
-            width: double.maxFinite, // Maximale Breite begrenzen
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Intervall-Auswahl
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Text("${loc.recurrenceInterval}:",
-                        style: Theme.of(context).textTheme.titleSmall),
-                  ),
-                  DropdownButton<int>(
-                    isExpanded: true, // Volle Breite nutzen
-                    value: _recurrenceInterval,
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _recurrenceInterval = value;
-                        });
-                      }
-                    },
-                    items: List.generate(30, (index) => index + 1).map((i) {
-                      return DropdownMenuItem<int>(
-                        value: i,
-                        child: Text('$i'),
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Wiederholungstyp
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Text("${loc.recurrence}:",
-                        style: Theme.of(context).textTheme.titleSmall),
-                  ),
-                  DropdownButton<sf.RecurrenceType>(
-                    isExpanded: true, // Volle Breite nutzen
-                    value: _recurrenceType,
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _recurrenceType = value;
-                        });
-                      }
-                    },
-                    items: [
-                      DropdownMenuItem<sf.RecurrenceType>(
-                        value: sf.RecurrenceType.daily,
-                        child: Text(loc.getRecurrenceTypeLabel("daily")),
-                      ),
-                      DropdownMenuItem<sf.RecurrenceType>(
-                        value: sf.RecurrenceType.weekly,
-                        child: Text(loc.getRecurrenceTypeLabel("weekly")),
-                      ),
-                      DropdownMenuItem<sf.RecurrenceType>(
-                        value: sf.RecurrenceType.monthly,
-                        child: Text(loc.getRecurrenceTypeLabel("monthly")),
-                      ),
-                      DropdownMenuItem<sf.RecurrenceType>(
-                        value: sf.RecurrenceType.yearly,
-                        child: Text(loc.getRecurrenceTypeLabel("yearly")),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Wiederholungsbereich
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Text("${loc.recurrenceRange}:",
-                        style: Theme.of(context).textTheme.titleSmall),
-                  ),
-                  DropdownButton<sf.RecurrenceRange>(
-                    isExpanded: true, // Volle Breite nutzen
-                    value: _recurrenceRange,
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _recurrenceRange = value;
-                        });
-                      }
-                    },
-                    items: [
-                      DropdownMenuItem<sf.RecurrenceRange>(
-                        value: sf.RecurrenceRange.noEndDate,
-                        child: Text(loc.noEndDate),
-                      ),
-                      DropdownMenuItem<sf.RecurrenceRange>(
-                        value: sf.RecurrenceRange.endDate,
-                        child: Text(loc.recurrenceEndDate),
-                      ),
-                      DropdownMenuItem<sf.RecurrenceRange>(
-                        value: sf.RecurrenceRange.count,
-                        child: Text(loc.recurrenceCount),
-                      ),
-                    ],
-                  ),
-
-                  // Anzahl der Wiederholungen (nur wenn RecurrenceRange.count ausgewählt ist)
-                  if (_recurrenceRange == sf.RecurrenceRange.count)
+        builder: (context, setState) => isIOS
+            ? CupertinoAlertDialog(
+                title: Text(loc.getRecurrenceTypeLabel("custom")),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Intervall-Auswahl
                     Padding(
-                      padding: const EdgeInsets.only(top: 16.0),
-                      child: TextFormField(
-                        initialValue: _recurrenceCount?.toString() ?? '10',
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: loc.recurrenceCount,
-                          border: const OutlineInputBorder(),
-                        ),
-                        onChanged: (value) {
-                          final count = int.tryParse(value);
-                          if (count != null && count > 0) {
-                            setState(() {
-                              _recurrenceCount = count;
-                            });
-                          }
-                        },
-                      ),
+                      padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
+                      child: Text("${loc.recurrence}:",
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
                     ),
-
-                  // Enddatum auswählen (nur wenn RecurrenceRange.endDate ausgewählt ist)
-                  if (_recurrenceRange == sf.RecurrenceRange.endDate)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16.0),
-                      child: InkWell(
-                        onTap: () async {
-                          Navigator.pop(context);
-                          await _showRecurrenceEndDateDialog();
-                          _showCustomRecurrenceDialog(loc);
-                        },
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () {
+                        // iOS Picker für Intervall
+                        _showCupertinoPicker(
+                          context: context,
+                          items: List.generate(30, (index) => index + 1),
+                          selectedItem: _recurrenceInterval,
+                          onSelectedItemChanged: (value) {
+                            setState(() {
+                              _recurrenceInterval = value + 1;
+                            });
+                          },
+                          label: loc.recurrenceInterval,
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 8.0, horizontal: 16.0),
+                        decoration: BoxDecoration(
+                          color:
+                              CupertinoColors.systemGrey6.resolveFrom(context),
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(loc.recurrenceEndDate,
-                                style: Theme.of(context).textTheme.titleSmall),
-                            const SizedBox(height: 4),
-                            Text(_recurrenceEndDate != null
-                                ? _formatDate(_recurrenceEndDate!)
-                                : loc.noEndDate),
+                            Text('$_recurrenceInterval',
+                                style: const TextStyle(
+                                    color: CupertinoColors.activeBlue)),
+                            const Icon(
+                              CupertinoIcons.chevron_down,
+                              size: 14,
+                              color: CupertinoColors.activeBlue,
+                            ),
                           ],
                         ),
                       ),
                     ),
+
+                    const SizedBox(height: 16),
+
+                    // Wiederholungstyp
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text("${loc.selectRecurrenceType}:",
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () {
+                        showCupertinoModalPopup(
+                          context: context,
+                          builder: (context) => CupertinoActionSheet(
+                            title: Text(loc.selectRecurrenceType),
+                            actions: [
+                              CupertinoActionSheetAction(
+                                onPressed: () {
+                                  setState(() {
+                                    _recurrenceType = sf.RecurrenceType.daily;
+                                  });
+                                  Navigator.pop(context);
+                                },
+                                child:
+                                    Text(loc.getRecurrenceTypeLabel("daily")),
+                              ),
+                              CupertinoActionSheetAction(
+                                onPressed: () {
+                                  setState(() {
+                                    _recurrenceType = sf.RecurrenceType.weekly;
+                                  });
+                                  Navigator.pop(context);
+                                },
+                                child:
+                                    Text(loc.getRecurrenceTypeLabel("weekly")),
+                              ),
+                              CupertinoActionSheetAction(
+                                onPressed: () {
+                                  setState(() {
+                                    _recurrenceType = sf.RecurrenceType.monthly;
+                                  });
+                                  Navigator.pop(context);
+                                },
+                                child:
+                                    Text(loc.getRecurrenceTypeLabel("monthly")),
+                              ),
+                              CupertinoActionSheetAction(
+                                onPressed: () {
+                                  setState(() {
+                                    _recurrenceType = sf.RecurrenceType.yearly;
+                                  });
+                                  Navigator.pop(context);
+                                },
+                                child:
+                                    Text(loc.getRecurrenceTypeLabel("yearly")),
+                              ),
+                            ],
+                            cancelButton: CupertinoActionSheetAction(
+                              onPressed: () => Navigator.pop(context),
+                              isDestructiveAction: true,
+                              child: Text(loc.cancel),
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 8.0, horizontal: 16.0),
+                        decoration: BoxDecoration(
+                          color:
+                              CupertinoColors.systemGrey6.resolveFrom(context),
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                                loc.getRecurrenceTypeLabel(
+                                    _recurrenceType.toString().split('.').last),
+                                style: const TextStyle(
+                                    color: CupertinoColors.activeBlue)),
+                            const Icon(
+                              CupertinoIcons.chevron_down,
+                              size: 14,
+                              color: CupertinoColors.activeBlue,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Wiederholungsbereich
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text("${loc.recurrenceRange}:",
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () {
+                        showCupertinoModalPopup(
+                          context: context,
+                          builder: (context) => CupertinoActionSheet(
+                            title: Text(loc.recurrenceRange),
+                            actions: [
+                              CupertinoActionSheetAction(
+                                onPressed: () {
+                                  setState(() {
+                                    _recurrenceRange =
+                                        sf.RecurrenceRange.noEndDate;
+                                  });
+                                  Navigator.pop(context);
+                                },
+                                child: Text(loc.noEndDate),
+                              ),
+                              CupertinoActionSheetAction(
+                                onPressed: () {
+                                  setState(() {
+                                    _recurrenceRange =
+                                        sf.RecurrenceRange.endDate;
+                                  });
+                                  Navigator.pop(context);
+                                  // Zeige Datums-Picker
+                                  Navigator.pop(context); // Dialog schließen
+                                  _showRecurrenceEndDateDialog().then((_) {
+                                    _showCustomRecurrenceDialog(loc);
+                                  });
+                                },
+                                child: Text(loc.recurrenceEndDate),
+                              ),
+                              CupertinoActionSheetAction(
+                                onPressed: () {
+                                  setState(() {
+                                    _recurrenceRange = sf.RecurrenceRange.count;
+                                    _recurrenceCount ??= 10;
+                                  });
+                                  Navigator.pop(context);
+                                  // Zeige Anzahl-Picker
+                                  _showCupertinoPicker(
+                                    context: context,
+                                    items: List.generate(
+                                        100, (index) => index + 1),
+                                    selectedItem: _recurrenceCount ?? 10,
+                                    onSelectedItemChanged: (value) {
+                                      setState(() {
+                                        _recurrenceCount = value + 1;
+                                      });
+                                    },
+                                    label: loc.recurrenceCount,
+                                  );
+                                },
+                                child: Text(loc.recurrenceCount),
+                              ),
+                            ],
+                            cancelButton: CupertinoActionSheetAction(
+                              onPressed: () => Navigator.pop(context),
+                              isDestructiveAction: true,
+                              child: Text(loc.cancel),
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 8.0, horizontal: 16.0),
+                        decoration: BoxDecoration(
+                          color:
+                              CupertinoColors.systemGrey6.resolveFrom(context),
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(_getRecurrenceRangeText(loc),
+                                style: const TextStyle(
+                                    color: CupertinoColors.activeBlue)),
+                            const Icon(
+                              CupertinoIcons.chevron_down,
+                              size: 14,
+                              color: CupertinoColors.activeBlue,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  CupertinoDialogAction(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    isDestructiveAction: true,
+                    child: Text(loc.cancel),
+                  ),
+                  CupertinoDialogAction(
+                    onPressed: () {
+                      this.setState(() {
+                        // Änderungen wurden bereits durch StatefulBuilder in den State-Variablen gespeichert
+                      });
+                      Navigator.of(context).pop();
+                    },
+                    isDefaultAction: true,
+                    child: Text(loc.ok),
+                  ),
+                ],
+              )
+            : AlertDialog(
+                title: Text(loc.getRecurrenceTypeLabel("custom")),
+                content: SizedBox(
+                  width: double.maxFinite, // Maximale Breite begrenzen
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Intervall-Auswahl
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: Text("${loc.recurrence}:",
+                              style: Theme.of(context).textTheme.titleSmall),
+                        ),
+                        DropdownButton<int>(
+                          isExpanded: true, // Volle Breite nutzen
+                          value: _recurrenceInterval,
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() {
+                                _recurrenceInterval = value;
+                              });
+                            }
+                          },
+                          items:
+                              List.generate(30, (index) => index + 1).map((i) {
+                            return DropdownMenuItem<int>(
+                              value: i,
+                              child: Text('$i'),
+                            );
+                          }).toList(),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Wiederholungstyp
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: Text("${loc.selectRecurrenceType}:",
+                              style: Theme.of(context).textTheme.titleSmall),
+                        ),
+                        DropdownButton<sf.RecurrenceType>(
+                          isExpanded: true,
+                          value: _recurrenceType,
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() {
+                                _recurrenceType = value;
+                              });
+                            }
+                          },
+                          items: [
+                            DropdownMenuItem<sf.RecurrenceType>(
+                              value: sf.RecurrenceType.daily,
+                              child: Text(loc.getRecurrenceTypeLabel("daily")),
+                            ),
+                            DropdownMenuItem<sf.RecurrenceType>(
+                              value: sf.RecurrenceType.weekly,
+                              child: Text(loc.getRecurrenceTypeLabel("weekly")),
+                            ),
+                            DropdownMenuItem<sf.RecurrenceType>(
+                              value: sf.RecurrenceType.monthly,
+                              child:
+                                  Text(loc.getRecurrenceTypeLabel("monthly")),
+                            ),
+                            DropdownMenuItem<sf.RecurrenceType>(
+                              value: sf.RecurrenceType.yearly,
+                              child: Text(loc.getRecurrenceTypeLabel("yearly")),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Wiederholungsbereich - Radio Optionen
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: Text("${loc.recurrenceRange}:",
+                              style: Theme.of(context).textTheme.titleSmall),
+                        ),
+                        RadioListTile<sf.RecurrenceRange>(
+                          title: Text(loc.noEndDate),
+                          value: sf.RecurrenceRange.noEndDate,
+                          groupValue: _recurrenceRange,
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          onChanged: (value) {
+                            setState(() {
+                              _recurrenceRange = value!;
+                            });
+                          },
+                        ),
+                        RadioListTile<sf.RecurrenceRange>(
+                          title: Text(loc.recurrenceEndDate),
+                          value: sf.RecurrenceRange.endDate,
+                          groupValue: _recurrenceRange,
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          onChanged: (value) {
+                            setState(() {
+                              _recurrenceRange = value!;
+                            });
+                          },
+                        ),
+                        RadioListTile<sf.RecurrenceRange>(
+                          title: Text(loc.recurrenceCount),
+                          value: sf.RecurrenceRange.count,
+                          groupValue: _recurrenceRange,
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          onChanged: (value) {
+                            setState(() {
+                              _recurrenceRange = value!;
+                              _recurrenceCount ??= 10;
+                            });
+                          },
+                        ),
+
+                        if (_recurrenceRange == sf.RecurrenceRange.count)
+                          Padding(
+                            padding:
+                                const EdgeInsets.only(left: 32.0, top: 8.0),
+                            child: DropdownButton<int>(
+                              value: _recurrenceCount ?? 10,
+                              onChanged: (value) {
+                                setState(() {
+                                  _recurrenceCount = value;
+                                });
+                              },
+                              items: List.generate(100, (index) => index + 1)
+                                  .map((i) {
+                                return DropdownMenuItem<int>(
+                                  value: i,
+                                  child: Text('$i'),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+
+                        // Enddatum auswählen (nur wenn RecurrenceRange.endDate ausgewählt ist)
+                        if (_recurrenceRange == sf.RecurrenceRange.endDate)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 16.0),
+                            child: InkWell(
+                              onTap: () async {
+                                Navigator.pop(context);
+                                await _showRecurrenceEndDateDialog();
+                                _showCustomRecurrenceDialog(loc);
+                              },
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(loc.recurrenceEndDate,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall),
+                                  const SizedBox(height: 4),
+                                  Text(_recurrenceEndDate != null
+                                      ? _formatDate(_recurrenceEndDate!)
+                                      : loc.noEndDate),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Text(loc.cancel),
+                  ),
+                  FilledButton(
+                    onPressed: () {
+                      this.setState(() {
+                        // Die Änderungen werden durch die StatefulBuilder bereits in den State-Variablen gespeichert
+                      });
+                      Navigator.of(context).pop();
+                    },
+                    child: Text(loc.ok),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  // Hilfsmethode für Text des Wiederholungsbereichs
+  String _getRecurrenceRangeText(AppLocalizations loc) {
+    switch (_recurrenceRange) {
+      case sf.RecurrenceRange.noEndDate:
+        return loc.noEndDate;
+      case sf.RecurrenceRange.endDate:
+        return _recurrenceEndDate != null
+            ? _formatDate(_recurrenceEndDate!)
+            : loc.recurrenceEndDate;
+      case sf.RecurrenceRange.count:
+        return "${loc.recurrenceCount}: ${_recurrenceCount ?? 10}";
+      default:
+        return loc.noEndDate;
+    }
+  }
+
+  // Hilfsmethode für iOS Picker
+  Future<void> _showCupertinoPicker({
+    required BuildContext context,
+    required List<int> items,
+    required int selectedItem,
+    required Function(int) onSelectedItemChanged,
+    required String label,
+  }) async {
+    int tempSelectedItem = selectedItem - 1;
+
+    await showCupertinoModalPopup(
+      context: context,
+      builder: (context) => Container(
+        height: 250,
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        child: Column(
+          children: [
+            Container(
+              height: 40,
+              color: CupertinoColors.systemGrey6.resolveFrom(context),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(Provider.of<AppLocalizations>(context).cancel),
+                  ),
+                  Text(label,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () {
+                      onSelectedItemChanged(tempSelectedItem);
+                      Navigator.pop(context);
+                    },
+                    child: Text(Provider.of<AppLocalizations>(context).ok),
+                  ),
                 ],
               ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text(loc.cancel),
-            ),
-            FilledButton(
-              onPressed: () {
-                this.setState(() {
-                  // Die Änderungen werden durch die StatefulBuilder bereits in den State-Variablen gespeichert
-                });
-                Navigator.of(context).pop();
-              },
-              child: Text(loc.ok),
+            Expanded(
+              child: CupertinoPicker(
+                itemExtent: 32,
+                scrollController: FixedExtentScrollController(
+                  initialItem: selectedItem - 1,
+                ),
+                onSelectedItemChanged: (index) {
+                  tempSelectedItem = index;
+                },
+                children: items
+                    .map((i) => Center(child: Text(i.toString())))
+                    .toList(),
+              ),
             ),
           ],
         ),
