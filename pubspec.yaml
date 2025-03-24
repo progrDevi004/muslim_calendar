@@ -31,6 +31,7 @@ dependencies:
   googleapis_auth: ^1.4.2
   flutter_localizations:
     sdk: flutter
+  flutter_compass_v2: ^1.0.3
 
 dev_dependencies:
   flutter_test:
