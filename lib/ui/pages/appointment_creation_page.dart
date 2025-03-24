@@ -1515,18 +1515,16 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         // Save Button
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: _isIos
-              ? CupertinoButton.filled(
-                  onPressed: _saveAppointment,
-                  child: Text(loc.save),
-                )
-              : FilledButton(
+          child: !isIOS
+              ? FilledButton(
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(48),
                   ),
                   onPressed: _saveAppointment,
                   child: Text(loc.save),
-                ),
+                )
+              : const SizedBox
+                  .shrink(), // Kein Button auf iOS, da bereits in der NavBar
         ),
       ],
     );
