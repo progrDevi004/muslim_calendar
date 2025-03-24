@@ -430,75 +430,46 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isIOS = Platform.isIOS;
+    final theme = Theme.of(context);
     final loc = Provider.of<AppLocalizations>(context);
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (Platform.isIOS) {
-      // iOS-spezifischer Drawer (modifiziertes Bottom-Sheet)
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+    return Drawer(
+      backgroundColor: isIOS
+          ? CupertinoColors.systemBackground
+          : theme.drawerTheme.backgroundColor,
+      child: SafeArea(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
+            // Logo und Titel
             Container(
-              padding: const EdgeInsets.only(bottom: 16.0),
+              padding: const EdgeInsets.all(16.0),
               decoration: BoxDecoration(
+                color: isIOS
+                    ? CupertinoColors.systemBackground
+                    : theme.drawerTheme.backgroundColor,
                 border: Border(
                   bottom: BorderSide(
-                    color: CupertinoColors.systemGrey5.resolveFrom(context),
-                    width: 1.0,
+                    color:
+                        isIOS ? CupertinoColors.separator : theme.dividerColor,
                   ),
                 ),
               ),
               child: Row(
                 children: [
-                  // App Icon
-                  Container(
+                  Image.asset(
+                    'assets/images/logo.png',
                     width: 40,
                     height: 40,
-                    decoration: BoxDecoration(
-                      color: logoColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        CupertinoIcons.calendar,
-                        color: logoColor,
-                        size: 24,
-                      ),
-                    ),
                   ),
-                  const SizedBox(width: 12),
-                  // App Name
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Image.asset(
-                        Theme.of(context).brightness == Brightness.dark
-                            ? 'assets/images/text_dark.png'
-                            : 'assets/images/text_light.png',
-                        height: 32,
-                        fit: BoxFit.contain,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        loc.menu,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: CupertinoColors.secondaryLabel
-                              .resolveFrom(context),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  // Close Button
-                  CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: () => Navigator.pop(context),
-                    child: const Icon(CupertinoIcons.xmark_circle_fill,
-                        color: CupertinoColors.systemGrey),
+                  const SizedBox(width: 16),
+                  Text(
+                    loc.appTitle,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: isIOS
+                          ? CupertinoColors.label
+                          : theme.textTheme.titleLarge?.color,
+                    ),
                   ),
                 ],
               ),
@@ -557,86 +528,7 @@ class AppDrawer extends StatelessWidget {
             // ),
           ],
         ),
-      );
-    } else {
-      // Android Material Design Drawer
-      final Color headerColor =
-          isDark ? Colors.grey.shade800 : logoColor.withOpacity(0.1);
-      final Color iconColor = logoColor;
-
-      return Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            // Header
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: headerColor,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Image.asset(
-                    Theme.of(context).brightness == Brightness.dark
-                        ? 'assets/images/text_dark.png'
-                        : 'assets/images/text_light.png',
-                    height: 40,
-                    fit: BoxFit.contain,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    loc.menu,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: isDark ? Colors.white70 : Colors.black54,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Einstellungen
-            ListTile(
-              leading: Icon(Icons.settings, color: iconColor),
-              title: Text(loc.settings),
-              onTap: () => _openSettings(context),
-            ),
-
-            // Qibla Kompass
-            ListTile(
-              leading: Icon(Icons.explore, color: iconColor),
-              title: Text(loc.qiblaCompass),
-              onTap: () => _openQiblaCompass(context),
-            ),
-
-            // Kategorien
-            ListTile(
-              leading: Icon(Icons.category, color: iconColor),
-              title: Text(loc.categoryLabel),
-              onTap: () => _showCategoryFilterDialog(context),
-            ),
-
-            const Divider(),
-
-            // Synchronisation
-            ListTile(
-              leading: Icon(Icons.sync, color: iconColor),
-              title: Text(loc.synchronization),
-              onTap: () => _showSyncOptionsDialog(context),
-            ),
-
-            // // Import-Optionen
-            // ListTile(
-            //   leading: Icon(Icons.settings_applications, color: iconColor),
-            //   title: Text(loc.importOptions),
-            //   onTap: () => _showImportOptionsDialog(context),
-            // ),
-
-            // Weitere Trennlinie am Ende
-            const Divider(),
-          ],
-        ),
-      );
-    }
+      ),
+    );
   }
 }
