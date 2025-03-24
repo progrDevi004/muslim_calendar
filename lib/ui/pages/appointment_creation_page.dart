@@ -1053,112 +1053,249 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
 
         // Gebetszeit-Einstellungen direkt im Hauptbereich
         if (_isRelatedToPrayerTimes)
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            padding: const EdgeInsets.all(12.0),
-            decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .surfaceContainerHighest
-                  .withOpacity(0.3),
-              borderRadius: BorderRadius.circular(8.0),
-              border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Überschrift für den Abschnitt
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Text(
-                    loc.prayerTimeSettings,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                ),
-
-                // Datum auswählen
-                ListTile(
-                  leading: const Icon(Icons.calendar_today),
-                  title: Text(loc.selectDate),
-                  subtitle: Text(
-                      _startTime != null ? _formatDate(_startTime!) : '---'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () async {
-                    await _pickStartDate();
-                  },
-                  // Größere Touch-Fläche für iOS
-                  contentPadding: _isIos
-                      ? const EdgeInsets.symmetric(
-                          horizontal: 16.0, vertical: 10.0)
-                      : const EdgeInsets.symmetric(horizontal: 16.0),
-                ),
-
-                // Gebetszeit auswählen
-                ListTile(
-                  leading: const Icon(Icons.timer),
-                  title: Text(loc.prayerTime),
-                  subtitle: Text(_selectedPrayerTime != null
-                      ? loc.getPrayerTimeLabel(_selectedPrayerTime!)
-                      : loc.selectPrayerTime),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    _showPrayerTimeSelectionDialog(loc);
-                  },
-                  // Größere Touch-Fläche für iOS
-                  contentPadding: _isIos
-                      ? const EdgeInsets.symmetric(
-                          horizontal: 16.0, vertical: 10.0)
-                      : const EdgeInsets.symmetric(horizontal: 16.0),
-                ),
-
-                // Zeit-Relation (vor/nach)
-                ListTile(
-                  leading: const Icon(Icons.schedule),
-                  title: Text(loc.timeRelation),
-                  subtitle: Text(_selectedTimeRelation != null
-                      ? loc.getTimeRelationLabel(_selectedTimeRelation!)
-                      : loc.timeRelation),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {
-                    _showTimeRelationSelectionDialog(loc);
-                  },
-                  // Größere Touch-Fläche für iOS
-                  contentPadding: _isIos
-                      ? const EdgeInsets.symmetric(
-                          horizontal: 16.0, vertical: 10.0)
-                      : const EdgeInsets.symmetric(horizontal: 16.0),
-                ),
-
-                // Minuten vor/nach & Dauer
-                Padding(
-                  padding: const EdgeInsets.symmetric(
+          _isIos
+              ? Container(
+                  margin: const EdgeInsets.symmetric(
                       horizontal: 16.0, vertical: 8.0),
-                  child: Row(
+                  padding:
+                      const EdgeInsets.all(0), // iOS Container hat kein Padding
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemGroupedBackground
+                        .resolveFrom(context),
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: isIOS
-                            ? CupertinoTextFormFieldRow(
-                                initialValue:
-                                    _minutesBeforeAfter?.toString() ?? '15',
-                                keyboardType: TextInputType.number,
-                                prefix: Text(loc.minutesBeforeAfter),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _minutesBeforeAfter =
-                                        int.tryParse(value) ?? 15;
-                                    if (_isRelatedToPrayerTimes &&
-                                        _startTime != null &&
-                                        _duration != null) {
-                                      _updateCalculatedTimes();
-                                    }
-                                  });
-                                },
-                              )
-                            : TextFormField(
+                      // iOS-spezifischer Titel
+                      Padding(
+                        padding:
+                            const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+                        child: Text(
+                          loc.prayerTimeSettings,
+                          style: CupertinoTheme.of(context)
+                              .textTheme
+                              .navTitleTextStyle,
+                        ),
+                      ),
+
+                      // Datum auswählen - iOS-Stil
+                      CupertinoListTile(
+                        leading: const Icon(CupertinoIcons.calendar,
+                            color: CupertinoColors.systemGrey),
+                        title: Text(loc.selectDate),
+                        subtitle: Text(_startTime != null
+                            ? _formatDate(_startTime!)
+                            : '---'),
+                        trailing: const Icon(CupertinoIcons.chevron_right,
+                            color: CupertinoColors.systemGrey),
+                        onTap: () async {
+                          await _pickStartDate();
+                        },
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 12.0),
+                      ),
+
+                      const Divider(height: 0.5, indent: 16.0),
+
+                      // Gebetszeit auswählen - iOS-Stil
+                      CupertinoListTile(
+                        leading: const Icon(CupertinoIcons.timer,
+                            color: CupertinoColors.systemGrey),
+                        title: Text(loc.prayerTime),
+                        subtitle: Text(_selectedPrayerTime != null
+                            ? loc.getPrayerTimeLabel(_selectedPrayerTime!)
+                            : loc.selectPrayerTime),
+                        trailing: const Icon(CupertinoIcons.chevron_right,
+                            color: CupertinoColors.systemGrey),
+                        onTap: () {
+                          _showPrayerTimeSelectionDialog(loc);
+                        },
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 12.0),
+                      ),
+
+                      const Divider(height: 0.5, indent: 16.0),
+
+                      // Zeit-Relation (vor/nach) - iOS-Stil
+                      CupertinoListTile(
+                        leading: const Icon(CupertinoIcons.time,
+                            color: CupertinoColors.systemGrey),
+                        title: Text(loc.timeRelation),
+                        subtitle: Text(_selectedTimeRelation != null
+                            ? loc.getTimeRelationLabel(_selectedTimeRelation!)
+                            : loc.timeRelation),
+                        trailing: const Icon(CupertinoIcons.chevron_right,
+                            color: CupertinoColors.systemGrey),
+                        onTap: () {
+                          _showTimeRelationSelectionDialog(loc);
+                        },
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 12.0),
+                      ),
+
+                      const Divider(height: 0.5, indent: 16.0),
+
+                      // Minuten vor/nach & Dauer - iOS-Stil
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // iOS-typisches Label
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: Text(
+                                'Zeiteinstellungen',
+                                style: CupertinoTheme.of(context)
+                                    .textTheme
+                                    .textStyle
+                                    .copyWith(
+                                      color: CupertinoColors.systemGrey,
+                                      fontSize: 13,
+                                    ),
+                              ),
+                            ),
+                            // Eingabefelder
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: CupertinoTextFormFieldRow(
+                                    initialValue:
+                                        _minutesBeforeAfter?.toString() ?? '15',
+                                    keyboardType: TextInputType.number,
+                                    prefix: Text(loc.minutesBeforeAfter),
+                                    padding: EdgeInsets.zero,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _minutesBeforeAfter =
+                                            int.tryParse(value) ?? 15;
+                                        if (_isRelatedToPrayerTimes &&
+                                            _startTime != null &&
+                                            _duration != null) {
+                                          _updateCalculatedTimes();
+                                        }
+                                      });
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: CupertinoTextFormFieldRow(
+                                    initialValue:
+                                        _duration?.inMinutes.toString() ?? '30',
+                                    keyboardType: TextInputType.number,
+                                    prefix: Text(loc.durationMinutes),
+                                    padding: EdgeInsets.zero,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _duration = Duration(
+                                            minutes: int.tryParse(value) ?? 30);
+                                        if (_isRelatedToPrayerTimes &&
+                                            _startTime != null) {
+                                          _updateCalculatedTimes();
+                                        } else if (_startTime != null) {
+                                          _endTime =
+                                              _startTime!.add(_duration!);
+                                        }
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : Container(
+                  // Original Android Container (unverändert)
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 8.0),
+                  padding: const EdgeInsets.all(12.0),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest
+                        .withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8.0),
+                    border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outline
+                          .withOpacity(0.3),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Überschrift für den Abschnitt
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Text(
+                          loc.prayerTimeSettings,
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                        ),
+                      ),
+
+                      // Datum auswählen
+                      ListTile(
+                        leading: const Icon(Icons.calendar_today),
+                        title: Text(loc.selectDate),
+                        subtitle: Text(_startTime != null
+                            ? _formatDate(_startTime!)
+                            : '---'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () async {
+                          await _pickStartDate();
+                        },
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 16.0),
+                      ),
+
+                      // Gebetszeit auswählen
+                      ListTile(
+                        leading: const Icon(Icons.timer),
+                        title: Text(loc.prayerTime),
+                        subtitle: Text(_selectedPrayerTime != null
+                            ? loc.getPrayerTimeLabel(_selectedPrayerTime!)
+                            : loc.selectPrayerTime),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          _showPrayerTimeSelectionDialog(loc);
+                        },
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 16.0),
+                      ),
+
+                      // Zeit-Relation (vor/nach)
+                      ListTile(
+                        leading: const Icon(Icons.schedule),
+                        title: Text(loc.timeRelation),
+                        subtitle: Text(_selectedTimeRelation != null
+                            ? loc.getTimeRelationLabel(_selectedTimeRelation!)
+                            : loc.timeRelation),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          _showTimeRelationSelectionDialog(loc);
+                        },
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 16.0),
+                      ),
+
+                      // Minuten vor/nach & Dauer
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 8.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
                                 initialValue:
                                     _minutesBeforeAfter?.toString() ?? '15',
                                 keyboardType: TextInputType.number,
@@ -1180,29 +1317,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                                   });
                                 },
                               ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: isIOS
-                            ? CupertinoTextFormFieldRow(
-                                initialValue:
-                                    _duration?.inMinutes.toString() ?? '30',
-                                keyboardType: TextInputType.number,
-                                prefix: Text(loc.durationMinutes),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _duration = Duration(
-                                        minutes: int.tryParse(value) ?? 30);
-                                    if (_isRelatedToPrayerTimes &&
-                                        _startTime != null) {
-                                      _updateCalculatedTimes();
-                                    } else if (_startTime != null) {
-                                      _endTime = _startTime!.add(_duration!);
-                                    }
-                                  });
-                                },
-                              )
-                            : TextFormField(
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextFormField(
                                 initialValue:
                                     _duration?.inMinutes.toString() ?? '30',
                                 keyboardType: TextInputType.number,
@@ -1225,13 +1343,13 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                                   });
                                 },
                               ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
 
         // Startzeit und Endzeit nur anzeigen, wenn NICHT an Gebetszeit gebunden
         Container(

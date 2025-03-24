@@ -917,20 +917,20 @@ class AppLocalizations extends ChangeNotifier {
   String get durationMinutes {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return 'Dauer (Minuten)';
+        return 'Dauer';
       case AppLanguage.turkish:
-        return 'Süre (dakika)';
+        return 'Süre';
       case AppLanguage.arabic:
-        return 'المدة (دقائق)';
+        return 'المدة';
       case AppLanguage.bosnian:
-        return 'Trajanje (minute)';
+        return 'Trajanje';
       case AppLanguage.spanish:
-        return 'Duración (minutos)';
+        return 'Duración';
       case AppLanguage.persian:
-        return 'مدت (دقیقه)';
+        return 'مدت';
       case AppLanguage.english:
       default:
-        return 'Duration (minutes)';
+        return 'Duration';
     }
   }
 
