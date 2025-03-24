@@ -416,7 +416,7 @@ class DashboardPageState extends State<DashboardPage> {
                     children: [
                       Icon(CupertinoIcons.square_arrow_up, color: iconColor),
                       const SizedBox(width: 8),
-                      Text(localizations.exportToGoogleCalendar),
+                      Text(localizations.exportOnly),
                     ],
                   ),
                 ),
@@ -458,7 +458,7 @@ class DashboardPageState extends State<DashboardPage> {
                     children: [
                       Icon(CupertinoIcons.square_arrow_down, color: iconColor),
                       const SizedBox(width: 8),
-                      Text(localizations.importFromGoogleCalendar),
+                      Text(localizations.importOnly),
                     ],
                   ),
                 ),

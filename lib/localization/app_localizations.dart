@@ -5241,26 +5241,6 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
-  String get importFromGoogleCalendar {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Termine von Google Kalender importieren';
-      case AppLanguage.turkish:
-        return 'Google Takvim\'den etkinlikleri içe aktar';
-      case AppLanguage.arabic:
-        return 'استيراد المواعيد من تقويم Google';
-      case AppLanguage.bosnian:
-        return 'Uvezi događaje iz Google Kalendara';
-      case AppLanguage.spanish:
-        return 'Importar eventos del Calendario de Google';
-      case AppLanguage.persian:
-        return 'وارد کردن رویدادها از تقویم گوگل';
-      case AppLanguage.english:
-      default:
-        return 'Import appointments from Google Calendar';
-    }
-  }
-
   String get exportOnly {
     switch (_currentLanguage) {
       case AppLanguage.german:
@@ -5278,26 +5258,6 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.english:
       default:
         return 'Export only';
-    }
-  }
-
-  String get exportToGoogleCalendar {
-    switch (_currentLanguage) {
-      case AppLanguage.german:
-        return 'Termine nach Google Kalender exportieren';
-      case AppLanguage.turkish:
-        return 'Etkinlikleri Google Takvim\'e dışa aktar';
-      case AppLanguage.arabic:
-        return 'تصدير المواعيد إلى تقويم Google';
-      case AppLanguage.bosnian:
-        return 'Izvezi događaje u Google Kalendar';
-      case AppLanguage.spanish:
-        return 'Exportar eventos al Calendario de Google';
-      case AppLanguage.persian:
-        return 'صادر کردن رویدادها به تقویم گوگل';
-      case AppLanguage.english:
-      default:
-        return 'Export appointments to Google Calendar';
     }
   }
 

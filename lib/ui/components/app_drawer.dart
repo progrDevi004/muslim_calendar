@@ -229,7 +229,7 @@ class AppDrawer extends StatelessWidget {
                       : Icons.download,
                   color: iconColor),
               title: localizations.importOnly,
-              subtitle: localizations.importFromGoogleCalendar,
+              subtitle: localizations.importFromCalendar,
               titleStyle:
                   const TextStyle(fontWeight: FontWeight.bold, inherit: true),
               onTap: () {
@@ -247,7 +247,7 @@ class AppDrawer extends StatelessWidget {
                       : Icons.upload,
                   color: iconColor),
               title: localizations.exportOnly,
-              subtitle: localizations.exportToGoogleCalendar,
+              subtitle: localizations.exportToCalendar,
               titleStyle:
                   const TextStyle(fontWeight: FontWeight.bold, inherit: true),
               onTap: () async {
@@ -299,7 +299,7 @@ class AppDrawer extends StatelessWidget {
         // Plattformspezifischen Dialog anzeigen
         PlatformAdaptiveDialog.showAdaptiveDialog(
           context: globalContext,
-          title: localizations.googleCalendar,
+          title: localizations.synchronization,
           content: content,
           actions: actions,
         );

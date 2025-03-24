@@ -851,7 +851,7 @@ class HomePageState extends State<HomePage> {
                 color: logoColor,
               ),
               title: localizations.importOnly,
-              subtitle: localizations.importFromGoogleCalendar,
+              subtitle: localizations.importFromCalendar,
               titleStyle: const TextStyle(fontWeight: FontWeight.bold),
               onTap: () {
                 Navigator.pop(context);
@@ -866,7 +866,7 @@ class HomePageState extends State<HomePage> {
                 color: logoColor,
               ),
               title: localizations.exportOnly,
-              subtitle: localizations.exportToGoogleCalendar,
+              subtitle: localizations.exportToCalendar,
               titleStyle: const TextStyle(fontWeight: FontWeight.bold),
               onTap: () {
                 Navigator.pop(context);
