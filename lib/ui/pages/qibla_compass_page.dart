@@ -29,10 +29,21 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
   /// Flag, falls der Benutzer die Location-Berechtigung ablehnt.
   bool _permissionDenied = false;
 
+  /// Lokale Referenz auf die Lokalisierungen
+  AppLocalizations? _localizations;
+
   @override
   void initState() {
     super.initState();
     _checkAndRequestPermission();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // AppLocalizations Referenz speichern
+    _localizations = Provider.of<AppLocalizations>(context, listen: false);
   }
 
   /// Prüft und fordert die Location-Berechtigung an.
@@ -101,13 +112,25 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
 
   @override
   void dispose() {
-    FlutterQiblah().dispose();
+    // Sicheres Entfernen des FlutterQiblah-Streams
+    try {
+      FlutterQiblah().dispose();
+    } catch (e) {
+      // Fehler beim Entfernen des Streams ignorieren
+      debugPrint('Fehler beim Entfernen des FlutterQiblah-Streams: $e');
+    }
+
+    // Wir greifen nicht mehr auf Provider.of in dispose zu
+
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final localizations = Provider.of<AppLocalizations>(context);
+    // Statt Provider.of im build zu nutzen, greifen wir auf die gespeicherte Referenz zu
+    // Falls _localizations null ist (didChangeDependencies noch nicht aufgerufen), verwenden wir direct Provider.of
+    final localizations =
+        _localizations ?? Provider.of<AppLocalizations>(context);
 
     // Wenn die Berechtigung abgelehnt wurde, zeige eine Fehlermeldung.
     if (_permissionDenied) {

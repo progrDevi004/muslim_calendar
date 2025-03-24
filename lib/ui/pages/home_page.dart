@@ -144,6 +144,9 @@ class HomePageState extends State<HomePage> {
   // Referenz auf den CalendarSyncService
   late CalendarSyncService _calendarSyncService;
 
+  // Referenz auf den PrayerTimeService hinzufügen
+  PrayerTimeService? _prayerTimeService;
+
   // Dezenter Farbton für Gebetszeiten (BlueGrey 300)
   static const Color _prayerTimeColor = Color(0xFF90A4AE);
 
@@ -199,9 +202,8 @@ class HomePageState extends State<HomePage> {
         Provider.of<CalendarSyncService>(context, listen: false);
 
     // PrayerTimeService registrieren und Listener hinzufügen
-    final prayerTimeService =
-        Provider.of<PrayerTimeService>(context, listen: false);
-    prayerTimeService.addListener(_onPrayerTimesChanged);
+    _prayerTimeService = Provider.of<PrayerTimeService>(context, listen: false);
+    _prayerTimeService!.addListener(_onPrayerTimesChanged);
 
     // Listener hinzufügen, um auf Kategorieänderungen zu reagieren
     _calendarSyncService.addListener(_onCategoriesChanged);
@@ -213,9 +215,7 @@ class HomePageState extends State<HomePage> {
     _calendarSyncService.removeListener(_onCategoriesChanged);
 
     // PrayerTimeService Listener entfernen
-    final prayerTimeService =
-        Provider.of<PrayerTimeService>(context, listen: false);
-    prayerTimeService.removeListener(_onPrayerTimesChanged);
+    _prayerTimeService!.removeListener(_onPrayerTimesChanged);
 
     super.dispose();
   }
