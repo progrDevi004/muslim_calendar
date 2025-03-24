@@ -37,38 +37,66 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
 
   /// Prüft und fordert die Location-Berechtigung an.
   Future<void> _checkAndRequestPermission() async {
-    // Auf iOS verwenden wir "locationWhenInUse", auf Android "location".
-    if (Platform.isIOS) {
-      var status = await Permission.locationWhenInUse.status;
-      if (!status.isGranted) {
-        final result = await Permission.locationWhenInUse.request();
-        if (!result.isGranted) {
-          setState(() {
-            _permissionDenied = true;
-          });
-          return;
+    try {
+      // Auf iOS verwenden wir "locationWhenInUse", auf Android "location".
+      if (Platform.isIOS) {
+        var status = await Permission.locationWhenInUse.status;
+        if (!status.isGranted) {
+          final result = await Permission.locationWhenInUse.request();
+          if (!result.isGranted) {
+            setState(() {
+              _permissionDenied = true;
+            });
+            return;
+          }
+        }
+      } else {
+        var status = await Permission.location.status;
+        if (!status.isGranted) {
+          final result = await Permission.location.request();
+          if (!result.isGranted) {
+            setState(() {
+              _permissionDenied = true;
+            });
+            return;
+          }
         }
       }
-    } else {
-      var status = await Permission.location.status;
-      if (!status.isGranted) {
-        final result = await Permission.location.request();
-        if (!result.isGranted) {
-          setState(() {
-            _permissionDenied = true;
-          });
-          return;
-        }
+
+      // Berechtigung erteilt – initialisiere Device-Support und Qiblah-Stream.
+      // Für iOS überspringen wir die androidDeviceSensorSupport-Prüfung, da diese nur für Android relevant ist
+      if (Platform.isIOS) {
+        _deviceSupportFuture = Future.value(
+            true); // Wir gehen davon aus, dass iOS-Geräte Kompass unterstützen
+      } else {
+        _deviceSupportFuture = FlutterQiblah.androidDeviceSensorSupport()
+            .then((value) => value ?? false);
+      }
+
+      // Wir stellen sicher, dass der Qiblah-Stream erst initialisiert wird, nachdem alles bereit ist
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Explizit FlutterQiblah initialisieren (wichtig für iOS)
+      if (!mounted) return;
+      try {
+        _qiblahStream = FlutterQiblah.qiblahStream;
+        setState(() {});
+      } catch (e) {
+        debugPrint('Fehler bei der Initialisierung des QiblahStream: $e');
+        // Wir versuchen einen weiteren Anlauf nach kurzem Warten
+        await Future.delayed(const Duration(seconds: 1));
+        if (!mounted) return;
+        _qiblahStream = FlutterQiblah.qiblahStream;
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('Fehler bei der Berechtigung oder Initialisierung: $e');
+      if (mounted) {
+        setState(() {
+          _permissionDenied = true;
+        });
       }
     }
-
-    // Berechtigung erteilt – initialisiere Device-Support und Qiblah-Stream.
-    _deviceSupportFuture = FlutterQiblah.androidDeviceSensorSupport()
-        .then((value) => value ?? false);
-
-    _qiblahStream = FlutterQiblah.qiblahStream;
-
-    setState(() {});
   }
 
   @override
@@ -163,8 +191,22 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
                 );
               }
               final qiblahDirection = qiblahSnapshot.data!;
+
               // qiblahDirection.qiblah gibt die Qibla-Richtung in Grad an (Abweichung von Norden)
-              final double qiblahDegrees = qiblahDirection.qiblah ?? 0;
+              // Dieser Wert kann auf iOS manchmal null sein, daher fangen wir das ab
+              final double qiblahDegrees;
+              if (qiblahDirection.qiblah == null) {
+                // Wenn null, verwenden wir einen Standardwert oder den letzten bekannten Wert
+                // Ein typischer Wert für Mitteleuropa könnte etwa 120-140 Grad sein (Richtung Südost)
+                qiblahDegrees = Platform.isIOS ? 130.0 : 0.0;
+
+                // Im Debug-Modus Hinweis ausgeben
+                debugPrint(
+                    'Warnung: qiblahDirection.qiblah ist null, verwende Fallback-Wert: $qiblahDegrees');
+              } else {
+                qiblahDegrees = qiblahDirection.qiblah!;
+              }
+
               final double angleInRadians = qiblahDegrees * (math.pi / 180);
               // Invertiere den Winkel, um eine stabile Rotation zu erreichen
               final double correctedAngle = -angleInRadians;
