@@ -136,24 +136,52 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
     // Plattform bestimmen
     final bool isIOS = Platform.isIOS;
 
+    // Sichere Navigation zurück zum Dashboard
+    void navigateBack() {
+      debugPrint('QiblaCompassPage: Navigation zurück zum Dashboard...');
+      try {
+        // Wir verwenden routes statt pop(), um direkt zur HomePage zu navigieren
+        // Das verhindert den schwarzen Bildschirm
+        Navigator.of(context).pushReplacementNamed('/');
+        debugPrint('QiblaCompassPage: Navigation erfolgreich durchgeführt');
+      } catch (e) {
+        debugPrint('QiblaCompassPage: Fehler bei der Navigation: $e');
+        // Fallback: Versuche normal zu schließen, falls pushReplacementNamed fehlschlägt
+        Navigator.of(context).pop();
+      }
+    }
+
+    // Wir umgeben unsere UI mit WillPopScope, um das Zurück-Verhalten zu überschreiben
+    Widget buildScaffold(Widget body) {
+      return WillPopScope(
+        onWillPop: () async {
+          navigateBack();
+          return false; // Verhindert das normale Pop-Verhalten
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(localizations.qiblaCompass),
+            // Zurück-Button mit sicherer Navigation
+            leading: isIOS
+                ? CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    child: const Icon(CupertinoIcons.back),
+                    onPressed: navigateBack,
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: navigateBack,
+                  ),
+          ),
+          body: body,
+        ),
+      );
+    }
+
     // Wenn die Berechtigung abgelehnt wurde, zeige eine Fehlermeldung.
     if (_permissionDenied) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text(localizations.qiblaCompass),
-          // Zurück-Button hinzufügen
-          leading: isIOS
-              ? CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  child: const Icon(CupertinoIcons.back),
-                  onPressed: () => Navigator.of(context).pop(),
-                )
-              : IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-        ),
-        body: Center(
+      return buildScaffold(
+        Center(
           child: Text(
             localizations.locationPermissionDeniedMessage,
             textAlign: TextAlign.center,
@@ -165,22 +193,8 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
 
     // Falls _deviceSupportFuture noch null ist, zeigen wir einen Ladeindikator.
     if (_deviceSupportFuture == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text(localizations.qiblaCompass),
-          // Zurück-Button hinzufügen
-          leading: isIOS
-              ? CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  child: const Icon(CupertinoIcons.back),
-                  onPressed: () => Navigator.of(context).pop(),
-                )
-              : IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-        ),
-        body: const Center(
+      return buildScaffold(
+        const Center(
           child: SpinKitFadingCircle(
             color: logoColor,
             size: 50.0,
@@ -189,22 +203,8 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(localizations.qiblaCompass),
-        // Zurück-Button hinzufügen
-        leading: isIOS
-            ? CupertinoButton(
-                padding: EdgeInsets.zero,
-                child: const Icon(CupertinoIcons.back),
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-      ),
-      body: FutureBuilder<bool>(
+    return buildScaffold(
+      FutureBuilder<bool>(
         future: _deviceSupportFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {

@@ -217,6 +217,10 @@ class _MyAppState extends State<MyApp> {
       themeMode: themeMode,
       theme: lightTheme,
       darkTheme: darkTheme,
+      // Definierte Routen hinzufügen für Navigation
+      routes: {
+        '/': (context) => const HomePage(),
+      },
       home: FutureBuilder<bool>(
         future: _locationCheckFuture,
         builder: (context, snapshot) {
