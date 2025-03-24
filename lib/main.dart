@@ -219,25 +219,26 @@ class _MyAppState extends State<MyApp> {
       darkTheme: darkTheme,
       // Definierte Routen hinzufügen für Navigation
       routes: {
-        '/': (context) => const HomePage(),
+        '/': (context) => FutureBuilder<bool>(
+              future: _locationCheckFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Scaffold(
+                    body: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+                final bool wasLocationAsked = snapshot.data ?? false;
+                if (!wasLocationAsked) {
+                  return const InitialLocationPage();
+                }
+                return const HomePage();
+              },
+            ),
       },
-      home: FutureBuilder<bool>(
-        future: _locationCheckFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(),
-              ),
-            );
-          }
-          final bool wasLocationAsked = snapshot.data ?? false;
-          if (!wasLocationAsked) {
-            return const InitialLocationPage();
-          }
-          return const HomePage();
-        },
-      ),
+      // Startroute definieren
+      initialRoute: '/',
     );
   }
 }
