@@ -50,19 +50,48 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
   /// Prüft und fordert die Location-Berechtigung an.
   Future<void> _checkAndRequestPermission() async {
     try {
+      debugPrint('QiblaCompass: Überprüfe Standort-Berechtigung...');
+
       // Auf iOS verwenden wir "locationWhenInUse", auf Android "location".
       if (Platform.isIOS) {
+        debugPrint('QiblaCompass: iOS-Plattform erkannt');
+
+        // Überprüfen des Standortstatus
         var status = await Permission.locationWhenInUse.status;
+        debugPrint('QiblaCompass: iOS Standortstatus ist: $status');
+
         if (!status.isGranted) {
+          debugPrint('QiblaCompass: iOS Standortberechtigung anfordern...');
           final result = await Permission.locationWhenInUse.request();
+          debugPrint('QiblaCompass: iOS Standortanfrage Ergebnis: $result');
+
           if (!result.isGranted) {
+            debugPrint('QiblaCompass: iOS Standortberechtigung abgelehnt');
             setState(() {
               _permissionDenied = true;
             });
             return;
           }
         }
+
+        // Auf iOS brauchen wir für den Kompass auch Bewegungssensoren
+        // Auf neueren iOS-Versionen ist möglicherweise eine Sensorerberechtigung nötig
+        debugPrint(
+            'QiblaCompass: Prüfe auf weitere benötigte Berechtigungen für iOS');
+
+        try {
+          // Einige iOS-Versionen benötigen zusätzliche Berechtigungsabfragen
+          if (await Permission.sensors.isDenied) {
+            debugPrint('QiblaCompass: iOS Sensorberechtigung anfordern...');
+            await Permission.sensors.request();
+          }
+        } catch (e) {
+          // Wir fangen den Fehler ab und setzen fort - nicht alle iOS-Versionen unterstützen diese Berechtigung
+          debugPrint(
+              'QiblaCompass: Fehler bei Sensorberechtigung - ignorieren: $e');
+        }
       } else {
+        debugPrint('QiblaCompass: Android-Plattform erkannt');
         var status = await Permission.location.status;
         if (!status.isGranted) {
           final result = await Permission.location.request();
@@ -76,33 +105,82 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
       }
 
       // Berechtigung erteilt – initialisiere Device-Support und Qiblah-Stream.
+      debugPrint(
+          'QiblaCompass: Berechtigung erteilt, initialisiere Sensoren...');
+
       // Für iOS überspringen wir die androidDeviceSensorSupport-Prüfung, da diese nur für Android relevant ist
       if (Platform.isIOS) {
+        debugPrint('QiblaCompass: iOS - setze deviceSupport auf true');
         _deviceSupportFuture = Future.value(
             true); // Wir gehen davon aus, dass iOS-Geräte Kompass unterstützen
       } else {
-        _deviceSupportFuture = FlutterQiblah.androidDeviceSensorSupport()
-            .then((value) => value ?? false);
+        debugPrint('QiblaCompass: Android - prüfe Sensorunterstützung');
+        _deviceSupportFuture =
+            FlutterQiblah.androidDeviceSensorSupport().then((value) {
+          debugPrint('QiblaCompass: Android Sensorunterstützung: $value');
+          return value ?? false;
+        });
       }
 
       // Wir stellen sicher, dass der Qiblah-Stream erst initialisiert wird, nachdem alles bereit ist
+      debugPrint('QiblaCompass: Warte kurz vor Stream-Initialisierung...');
       await Future.delayed(const Duration(milliseconds: 500));
 
       // Explizit FlutterQiblah initialisieren (wichtig für iOS)
       if (!mounted) return;
       try {
-        _qiblahStream = FlutterQiblah.qiblahStream;
+        debugPrint('QiblaCompass: Initialisiere Qiblah-Stream...');
+
+        // Auf iOS besonders vorsichtig sein - wir versuchen die Initialisierung mehrfach
+        if (Platform.isIOS) {
+          // Kompassdaten werden auf iOS manchmal verzögert geliefert
+          _qiblahStream = FlutterQiblah.qiblahStream;
+
+          // Zusätzlich eine minimale Verzögerung hinzufügen, um iOS Zeit zu geben
+          await Future.delayed(const Duration(milliseconds: 200));
+        } else {
+          _qiblahStream = FlutterQiblah.qiblahStream;
+        }
+
+        debugPrint('QiblaCompass: Qiblah-Stream erfolgreich initialisiert');
         setState(() {});
       } catch (e) {
-        debugPrint('Fehler bei der Initialisierung des QiblahStream: $e');
+        debugPrint(
+            'QiblaCompass: Fehler bei der Initialisierung des QiblahStream: $e');
         // Wir versuchen einen weiteren Anlauf nach kurzem Warten
         await Future.delayed(const Duration(seconds: 1));
         if (!mounted) return;
-        _qiblahStream = FlutterQiblah.qiblahStream;
-        setState(() {});
+
+        debugPrint(
+            'QiblaCompass: Zweiter Versuch zur Initialisierung des Qiblah-Streams...');
+        try {
+          _qiblahStream = FlutterQiblah.qiblahStream;
+          debugPrint('QiblaCompass: Zweiter Versuch erfolgreich');
+          setState(() {});
+        } catch (e2) {
+          debugPrint('QiblaCompass: Auch zweiter Versuch fehlgeschlagen: $e2');
+          // Fallback für iOS: Wir erstellen einen vereinfachten/simulierten Stream
+          if (Platform.isIOS) {
+            debugPrint('QiblaCompass: Verwende iOS Fallback-Lösung');
+            // Da wir den Konstruktor nicht direkt aufrufen können, verwenden wir
+            // eine andere Strategie - wir lassen den Stream leer und
+            // zeigen stattdessen einen statischen Wert in der UI an
+            _qiblahStream = Stream.empty();
+
+            // In diesem Fall setzen wir _deviceSupportFuture auf false
+            // damit wir eine Fehlermeldung anzeigen können, die den Benutzer auffordert,
+            // die Berechtigung in den Einstellungen zu überprüfen
+            _deviceSupportFuture = Future.value(false);
+
+            debugPrint(
+                'QiblaCompass: Fallback-Stream eingerichtet - zeige Hilfenachricht an');
+            setState(() {});
+          }
+        }
       }
     } catch (e) {
-      debugPrint('Fehler bei der Berechtigung oder Initialisierung: $e');
+      debugPrint(
+          'QiblaCompass: Allgemeiner Fehler bei Berechtigung oder Initialisierung: $e');
       if (mounted) {
         setState(() {
           _permissionDenied = true;
@@ -182,10 +260,52 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
     if (_permissionDenied) {
       return buildScaffold(
         Center(
-          child: Text(
-            localizations.locationPermissionDeniedMessage,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, color: Colors.red),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Platform.isIOS
+                    ? CupertinoIcons.location_slash
+                    : Icons.location_off,
+                size: 64,
+                color: Colors.red.shade400,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                localizations.locationPermissionDeniedMessage,
+                style: const TextStyle(
+                    fontSize: 18,
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                child: Text(
+                  Platform.isIOS
+                      ? 'Bitte aktivieren Sie den Standortzugriff in den Einstellungen, um den Qibla-Kompass zu nutzen. '
+                          'Gehen Sie zu Einstellungen → Datenschutz → Ortungsdienste → Taqvimi.'
+                      : 'Bitte gewähren Sie der App Zugriff auf Ihren Standort, um den Qibla-Kompass zu nutzen. '
+                          'Öffnen Sie die App-Einstellungen, um die Berechtigung zu erteilen.',
+                  style:
+                      TextStyle(fontSize: 14, color: Colors.blueGrey.shade700),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () => navigateBack(),
+                icon: Icon(Platform.isIOS
+                    ? CupertinoIcons.arrow_left
+                    : Icons.arrow_back),
+                label: const Text('Zurück zur App'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: logoColor,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -226,10 +346,46 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
           final deviceSupported = snapshot.data!;
           if (!deviceSupported) {
             return Center(
-              child: Text(
-                localizations.deviceNotSupported,
-                style: const TextStyle(fontSize: 16, color: Colors.red),
-                textAlign: TextAlign.center,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Platform.isIOS
+                        ? CupertinoIcons.compass
+                        : Icons.compass_calibration_outlined,
+                    size: 64,
+                    color: Colors.red.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    localizations.deviceNotSupported,
+                    style: const TextStyle(
+                        fontSize: 18,
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  if (Platform.isIOS)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      child: Text(
+                        'Für iOS-Geräte: Bitte überprüfen Sie die Standort- und Bewegungssensor-Berechtigungen in den Einstellungen. '
+                        'Gehen Sie zu Einstellungen → Datenschutz → Ortungsdienste → Taqvimi und stellen Sie die Berechtigung auf "Beim Verwenden der App" ein. '
+                        'Starten Sie dann die App neu.',
+                        style: TextStyle(
+                            fontSize: 14, color: Colors.blueGrey.shade700),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  if (Platform.isIOS)
+                    ElevatedButton.icon(
+                      onPressed: () => navigateBack(),
+                      icon: const Icon(CupertinoIcons.arrow_left),
+                      label: const Text('Zurück zur App'),
+                    ),
+                ],
               ),
             );
           }

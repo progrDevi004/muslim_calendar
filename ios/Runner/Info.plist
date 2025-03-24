@@ -22,6 +22,17 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.778895687512-t7lq66jbs8ljd1rredheoeoqfe5g8in8</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
@@ -30,6 +41,14 @@
 	<string>The app needs access to your location to calculate prayer times for your current location and display the Qibla direction.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>The app needs access to your location to calculate prayer times for your current location and display the Qibla direction.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>This app needs to access your device motion data to show the Qibla compass and proper orientation.</string>
+	<!-- Magnetometer Zugriff für Kompass -->
+	<key>NSMagneticFieldUsageDescription</key>
+	<string>We need to use the magnetometer for the Qibla compass to function properly.</string>
+	<!-- Gyroscope Zugriff für Kompass-Orientierung -->
+	<key>NSGyroscopeUsageDescription</key>
+	<string>We need access to the gyroscope for the Qibla compass orientation.</string>
 	<key>NSUserNotificationUsageDescription</key>
 	<string>The app needs permission to display notifications to inform you about upcoming appointments.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
@@ -51,29 +70,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-<<<<<<< HEAD
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
-	<key>NSUserNotificationUsageDescription</key>
-	<string>The app needs permission to display notifications to inform you about upcoming appointments.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>The app needs access to your location to calculate prayer times for your current location and display the Qibla direction.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>The app needs access to your location to calculate prayer times for your current location and display the Qibla direction.</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.778895687512-t7lq66jbs8ljd1rredheoeoqfe5g8in8</string>
-			</array>
-		</dict>
-	</array>
-=======
->>>>>>> 8b635af (Commit für IOS (ggf flutter clean/pub get ausführen))
 </dict>
 </plist>

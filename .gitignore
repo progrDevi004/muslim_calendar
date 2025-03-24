@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Wichtige iOS-Dateien, die NICHT ignoriert werden sollen
+!ios/Runner/Info.plist
