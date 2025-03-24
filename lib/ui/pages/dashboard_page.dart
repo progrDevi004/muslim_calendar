@@ -1046,7 +1046,7 @@ class DashboardPageState extends State<DashboardPage> {
         actions: isIOS
             ? [
                 IconButton(
-                  icon: const Icon(CupertinoIcons.ellipsis_vertical),
+                  icon: const Icon(CupertinoIcons.ellipsis),
                   onPressed: () {
                     showCupertinoModalPopup(
                       context: context,
