@@ -2,6 +2,7 @@
 
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart'; // CupertinoIcons und CupertinoButton importieren
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_qiblah/flutter_qiblah.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart'; // Für Ladeanimation
@@ -132,11 +133,25 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
     final localizations =
         _localizations ?? Provider.of<AppLocalizations>(context);
 
+    // Plattform bestimmen
+    final bool isIOS = Platform.isIOS;
+
     // Wenn die Berechtigung abgelehnt wurde, zeige eine Fehlermeldung.
     if (_permissionDenied) {
       return Scaffold(
         appBar: AppBar(
           title: Text(localizations.qiblaCompass),
+          // Zurück-Button hinzufügen
+          leading: isIOS
+              ? CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  child: const Icon(CupertinoIcons.back),
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
         ),
         body: Center(
           child: Text(
@@ -153,6 +168,17 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
       return Scaffold(
         appBar: AppBar(
           title: Text(localizations.qiblaCompass),
+          // Zurück-Button hinzufügen
+          leading: isIOS
+              ? CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  child: const Icon(CupertinoIcons.back),
+                  onPressed: () => Navigator.of(context).pop(),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
         ),
         body: const Center(
           child: SpinKitFadingCircle(
@@ -166,6 +192,17 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(localizations.qiblaCompass),
+        // Zurück-Button hinzufügen
+        leading: isIOS
+            ? CupertinoButton(
+                padding: EdgeInsets.zero,
+                child: const Icon(CupertinoIcons.back),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
       ),
       body: FutureBuilder<bool>(
         future: _deviceSupportFuture,
