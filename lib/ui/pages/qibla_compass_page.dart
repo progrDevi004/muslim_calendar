@@ -138,12 +138,12 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
 
     // Sichere Navigation zurück zum Dashboard
     void navigateBack() {
-      debugPrint('QiblaCompassPage: Navigation zurück zum Dashboard...');
+      // debugPrint('QiblaCompassPage: Navigation zurück zum Dashboard...');
       try {
         // Wir verwenden routes statt pop(), um direkt zur HomePage zu navigieren
         // Das verhindert den schwarzen Bildschirm
         Navigator.of(context).pushReplacementNamed('/');
-        debugPrint('QiblaCompassPage: Navigation erfolgreich durchgeführt');
+        // debugPrint('QiblaCompassPage: Navigation erfolgreich durchgeführt');
       } catch (e) {
         debugPrint('QiblaCompassPage: Fehler bei der Navigation: $e');
         // Fallback: Versuche normal zu schließen, falls pushReplacementNamed fehlschlägt
