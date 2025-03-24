@@ -326,143 +326,219 @@ class DashboardPageState extends State<DashboardPage> {
         final scaffold = ScaffoldMessenger.of(globalContext);
         final Color iconColor = logoColor;
 
-        // Dialog-Inhalt erstellen, der für beide Plattformen passt
-        final content = Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Vollständig synchronisieren
-            PlatformAdaptiveListTile(
-              leading: Icon(
+        if (Platform.isIOS) {
+          // iOS-spezifische Implementierung mit CupertinoActionSheet
+          showCupertinoModalPopup(
+            context: globalContext,
+            builder: (context) => CupertinoActionSheet(
+              title: Text(localizations.googleCalendar),
+              actions: [
+                CupertinoActionSheetAction(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    try {
+                      scaffold.showSnackBar(
+                        SnackBar(
+                          content:
+                              Text(localizations.syncingWithGoogleCalendar),
+                        ),
+                      );
+
+                      await _calendarSyncService.syncGoogleCalendarNow();
+                      await reloadData();
+
+                      final homePageState = globalContext
+                          .findAncestorStateOfType<HomePageState>();
+                      homePageState?.loadAllAppointments();
+
+                      scaffold.clearSnackBars();
+                      scaffold.showSnackBar(
+                        SnackBar(
+                          content: Text(localizations.syncCompleted),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    } catch (e) {
+                      debugPrint('Sync-Fehler: $e');
+                      scaffold.clearSnackBars();
+                      scaffold.showSnackBar(
+                        SnackBar(
+                          content: Text(localizations.syncError(e.toString())),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(CupertinoIcons.arrow_2_circlepath, color: iconColor),
+                      const SizedBox(width: 8),
+                      Text(localizations.fullSync),
+                    ],
+                  ),
+                ),
+                CupertinoActionSheetAction(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    try {
+                      scaffold.showSnackBar(
+                        SnackBar(
+                          content:
+                              Text(localizations.exportingToGoogleCalendar),
+                        ),
+                      );
+
+                      await _calendarSyncService.exportAppointments();
+
+                      scaffold.clearSnackBars();
+                      scaffold.showSnackBar(
+                        SnackBar(
+                          content: Text(localizations.syncExportCompleted ??
+                              localizations.exportCompleted),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    } catch (e) {
+                      debugPrint('Export-Fehler: $e');
+                      scaffold.clearSnackBars();
+                      scaffold.showSnackBar(
+                        SnackBar(
+                          content:
+                              Text(localizations.exportError(e.toString())),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(CupertinoIcons.square_arrow_up, color: iconColor),
+                      const SizedBox(width: 8),
+                      Text(localizations.exportToGoogleCalendar),
+                    ],
+                  ),
+                ),
+                CupertinoActionSheetAction(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    try {
+                      scaffold.showSnackBar(
+                        SnackBar(
+                          content:
+                              Text(localizations.importingFromGoogleCalendar),
+                        ),
+                      );
+
+                      await _calendarSyncService.importAppointments();
+
+                      scaffold.clearSnackBars();
+                      scaffold.showSnackBar(
+                        SnackBar(
+                          content: Text(localizations.syncImportCompleted ??
+                              localizations.importCompleted),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    } catch (e) {
+                      debugPrint('Import-Fehler: $e');
+                      scaffold.clearSnackBars();
+                      scaffold.showSnackBar(
+                        SnackBar(
+                          content:
+                              Text(localizations.importError(e.toString())),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(CupertinoIcons.square_arrow_down, color: iconColor),
+                      const SizedBox(width: 8),
+                      Text(localizations.importFromGoogleCalendar),
+                    ],
+                  ),
+                ),
+                CupertinoActionSheetAction(
+                  onPressed: () => Navigator.pop(context),
+                  isDestructiveAction: true,
+                  child: Text(localizations.cancel),
+                ),
+              ],
+            ),
+          );
+        } else {
+          // Android-Implementierung bleibt unverändert
+          final content = Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              PlatformAdaptiveListTile(
+                leading: Icon(
                   Platform.isIOS
                       ? CupertinoIcons.arrow_2_circlepath
                       : Icons.sync,
-                  color: iconColor),
-              title: localizations.fullSync,
-              subtitle: localizations.importAndExport,
-              titleStyle:
-                  const TextStyle(fontWeight: FontWeight.bold, inherit: true),
-              onTap: () async {
-                Navigator.pop(globalContext);
+                  color: iconColor,
+                ),
+                title: localizations.fullSync,
+                subtitle: localizations.importAndExport,
+                titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+                onTap: () async {
+                  Navigator.pop(globalContext);
+                  try {
+                    scaffold.showSnackBar(
+                      SnackBar(
+                        content: Text(localizations.syncingWithGoogleCalendar),
+                      ),
+                    );
 
-                try {
-                  // Fortschritt anzeigen
-                  scaffold.showSnackBar(
-                    SnackBar(
-                        content: Text(localizations.syncingWithGoogleCalendar)),
-                  );
+                    await _calendarSyncService.syncGoogleCalendarNow();
+                    await reloadData();
 
-                  // Vollständige Synchronisation durchführen
-                  await _calendarSyncService.syncGoogleCalendarNow();
+                    final homePageState =
+                        globalContext.findAncestorStateOfType<HomePageState>();
+                    homePageState?.loadAllAppointments();
 
-                  // Nach erfolgreicher Synchronisation neu laden
-                  await reloadData();
+                    scaffold.clearSnackBars();
+                    scaffold.showSnackBar(
+                      SnackBar(
+                        content: Text(localizations.syncCompleted),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } catch (e) {
+                    debugPrint('Sync-Fehler: $e');
+                    scaffold.clearSnackBars();
+                    scaffold.showSnackBar(
+                      SnackBar(
+                        content: Text(localizations.syncError(e.toString())),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+          );
 
-                  // Auch HomePage aktualisieren falls nötig
-                  final homePageState =
-                      globalContext.findAncestorStateOfType<HomePageState>();
-                  homePageState?.loadAllAppointments();
-
-                  scaffold.clearSnackBars();
-                  scaffold.showSnackBar(
-                    SnackBar(
-                      content: Text(localizations.syncCompleted),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } catch (e) {
-                  debugPrint('Sync-Fehler: $e');
-                  scaffold.clearSnackBars();
-                  scaffold.showSnackBar(
-                    SnackBar(
-                      content: Text(localizations.syncSyncError(e.toString())),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
+          final actions = [
+            PlatformAdaptiveDialog.adaptiveDialogAction(
+              context: globalContext,
+              text: localizations.cancel,
+              onPressed: () => Navigator.pop(globalContext),
+              color: logoColor,
             ),
+          ];
 
-            // Nur importieren
-            PlatformAdaptiveListTile(
-              leading: Icon(
-                  Platform.isIOS
-                      ? CupertinoIcons.arrow_down_circle
-                      : Icons.download,
-                  color: iconColor),
-              title: localizations.importOnly,
-              subtitle: localizations.importFromGoogleCalendar,
-              titleStyle:
-                  const TextStyle(fontWeight: FontWeight.bold, inherit: true),
-              onTap: () {
-                Navigator.pop(globalContext);
-                _calendarSyncService.importAppointments();
-              },
-            ),
-
-            // Nur exportieren
-            PlatformAdaptiveListTile(
-              leading: Icon(
-                  Platform.isIOS
-                      ? CupertinoIcons.arrow_up_circle
-                      : Icons.upload,
-                  color: iconColor),
-              title: localizations.exportOnly,
-              subtitle: localizations.exportToGoogleCalendar,
-              titleStyle:
-                  const TextStyle(fontWeight: FontWeight.bold, inherit: true),
-              onTap: () async {
-                Navigator.pop(globalContext);
-
-                try {
-                  // Fortschritt anzeigen
-                  scaffold.showSnackBar(
-                    SnackBar(
-                        content: Text(localizations.exportingToGoogleCalendar)),
-                  );
-
-                  // Export durchführen
-                  await _calendarSyncService.exportAppointments();
-
-                  scaffold.clearSnackBars();
-                  scaffold.showSnackBar(
-                    SnackBar(
-                      content: Text(localizations.syncExportCompleted ??
-                          localizations.exportCompleted),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } catch (e) {
-                  debugPrint('Export-Fehler: $e');
-                  scaffold.clearSnackBars();
-                  scaffold.showSnackBar(
-                    SnackBar(
-                      content: Text(localizations.exportError(e.toString())),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-            ),
-          ],
-        );
-
-        // Dialog-Aktionen erstellen
-        final actions = [
-          PlatformAdaptiveDialog.adaptiveDialogAction(
+          PlatformAdaptiveDialog.showAdaptiveDialog(
             context: globalContext,
-            text: localizations.cancel,
-            onPressed: () => Navigator.pop(globalContext),
-            color: logoColor,
-          ),
-        ];
-
-        // Plattformspezifischen Dialog anzeigen
-        PlatformAdaptiveDialog.showAdaptiveDialog(
-          context: globalContext,
-          title: localizations.googleCalendar,
-          content: content,
-          actions: actions,
-        );
+            title: localizations.googleCalendar,
+            content: content,
+            actions: actions,
+          );
+        }
       });
     });
   }
