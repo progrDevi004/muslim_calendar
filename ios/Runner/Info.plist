@@ -46,6 +46,10 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSUserNotificationUsageDescription</key>
-	<string>Die App benötigt die Erlaubnis, Benachrichtigungen anzuzeigen, um Sie über bevorstehende Termine zu informieren.</string>
+	<string>The app needs permission to display notifications to inform you about upcoming appointments.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>The app needs access to your location to calculate prayer times for your current location and display the Qibla direction.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>The app needs access to your location to calculate prayer times for your current location and display the Qibla direction.</string>
 </dict>
 </plist>
