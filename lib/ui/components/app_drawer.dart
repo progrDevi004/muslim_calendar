@@ -71,9 +71,10 @@ class AppDrawer extends StatelessWidget {
       Navigator.pop(context);
     }
 
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const SettingsPage()),
-    );
+    // Speichern der Route, um keinen BuildContext über async gap zu verwenden
+    final route = MaterialPageRoute(builder: (context) => const SettingsPage());
+
+    await Navigator.of(context).push(route);
 
     // Callback für Settings-Update
     onSettingsOpen();
@@ -88,9 +89,11 @@ class AppDrawer extends StatelessWidget {
       Navigator.pop(context);
     }
 
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const QiblaCompassPage()),
-    );
+    // Speichern der Route, um keinen BuildContext über async gap zu verwenden
+    final route =
+        MaterialPageRoute(builder: (context) => const QiblaCompassPage());
+
+    await Navigator.of(context).push(route);
   }
 
   /// Zeigt den Dialog zum Filtern nach Kategorien an
@@ -192,7 +195,8 @@ class AppDrawer extends StatelessWidget {
               titleStyle:
                   const TextStyle(fontWeight: FontWeight.bold, inherit: true),
               onTap: () async {
-                Navigator.pop(globalContext);
+                final navContext = globalContext;
+                Navigator.pop(navContext);
 
                 try {
                   // Fortschritt anzeigen
@@ -207,22 +211,28 @@ class AppDrawer extends StatelessWidget {
                   // Nach erfolgreicher Synchronisation neu laden
                   onReloadAppointments();
 
-                  scaffold.clearSnackBars();
-                  scaffold.showSnackBar(
-                    SnackBar(
-                      content: Text(localizations.syncCompleted),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
+                  // Prüfen, ob das Widget noch im Baum ist
+                  if (scaffold.mounted) {
+                    scaffold.clearSnackBars();
+                    scaffold.showSnackBar(
+                      SnackBar(
+                        content: Text(localizations.syncCompleted),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
                 } catch (e) {
                   debugPrint('Sync-Fehler: $e');
-                  scaffold.clearSnackBars();
-                  scaffold.showSnackBar(
-                    SnackBar(
-                      content: Text(localizations.syncSyncError(e.toString())),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  if (scaffold.mounted) {
+                    scaffold.clearSnackBars();
+                    scaffold.showSnackBar(
+                      SnackBar(
+                        content:
+                            Text(localizations.syncSyncError(e.toString())),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
               },
             ),
@@ -272,8 +282,7 @@ class AppDrawer extends StatelessWidget {
                   scaffold.clearSnackBars();
                   scaffold.showSnackBar(
                     SnackBar(
-                      content: Text(localizations.syncExportCompleted ??
-                          localizations.exportCompleted),
+                      content: Text(localizations.syncExportCompleted),
                       backgroundColor: Colors.green,
                     ),
                   );
@@ -367,14 +376,20 @@ class AppDrawer extends StatelessWidget {
               titleStyle:
                   const TextStyle(fontWeight: FontWeight.bold, inherit: true),
               onTap: () async {
-                Navigator.pop(globalContext);
+                final navContext = globalContext;
+                Navigator.pop(navContext);
 
                 try {
                   // Speichere zuerst die Import-Option
                   await ImportSettingsService.saveImportOption(2);
-                  ScaffoldMessenger.of(globalContext).showSnackBar(
-                    SnackBar(content: Text(localizations.importOptionSaved)),
-                  );
+
+                  // Prüfen, ob das Widget noch im Baum ist
+                  if (scaffold.mounted) {
+                    ScaffoldMessenger.of(navContext).showSnackBar(
+                      SnackBar(content: Text(localizations.importOptionSaved)),
+                    );
+                  }
+
                   // Nach dem Speichern der Option neu laden
                   onReloadAppointments();
                 } catch (e) {
@@ -395,14 +410,20 @@ class AppDrawer extends StatelessWidget {
               titleStyle:
                   const TextStyle(fontWeight: FontWeight.bold, inherit: true),
               onTap: () async {
-                Navigator.pop(globalContext);
+                final navContext = globalContext;
+                Navigator.pop(navContext);
 
                 try {
                   // Speichere zuerst die Import-Option
                   await ImportSettingsService.saveImportOption(0);
-                  ScaffoldMessenger.of(globalContext).showSnackBar(
-                    SnackBar(content: Text(localizations.importOptionSaved)),
-                  );
+
+                  // Prüfen, ob das Widget noch im Baum ist
+                  if (scaffold.mounted) {
+                    ScaffoldMessenger.of(navContext).showSnackBar(
+                      SnackBar(content: Text(localizations.importOptionSaved)),
+                    );
+                  }
+
                   // Nach dem Speichern der Option neu laden
                   onReloadAppointments();
                 } catch (e) {

@@ -761,24 +761,33 @@ class _ProjectDialogState extends State<ProjectDialog> {
                 padding: const EdgeInsets.only(top: 16.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: dialogActions.map((action) {
-                    // Spezielle Gestaltung für iOS-Buttons
-                    if (action is CupertinoButton) {
-                      return Expanded(
-                        child: action,
-                      );
-                    } else if (action is TextButton) {
-                      // Anpassen der TextButtons für iOS-Stil
-                      return Expanded(
+                  children: [
+                    if (isEditing && widget.onDelete != null)
+                      Expanded(
                         child: CupertinoButton(
                           padding: EdgeInsets.zero,
-                          onPressed: action.onPressed,
-                          child: action.child ?? const Text(''),
+                          onPressed: _showDeleteConfirmationDialog,
+                          child: Text(
+                            localizations.delete ?? 'Löschen',
+                            style: const TextStyle(color: Colors.red),
+                          ),
                         ),
-                      );
-                    }
-                    return Expanded(child: action);
-                  }).toList(),
+                      ),
+                    Expanded(
+                      child: CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(localizations.cancel ?? 'Abbrechen'),
+                      ),
+                    ),
+                    Expanded(
+                      child: CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: _saveProject,
+                        child: Text(localizations.save ?? 'Speichern'),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
