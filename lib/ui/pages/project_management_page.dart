@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:Taqvimi/models/project_model.dart';
 import 'package:Taqvimi/providers/project_provider.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_app_bar.dart';
-import 'package:Taqvimi/ui/components/platform_adaptive_dialog.dart';
 import 'package:Taqvimi/ui/dialogs/project_dialog.dart';
 import 'package:Taqvimi/ui/components/app_drawer.dart';
 import 'package:Taqvimi/localization/app_localizations.dart';
@@ -75,6 +74,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
   Widget build(BuildContext context) {
     final localizations = Provider.of<AppLocalizations>(context);
     final isIOS = Platform.isIOS;
+    final theme = Theme.of(context);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -83,15 +83,6 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
         leading: isIOS ? null : const Icon(Icons.menu),
         onLeadingPressed: isIOS ? null : _toggleDrawer,
         centerTitle: isIOS, // Auf iOS zentrieren, auf Android links
-        actions: [
-          // Ansicht wechseln (Woche, Monat, Jahr)
-          IconButton(
-            icon: Icon(
-              isIOS ? CupertinoIcons.calendar : Icons.calendar_view_month,
-            ),
-            onPressed: _showViewTypeSelectionDialog,
-          ),
-        ],
       ),
       drawer: AppDrawer(
         onSettingsOpen: () => setState(() {}),
@@ -137,8 +128,8 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
           final sortedProjects = List<ProjectModel>.from(projects)
             ..sort((a, b) => a.startDate.compareTo(b.startDate));
 
-          // Hauptinhalt: Projektliste mit Zeitachse
-          return _buildProjectList(sortedProjects);
+          // Hauptinhalt: Projektliste mit Zeitachse je nach ausgewählter Ansicht
+          return _buildProjectListByViewType(sortedProjects);
         },
       ),
       floatingActionButton: FloatingActionButton(
@@ -149,7 +140,991 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
           color: Colors.white,
         ),
       ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: isIOS
+            ? CupertinoTabBar(
+                currentIndex: _viewType.index,
+                activeColor: theme.primaryColor,
+                onTap: (index) {
+                  setState(() {
+                    _viewType = ProjectViewType.values[index];
+                  });
+                },
+                items: [
+                  BottomNavigationBarItem(
+                    icon: const Icon(CupertinoIcons.calendar_today),
+                    label: localizations.dayView ?? 'Tag',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: const Icon(CupertinoIcons.calendar_badge_plus),
+                    label: localizations.weekView ?? 'Woche',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: const Icon(CupertinoIcons.calendar),
+                    label: localizations.monthView ?? 'Monat',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: const Icon(CupertinoIcons.calendar_circle),
+                    label: localizations.yearView ?? 'Jahr',
+                  ),
+                ],
+              )
+            : BottomNavigationBar(
+                currentIndex: _viewType.index,
+                selectedItemColor: theme.primaryColor,
+                unselectedItemColor: Colors.grey,
+                type: BottomNavigationBarType.fixed,
+                elevation: 8,
+                onTap: (index) {
+                  setState(() {
+                    _viewType = ProjectViewType.values[index];
+                  });
+                },
+                items: [
+                  BottomNavigationBarItem(
+                    icon: const Icon(Icons.view_day),
+                    label: localizations.dayView ?? 'Tag',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: const Icon(Icons.view_week),
+                    label: localizations.weekView ?? 'Woche',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: const Icon(Icons.calendar_view_month),
+                    label: localizations.monthView ?? 'Monat',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: const Icon(Icons.calendar_today),
+                    label: localizations.yearView ?? 'Jahr',
+                  ),
+                ],
+              ),
+      ),
     );
+  }
+
+  // Baut die Projektliste basierend auf dem ausgewählten ViewType
+  Widget _buildProjectListByViewType(List<ProjectModel> projects) {
+    switch (_viewType) {
+      case ProjectViewType.day:
+        return _buildDayView(projects);
+      case ProjectViewType.week:
+        return _buildWeekView(projects);
+      case ProjectViewType.month:
+        return _buildMonthView(projects);
+      case ProjectViewType.year:
+        return _buildYearView(projects);
+      default:
+        return _buildMonthView(projects); // Standardansicht: Monat
+    }
+  }
+
+  // Tagesansicht
+  Widget _buildDayView(List<ProjectModel> projects) {
+    // Standard-Tag ist heute
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+
+    // Zustandsvariable für den ausgewählten Tag
+    final DateTime selectedDate = _selectedDate ?? today;
+
+    // Filtere Projekte, die am ausgewählten Tag aktiv sind
+    final filteredProjects = projects.where((project) {
+      return (project.startDate.isBefore(selectedDate) ||
+              isSameDay(project.startDate, selectedDate)) &&
+          (project.endDate.isAfter(selectedDate) ||
+              isSameDay(project.endDate, selectedDate));
+    }).toList();
+
+    return Column(
+      children: [
+        // Navigation für Tagesauswahl
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back_ios),
+                onPressed: () {
+                  setState(() {
+                    _selectedDate =
+                        selectedDate.subtract(const Duration(days: 1));
+                  });
+                },
+              ),
+              TextButton(
+                onPressed: () => _selectDate(context),
+                child: Text(
+                  _formatDateWithWeekday(selectedDate),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.arrow_forward_ios),
+                onPressed: () {
+                  setState(() {
+                    _selectedDate = selectedDate.add(const Duration(days: 1));
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+
+        // Tages-Timeline
+        Expanded(
+          child: filteredProjects.isEmpty
+              ? Center(
+                  child: Text(
+                    'Keine Projekte für diesen Tag',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: filteredProjects.length,
+                  itemBuilder: (context, index) {
+                    final project = filteredProjects[index];
+                    return _buildProjectCard(project);
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  // Wochenansicht
+  Widget _buildWeekView(List<ProjectModel> projects) {
+    // Standard-Woche ist aktuelle Woche
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+
+    // Berechne Wochenbeginn (Montag) und Wochenende (Sonntag) der aktuellen Woche
+    final DateTime startOfWeek =
+        _selectedWeekStart ?? today.subtract(Duration(days: today.weekday - 1));
+    final DateTime endOfWeek = startOfWeek.add(const Duration(days: 6));
+
+    // Filtere Projekte, die in der ausgewählten Woche aktiv sind
+    final filteredProjects = projects.where((project) {
+      return (project.startDate.isBefore(endOfWeek) ||
+              isSameDay(project.startDate, endOfWeek)) &&
+          (project.endDate.isAfter(startOfWeek) ||
+              isSameDay(project.endDate, startOfWeek));
+    }).toList();
+
+    return Column(
+      children: [
+        // Navigation für Wochenauswahl
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back_ios),
+                onPressed: () {
+                  setState(() {
+                    _selectedWeekStart =
+                        startOfWeek.subtract(const Duration(days: 7));
+                  });
+                },
+              ),
+              TextButton(
+                onPressed: () {
+                  // Bei Klick auf aktuelle Woche zurücksetzen
+                  setState(() {
+                    _selectedWeekStart =
+                        today.subtract(Duration(days: today.weekday - 1));
+                  });
+                },
+                child: Text(
+                  '${_formatDate(startOfWeek)} - ${_formatDate(endOfWeek)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.arrow_forward_ios),
+                onPressed: () {
+                  setState(() {
+                    _selectedWeekStart =
+                        startOfWeek.add(const Duration(days: 7));
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+
+        // Wochen-Übersicht
+        Container(
+          height: 60,
+          margin: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Row(
+            children: List.generate(7, (index) {
+              final day = startOfWeek.add(Duration(days: index));
+              final isToday = isSameDay(day, today);
+
+              // Zähle Projekte für diesen Tag
+              final projectsForDay = projects
+                  .where((project) =>
+                      (project.startDate.isBefore(day) ||
+                          isSameDay(project.startDate, day)) &&
+                      (project.endDate.isAfter(day) ||
+                          isSameDay(project.endDate, day)))
+                  .length;
+
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedDate = day;
+                      _viewType =
+                          ProjectViewType.day; // Wechsel zur Tagesansicht
+                    });
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 2.0),
+                    decoration: BoxDecoration(
+                      color: isToday
+                          ? Theme.of(context).primaryColor.withOpacity(0.2)
+                          : null,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isToday
+                            ? Theme.of(context).primaryColor
+                            : Colors.grey[300]!,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _getDayOfWeekShort(day),
+                          style: TextStyle(
+                            fontWeight:
+                                isToday ? FontWeight.bold : FontWeight.normal,
+                            color: isToday
+                                ? Theme.of(context).primaryColor
+                                : Colors.grey[600],
+                          ),
+                        ),
+                        Text(
+                          day.day.toString(),
+                          style: TextStyle(
+                            fontWeight:
+                                isToday ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 16,
+                            color:
+                                isToday ? Theme.of(context).primaryColor : null,
+                          ),
+                        ),
+                        if (projectsForDay > 0)
+                          Container(
+                            margin: const EdgeInsets.only(top: 2),
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).primaryColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+
+        const SizedBox(height: 8.0),
+
+        // Wochenliste der Projekte
+        Expanded(
+          child: filteredProjects.isEmpty
+              ? Center(
+                  child: Text(
+                    'Keine Projekte für diese Woche',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: filteredProjects.length,
+                  itemBuilder: (context, index) {
+                    final project = filteredProjects[index];
+                    return _buildProjectCard(project);
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  // Monatsansicht
+  Widget _buildMonthView(List<ProjectModel> projects) {
+    // Standard-Monat ist aktueller Monat
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+
+    // Wähle den ersten Tag des ausgewählten Monats
+    final DateTime firstDayOfMonth =
+        _selectedMonth ?? DateTime(now.year, now.month, 1);
+    final int daysInMonth =
+        DateTime(firstDayOfMonth.year, firstDayOfMonth.month + 1, 0).day;
+
+    // Filtere Projekte, die im ausgewählten Monat aktiv sind
+    final DateTime lastDayOfMonth =
+        DateTime(firstDayOfMonth.year, firstDayOfMonth.month, daysInMonth);
+    final filteredProjects = projects.where((project) {
+      return (project.startDate.isBefore(lastDayOfMonth) ||
+              isSameDay(project.startDate, lastDayOfMonth)) &&
+          (project.endDate.isAfter(firstDayOfMonth) ||
+              isSameDay(project.endDate, firstDayOfMonth));
+    }).toList();
+
+    return Column(
+      children: [
+        // Navigation für Monatsauswahl
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back_ios),
+                onPressed: () {
+                  setState(() {
+                    _selectedMonth = DateTime(
+                        firstDayOfMonth.year, firstDayOfMonth.month - 1, 1);
+                  });
+                },
+              ),
+              TextButton(
+                onPressed: () => _selectMonth(context),
+                child: Text(
+                  _getMonthYearString(firstDayOfMonth),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.arrow_forward_ios),
+                onPressed: () {
+                  setState(() {
+                    _selectedMonth = DateTime(
+                        firstDayOfMonth.year, firstDayOfMonth.month + 1, 1);
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+
+        // Monatsübersicht
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Column(
+            children: [
+              // Wochentags-Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+                    .map((day) => Expanded(
+                          child: Center(
+                            child: Text(
+                              day,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ),
+                        ))
+                    .toList(),
+              ),
+
+              const SizedBox(height: 8.0),
+
+              // Kalendertage
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 7,
+                  childAspectRatio: 1,
+                ),
+                itemCount: _getMonthViewItemCount(firstDayOfMonth),
+                itemBuilder: (context, index) {
+                  // Berechne den ersten anzuzeigenden Tag (erster Wochentag des Monats)
+                  final firstDayWeekday =
+                      DateTime(firstDayOfMonth.year, firstDayOfMonth.month, 1)
+                          .weekday;
+                  final dayOffset = firstDayWeekday - 1; // -1 weil Montag = 1
+
+                  final displayedDay = index - dayOffset + 1;
+
+                  if (displayedDay < 1 || displayedDay > daysInMonth) {
+                    // Leere Zelle für Tage außerhalb des Monats
+                    return Container();
+                  }
+
+                  final date = DateTime(firstDayOfMonth.year,
+                      firstDayOfMonth.month, displayedDay);
+                  final isToday = isSameDay(date, today);
+
+                  // Prüfe, ob an diesem Tag Projekte aktiv sind
+                  final hasProjects = projects.any((project) =>
+                      (project.startDate.isBefore(date) ||
+                          isSameDay(project.startDate, date)) &&
+                      (project.endDate.isAfter(date) ||
+                          isSameDay(project.endDate, date)));
+
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedDate = date;
+                        _viewType =
+                            ProjectViewType.day; // Wechsel zur Tagesansicht
+                      });
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.all(2.0),
+                      decoration: BoxDecoration(
+                        color: isToday
+                            ? Theme.of(context).primaryColor.withOpacity(0.2)
+                            : null,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isToday
+                              ? Theme.of(context).primaryColor
+                              : hasProjects
+                                  ? Colors.grey[400]!
+                                  : Colors.grey[200]!,
+                          width: hasProjects ? 1.0 : 0.5,
+                        ),
+                      ),
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: Text(
+                              displayedDay.toString(),
+                              style: TextStyle(
+                                fontWeight: isToday
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: isToday
+                                    ? Theme.of(context).primaryColor
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          if (hasProjects)
+                            Positioned(
+                              right: 4,
+                              top: 4,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).primaryColor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 8.0),
+
+        // Monatsliste der Projekte
+        Expanded(
+          child: filteredProjects.isEmpty
+              ? Center(
+                  child: Text(
+                    'Keine Projekte für diesen Monat',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: filteredProjects.length,
+                  itemBuilder: (context, index) {
+                    final project = filteredProjects[index];
+                    return _buildProjectCard(project);
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  // Jahresansicht
+  Widget _buildYearView(List<ProjectModel> projects) {
+    // Standard-Jahr ist aktuelles Jahr
+    final DateTime now = DateTime.now();
+    final int selectedYear = _selectedYear ?? now.year;
+    final List<String> months = [
+      'Januar',
+      'Februar',
+      'März',
+      'April',
+      'Mai',
+      'Juni',
+      'Juli',
+      'August',
+      'September',
+      'Oktober',
+      'November',
+      'Dezember'
+    ];
+
+    // Filtere Projekte für das ausgewählte Jahr
+    final filteredProjects = projects.where((project) {
+      return (project.startDate.year == selectedYear ||
+              project.endDate.year == selectedYear) ||
+          (project.startDate.year < selectedYear &&
+              project.endDate.year > selectedYear);
+    }).toList();
+
+    return Column(
+      children: [
+        // Navigation für Jahresauswahl
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back_ios),
+                onPressed: () {
+                  setState(() {
+                    _selectedYear = selectedYear - 1;
+                  });
+                },
+              ),
+              TextButton(
+                onPressed: () => _selectYear(context),
+                child: Text(
+                  selectedYear.toString(),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.arrow_forward_ios),
+                onPressed: () {
+                  setState(() {
+                    _selectedYear = selectedYear + 1;
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+
+        // Monatsübersicht für das Jahr
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.all(16.0),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 1.2,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+            ),
+            itemCount: 12,
+            itemBuilder: (context, index) {
+              final month = index + 1;
+              final startOfMonth = DateTime(selectedYear, month, 1);
+              final endOfMonth = DateTime(selectedYear, month + 1, 0);
+
+              // Prüfe, ob in diesem Monat Projekte aktiv sind
+              final projectsInMonth = projects
+                  .where((project) =>
+                      (project.startDate.isBefore(endOfMonth) ||
+                          isSameDay(project.startDate, endOfMonth)) &&
+                      (project.endDate.isAfter(startOfMonth) ||
+                          isSameDay(project.endDate, startOfMonth)))
+                  .toList();
+
+              final isCurrentMonth =
+                  now.year == selectedYear && now.month == month;
+
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedMonth = startOfMonth;
+                    _viewType =
+                        ProjectViewType.month; // Wechsel zur Monatsansicht
+                  });
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isCurrentMonth
+                        ? Theme.of(context).primaryColor.withOpacity(0.1)
+                        : Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isCurrentMonth
+                          ? Theme.of(context).primaryColor
+                          : Colors.grey[300]!,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        months[index],
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isCurrentMonth
+                              ? Theme.of(context).primaryColor
+                              : Colors.grey[800],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${projectsInMonth.length} Projekte',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: projectsInMonth.isEmpty
+                              ? Colors.grey[500]
+                              : Colors.grey[700],
+                        ),
+                      ),
+                      if (projectsInMonth.isNotEmpty)
+                        Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          height: 6,
+                          width: 50,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor,
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+
+        // Projekte im gesamten Jahr
+        Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Projekte im Jahr $selectedYear',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                height: 160,
+                child: filteredProjects.isEmpty
+                    ? Center(
+                        child: Text(
+                          'Keine Projekte für dieses Jahr',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      )
+                    : ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: filteredProjects.length,
+                        itemBuilder: (context, index) {
+                          final project = filteredProjects[index];
+                          return _buildCompactProjectCard(project);
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Kompakte Projektkarte für die Jahresansicht
+  Widget _buildCompactProjectCard(ProjectModel project) {
+    final category = project.category;
+    final Color projectColor =
+        category?.color ?? Theme.of(context).primaryColor;
+
+    return GestureDetector(
+      onTap: () => _showProjectDetailsDialog(project),
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.only(right: 10.0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: projectColor.withOpacity(0.5)),
+          color: Colors.white,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: projectColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      project.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${_formatDate(project.startDate)} - ${_formatDate(project.endDate)}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 4),
+              LinearProgressIndicator(
+                value: project.progress / 100,
+                backgroundColor: Colors.grey[200],
+                valueColor: AlwaysStoppedAnimation<Color>(projectColor),
+                borderRadius: BorderRadius.circular(2),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${project.progress}% ${_getRemainingDaysText(project.endDate)}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: _getDeadlineColor(project.endDate),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Hilfsmethoden für die Ansichten
+  DateTime? _selectedDate;
+  DateTime? _selectedWeekStart;
+  DateTime? _selectedMonth;
+  int? _selectedYear;
+
+  // Datumauswahl-Dialog
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime initialDate = _selectedDate ?? DateTime.now();
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  // Monatsauswahl-Dialog
+  Future<void> _selectMonth(BuildContext context) async {
+    final DateTime initialDate = _selectedMonth ?? DateTime.now();
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      initialDatePickerMode: DatePickerMode.year,
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedMonth = DateTime(picked.year, picked.month, 1);
+      });
+    }
+  }
+
+  // Jahresauswahl-Dialog
+  Future<void> _selectYear(BuildContext context) async {
+    final int currentYear = DateTime.now().year;
+    final List<int> years =
+        List.generate(20, (index) => currentYear - 10 + index);
+
+    // Platform-spezifischer Dialog für Jahresauswahl
+    if (Platform.isIOS) {
+      showCupertinoModalPopup(
+        context: context,
+        builder: (BuildContext context) {
+          return Container(
+            height: 200,
+            color: CupertinoColors.systemBackground.resolveFrom(context),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    CupertinoButton(
+                      child: const Text('Abbrechen'),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    CupertinoButton(
+                      child: const Text('OK'),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: CupertinoPicker(
+                    itemExtent: 32,
+                    onSelectedItemChanged: (index) {
+                      setState(() {
+                        _selectedYear = years[index];
+                      });
+                    },
+                    children: years
+                        .map((year) => Center(child: Text(year.toString())))
+                        .toList(),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Jahr auswählen'),
+            content: Container(
+              width: double.maxFinite,
+              height: 300,
+              child: ListView.builder(
+                itemCount: years.length,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    title: Text(years[index].toString()),
+                    onTap: () {
+                      setState(() {
+                        _selectedYear = years[index];
+                      });
+                      Navigator.of(context).pop();
+                    },
+                  );
+                },
+              ),
+            ),
+          );
+        },
+      );
+    }
+  }
+
+  // Hilfsmethode für formatiertes Datum mit Wochentag
+  String _formatDateWithWeekday(DateTime date) {
+    final List<String> weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+    final String weekday =
+        weekdays[date.weekday - 1]; // -1 da weekday 1-7 liefert
+    return '$weekday, ${date.day}.${date.month}.${date.year}';
+  }
+
+  // Hilfsmethode für Monat und Jahr als String
+  String _getMonthYearString(DateTime date) {
+    final List<String> months = [
+      'Januar',
+      'Februar',
+      'März',
+      'April',
+      'Mai',
+      'Juni',
+      'Juli',
+      'August',
+      'September',
+      'Oktober',
+      'November',
+      'Dezember'
+    ];
+    return '${months[date.month - 1]} ${date.year}';
+  }
+
+  // Kurzform des Wochentags
+  String _getDayOfWeekShort(DateTime date) {
+    final List<String> weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+    return weekdays[date.weekday - 1]; // -1 da weekday 1-7 liefert
+  }
+
+  // Berechnet die Anzahl der Elemente für die Monatsansicht
+  int _getMonthViewItemCount(DateTime firstDayOfMonth) {
+    // Anzahl der Tage im Monat
+    final int daysInMonth =
+        DateTime(firstDayOfMonth.year, firstDayOfMonth.month + 1, 0).day;
+    // Wochentag des ersten Tags im Monat (1 = Montag, 7 = Sonntag)
+    final int firstDayWeekday =
+        DateTime(firstDayOfMonth.year, firstDayOfMonth.month, 1).weekday;
+
+    // Berechne die benötigte Anzahl von Zeilen (Wochen)
+    final int totalDays = firstDayWeekday - 1 + daysInMonth;
+    final int rowsNeeded = (totalDays / 7).ceil();
+
+    // Gesamtzahl der Elemente (7 Tage pro Woche)
+    return rowsNeeded * 7;
+  }
+
+  // Überprüft, ob zwei Daten den gleichen Tag repräsentieren
+  bool isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   // Eine Liste von Projektkarten anzeigen
@@ -442,114 +1417,5 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
         );
       },
     );
-  }
-
-  // Dialog zum Auswählen der Ansichtsart
-  Future<void> _showViewTypeSelectionDialog() async {
-    final localizations = Provider.of<AppLocalizations>(context, listen: false);
-
-    if (Platform.isIOS) {
-      showCupertinoModalPopup(
-        context: context,
-        builder: (BuildContext context) {
-          return CupertinoActionSheet(
-            title: Text(localizations.viewType ?? 'Ansichtstyp'),
-            actions: [
-              CupertinoActionSheetAction(
-                onPressed: () {
-                  setState(() {
-                    _viewType = ProjectViewType.day;
-                  });
-                  Navigator.pop(context);
-                },
-                child: Text(localizations.dayView ?? 'Tagesansicht'),
-              ),
-              CupertinoActionSheetAction(
-                onPressed: () {
-                  setState(() {
-                    _viewType = ProjectViewType.week;
-                  });
-                  Navigator.pop(context);
-                },
-                child: Text(localizations.weekView ?? 'Wochenansicht'),
-              ),
-              CupertinoActionSheetAction(
-                onPressed: () {
-                  setState(() {
-                    _viewType = ProjectViewType.month;
-                  });
-                  Navigator.pop(context);
-                },
-                child: Text(localizations.monthView ?? 'Monatsansicht'),
-              ),
-              CupertinoActionSheetAction(
-                onPressed: () {
-                  setState(() {
-                    _viewType = ProjectViewType.year;
-                  });
-                  Navigator.pop(context);
-                },
-                child: Text(localizations.yearView ?? 'Jahresansicht'),
-              ),
-            ],
-            cancelButton: CupertinoActionSheetAction(
-              onPressed: () => Navigator.pop(context),
-              isDestructiveAction: true,
-              child: Text(localizations.cancel ?? 'Abbrechen'),
-            ),
-          );
-        },
-      );
-    } else {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text(localizations.viewType ?? 'Ansichtstyp'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  title: Text(localizations.dayView ?? 'Tagesansicht'),
-                  onTap: () {
-                    setState(() {
-                      _viewType = ProjectViewType.day;
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  title: Text(localizations.weekView ?? 'Wochenansicht'),
-                  onTap: () {
-                    setState(() {
-                      _viewType = ProjectViewType.week;
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  title: Text(localizations.monthView ?? 'Monatsansicht'),
-                  onTap: () {
-                    setState(() {
-                      _viewType = ProjectViewType.month;
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  title: Text(localizations.yearView ?? 'Jahresansicht'),
-                  onTap: () {
-                    setState(() {
-                      _viewType = ProjectViewType.year;
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    }
   }
 }
