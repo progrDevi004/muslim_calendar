@@ -1211,14 +1211,16 @@ class DashboardPageState extends State<DashboardPage> {
         categories: _allCategories,
         selectedCategoryIds: _selectedCategoryIds,
       ),
-      floatingActionButton: PlatformAdaptiveScaffoldFAB.buildFAB(
-        context: context,
-        onPressed: _createQuickAppointment,
-        androidIcon: Icons.add,
-        iOSIcon: CupertinoIcons.add,
-        backgroundColor: mainColor,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-      ),
+      floatingActionButton: Platform.isIOS
+          ? null // Für iOS: Keinen Standard-FAB verwenden, da wir einen benutzerdefinierten haben
+          : PlatformAdaptiveScaffoldFAB.buildFAB(
+              context: context,
+              onPressed: _createQuickAppointment,
+              androidIcon: Icons.add,
+              iOSIcon: CupertinoIcons.add,
+              backgroundColor: mainColor,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+            ),
       body: SafeArea(
         child: Stack(
           children: [
