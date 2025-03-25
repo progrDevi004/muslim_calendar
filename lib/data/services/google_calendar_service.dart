@@ -52,6 +52,8 @@ class GoogleCalendarService {
       'email',
       'https://www.googleapis.com/auth/calendar',
     ],
+    clientId:
+        '778895687512-t7lq66jbs8ljd1rredheoeoqfe5g8in8.apps.googleusercontent.com', // Client ID für iOS
   );
 
   GoogleSignInAccount? _currentUser;
