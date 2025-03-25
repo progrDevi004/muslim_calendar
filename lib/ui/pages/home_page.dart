@@ -1278,7 +1278,7 @@ class HomePageState extends State<HomePage> {
               },
               onAppointmentsChanged: loadAllAppointments,
             ),
-      floatingActionButton: _selectedNavIndex >= 1
+      floatingActionButton: _selectedNavIndex >= 1 && !Platform.isIOS
           ? FloatingActionButton(
               onPressed: () async {
                 final result = await Navigator.of(context).push(
@@ -1303,6 +1303,7 @@ class HomePageState extends State<HomePage> {
         selectedIndex: _selectedNavIndex,
         onIndexSelected: _handleNavigationChange,
         localizations: localizations,
+        onAppointmentAdded: loadAllAppointments,
       ),
     );
   }

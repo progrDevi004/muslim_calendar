@@ -1251,35 +1251,7 @@ class DashboardPageState extends State<DashboardPage> {
               onHoverExit: _onHoverExit,
               onTaskTap: _onTaskTap,
             ),
-            // iOS-spezifischer FAB
-            if (Platform.isIOS)
-              Positioned(
-                right: 16,
-                bottom: 16,
-                child: Container(
-                  height: 56,
-                  width: 56,
-                  decoration: BoxDecoration(
-                    color: mainColor,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 6,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: _createQuickAppointment,
-                    child: Icon(
-                      CupertinoIcons.add,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                    ),
-                  ),
-                ),
-              ),
+            // iOS-spezifischer FAB (wurde entfernt, da jetzt in der Tab Bar)
           ],
         ),
       ),
