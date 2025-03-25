@@ -166,25 +166,26 @@ class HomeNavigationBar extends StatelessWidget {
           onAppointmentAdded!();
         }
       },
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          color: logoColor,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Einfaches, größeres Plus-Icon im nativen iOS-Stil
+          const Icon(
+            CupertinoIcons.add,
+            color: logoColor,
+            size: 30,
+          ),
+
+          // Optional: Text unter dem Icon (wie bei anderen Tab Items)
+          const SizedBox(height: 4),
+          const Text(
+            "Neu",
+            style: TextStyle(
+              fontSize: 11,
+              color: logoColor,
             ),
-          ],
-        ),
-        child: const Icon(
-          CupertinoIcons.add,
-          color: Colors.white,
-          size: 30,
-        ),
+          ),
+        ],
       ),
     );
   }
