@@ -6100,7 +6100,147 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
-  String? get highPriority {
+  String get dueToday {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Heute fällig';
+      case AppLanguage.turkish:
+        return 'Bugün vadesi doluyor';
+      case AppLanguage.arabic:
+        return 'مستحق اليوم';
+      case AppLanguage.bosnian:
+        return 'Dospijeva danas';
+      case AppLanguage.spanish:
+        return 'Vence hoy';
+      case AppLanguage.persian:
+        return 'امروز سررسید';
+      case AppLanguage.english:
+      default:
+        return 'Due today';
+    }
+  }
+
+  String get daysLeft {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Tage übrig';
+      case AppLanguage.turkish:
+        return 'Kalan günler';
+      case AppLanguage.arabic:
+        return 'الأيام المتبقية';
+      case AppLanguage.bosnian:
+        return 'Preostali dani';
+      case AppLanguage.spanish:
+        return 'Días restantes';
+      case AppLanguage.persian:
+        return 'روزهای باقی مانده';
+      case AppLanguage.english:
+      default:
+        return 'Days left';
+    }
+  }
+
+  String get dueTomorrow {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Morgen fällig';
+      case AppLanguage.turkish:
+        return 'Yarın vadesi doluyor';
+      case AppLanguage.arabic:
+        return 'مستحق غداً';
+      case AppLanguage.bosnian:
+        return 'Dospijeva sutra';
+      case AppLanguage.spanish:
+        return 'Vence mañana';
+      case AppLanguage.persian:
+        return 'فردا سررسید';
+      case AppLanguage.english:
+      default:
+        return 'Due tomorrow';
+    }
+  }
+
+  String get noUpcomingDeadlines {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Keine bevorstehenden Fristen';
+      case AppLanguage.turkish:
+        return 'Yaklaşan son tarih yok';
+      case AppLanguage.arabic:
+        return 'لا توجد مواعيد نهائية قادمة';
+      case AppLanguage.bosnian:
+        return 'Nema predstojećih rokova';
+      case AppLanguage.spanish:
+        return 'No hay plazos próximos';
+      case AppLanguage.persian:
+        return 'مهلت پیش رویی وجود ندارد';
+      case AppLanguage.english:
+      default:
+        return 'No upcoming deadlines';
+    }
+  }
+
+  String get upcomingDeadlines {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Bevorstehende Fristen';
+      case AppLanguage.turkish:
+        return 'Yaklaşan Son Tarihler';
+      case AppLanguage.arabic:
+        return 'المواعيد النهائية القادمة';
+      case AppLanguage.bosnian:
+        return 'Predstojeći rokovi';
+      case AppLanguage.spanish:
+        return 'Próximos plazos';
+      case AppLanguage.persian:
+        return 'مهلت‌های پیش رو';
+      case AppLanguage.english:
+      default:
+        return 'Upcoming Deadlines';
+    }
+  }
+
+  String get showAll {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Alle anzeigen';
+      case AppLanguage.turkish:
+        return 'Tümünü göster';
+      case AppLanguage.arabic:
+        return 'عرض الكل';
+      case AppLanguage.bosnian:
+        return 'Prikaži sve';
+      case AppLanguage.spanish:
+        return 'Mostrar todo';
+      case AppLanguage.persian:
+        return 'نمایش همه';
+      case AppLanguage.english:
+      default:
+        return 'Show all';
+    }
+  }
+
+  String get noOverdueProjects {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Keine überfälligen Projekte';
+      case AppLanguage.turkish:
+        return 'Gecikmiş proje yok';
+      case AppLanguage.arabic:
+        return 'لا توجد مشاريع متأخرة';
+      case AppLanguage.bosnian:
+        return 'Nema projekata sa prekoračenim rokom';
+      case AppLanguage.spanish:
+        return 'No hay proyectos atrasados';
+      case AppLanguage.persian:
+        return 'پروژه‌های با تاخیر وجود ندارد';
+      case AppLanguage.english:
+      default:
+        return 'No overdue projects';
+    }
+  }
+
+  String get highPriority {
     switch (_currentLanguage) {
       case AppLanguage.german:
         return 'Hoch';

@@ -23,9 +23,7 @@ import 'package:Taqvimi/data/services/prayer_time_service.dart';
 import 'package:Taqvimi/data/repositories/prayer_time_repository.dart';
 
 import 'data/repositories/appointment_repository.dart';
-import 'data/repositories/prayer_time_repository.dart';
 import 'package:Taqvimi/data/repositories/category_repository.dart';
-import 'data/repositories/category_repository.dart';
 import 'data/services/calendar_sync_service.dart';
 import 'data/services/google_calendar_service.dart';
 import 'data/services/recurrence_service.dart';

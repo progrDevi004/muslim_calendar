@@ -12,7 +12,7 @@ import 'package:Taqvimi/data/repositories/category_repository.dart';
 import 'package:Taqvimi/models/category_model.dart';
 
 // Eigene Enum für Ansichtstypen
-enum ProjectViewType { day, week, month, year }
+enum ProjectViewType { dashboard, day, week, month, year }
 
 class ProjectManagementPage extends StatefulWidget {
   static const String routeName = '/project-management';
@@ -162,6 +162,10 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
                 },
                 items: [
                   BottomNavigationBarItem(
+                    icon: const Icon(CupertinoIcons.graph_square),
+                    label: localizations.dashboard ?? 'Dashboard',
+                  ),
+                  BottomNavigationBarItem(
                     icon: const Icon(CupertinoIcons.calendar_today),
                     label: localizations.dayView ?? 'Tag',
                   ),
@@ -192,6 +196,10 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
                 },
                 items: [
                   BottomNavigationBarItem(
+                    icon: const Icon(Icons.dashboard),
+                    label: localizations.dashboard ?? 'Dashboard',
+                  ),
+                  BottomNavigationBarItem(
                     icon: const Icon(Icons.view_day),
                     label: localizations.dayView ?? 'Tag',
                   ),
@@ -216,6 +224,8 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
   // Baut die Projektliste basierend auf dem ausgewählten ViewType
   Widget _buildProjectListByViewType(List<ProjectModel> projects) {
     switch (_viewType) {
+      case ProjectViewType.dashboard:
+        return _buildDashboard(projects);
       case ProjectViewType.day:
         return _buildDayView(projects);
       case ProjectViewType.week:
@@ -225,8 +235,477 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
       case ProjectViewType.year:
         return _buildYearView(projects);
       default:
-        return _buildMonthView(projects); // Standardansicht: Monat
+        return _buildDashboard(projects); // Standardansicht: Dashboard
     }
+  }
+
+  // Dashboard mit Projektübersicht
+  Widget _buildDashboard(List<ProjectModel> projects) {
+    final localizations = Provider.of<AppLocalizations>(context);
+    final theme = Theme.of(context);
+    final now = DateTime.now();
+
+    // Projekte nach Status gruppieren
+    final overdueProjekte = projects
+        .where((p) => p.endDate.isBefore(now) && p.progress < 100)
+        .toList();
+    final aktiveProjekte = projects
+        .where((p) => !p.endDate.isBefore(now) && p.progress < 100)
+        .toList();
+    final abgeschlosseneProjekte =
+        projects.where((p) => p.progress == 100).toList();
+
+    // Berechne Projekte nach Priorität
+    final hohePrioritaet = projects.where((p) => p.priority == 3).length;
+    final mittlerePrioritaet = projects.where((p) => p.priority == 2).length;
+    final niedriegePrioritaet = projects.where((p) => p.priority == 1).length;
+
+    // Projekte nach Fälligkeit gruppieren
+    final heuteFaellig = projects
+        .where((p) => isSameDay(p.endDate, now) && p.progress < 100)
+        .length;
+    final dieseWocheFaellig = projects
+        .where((p) =>
+            !isSameDay(p.endDate, now) &&
+            p.endDate.isAfter(now) &&
+            p.endDate.difference(now).inDays <= 7 &&
+            p.progress < 100)
+        .length;
+
+    // Projekte nach Kategorien gruppieren für den Chart
+    final Map<String, int> projektNachKategorie = {};
+    for (var projekt in projects) {
+      final kategorieName = projekt.category?.name ?? 'Unbekannt';
+      if (projektNachKategorie.containsKey(kategorieName)) {
+        projektNachKategorie[kategorieName] =
+            projektNachKategorie[kategorieName]! + 1;
+      } else {
+        projektNachKategorie[kategorieName] = 1;
+      }
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Projektstatus-Karten
+          Row(
+            children: [
+              _buildStatusCard(
+                title: 'Aktive Projekte',
+                count: aktiveProjekte.length,
+                icon: Icons.play_circle_outline,
+                color: Colors.blue,
+              ),
+              const SizedBox(width: 8),
+              _buildStatusCard(
+                title: 'Abgeschlossen',
+                count: abgeschlosseneProjekte.length,
+                icon: Icons.check_circle_outline,
+                color: Colors.green,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _buildStatusCard(
+                title: 'Überfällig',
+                count: overdueProjekte.length,
+                icon: Icons.warning_amber_outlined,
+                color: Colors.red,
+              ),
+              const SizedBox(width: 8),
+              _buildStatusCard(
+                title: 'Bald fällig',
+                count: heuteFaellig + dieseWocheFaellig,
+                icon: Icons.schedule,
+                color: Colors.orange,
+              ),
+            ],
+          ),
+
+          // Fortschrittsanzeige
+          const SizedBox(height: 24),
+          Text(
+            'Projektfortschritt',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  _buildProgressBar(
+                    label: 'Abgeschlossen',
+                    color: Colors.green,
+                    value: abgeschlosseneProjekte.length / projects.length,
+                    text:
+                        '${abgeschlosseneProjekte.length} / ${projects.length}',
+                  ),
+                  const SizedBox(height: 16),
+                  _buildProgressBar(
+                    label: 'Aktiv',
+                    color: Colors.blue,
+                    value: aktiveProjekte.length / projects.length,
+                    text: '${aktiveProjekte.length} / ${projects.length}',
+                  ),
+                  const SizedBox(height: 16),
+                  _buildProgressBar(
+                    label: 'Überfällig',
+                    color: Colors.red,
+                    value: overdueProjekte.length / projects.length,
+                    text: '${overdueProjekte.length} / ${projects.length}',
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Prioritätsverteilung
+          const SizedBox(height: 24),
+          Text(
+            'Prioritätsverteilung',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildPriorityIndicator(
+                    label: localizations.highPriority != null
+                        ? localizations.highPriority!
+                        : 'Hoch',
+                    count: hohePrioritaet,
+                    color: Colors.red,
+                  ),
+                  _buildPriorityIndicator(
+                    label: localizations.mediumPriority != null
+                        ? localizations.mediumPriority!
+                        : 'Mittel',
+                    count: mittlerePrioritaet,
+                    color: Colors.orange,
+                  ),
+                  _buildPriorityIndicator(
+                    label: localizations.lowPriority != null
+                        ? localizations.lowPriority!
+                        : 'Niedrig',
+                    count: niedriegePrioritaet,
+                    color: Colors.green,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Listen für überfällige und heutige Projekte
+          const SizedBox(height: 24),
+          Text(
+            localizations.noOverdueProjects,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          overdueProjekte.isEmpty
+              ? Card(
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Center(
+                      child: Text(
+                        localizations.noOverdueProjects,
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ),
+                  ),
+                )
+              : Card(
+                  elevation: 2,
+                  child: ListView.separated(
+                    physics: const NeverScrollableScrollPhysics(),
+                    shrinkWrap: true,
+                    itemCount:
+                        overdueProjekte.length > 3 ? 3 : overdueProjekte.length,
+                    separatorBuilder: (context, index) =>
+                        const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final project = overdueProjekte[index];
+                      return ListTile(
+                        leading: Icon(Icons.warning, color: Colors.red),
+                        title: Text(project.name),
+                        subtitle: Text(
+                            '${_formatDate(project.endDate)} • ${project.progress}%'),
+                        trailing: project.priority == 3
+                            ? Chip(
+                                label: Text(
+                                  localizations.highPriority,
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 10),
+                                ),
+                                backgroundColor: Colors.red,
+                                padding: EdgeInsets.zero,
+                              )
+                            : null,
+                        onTap: () => _showProjectDetailsDialog(project),
+                      );
+                    },
+                  ),
+                ),
+
+          if (overdueProjekte.length > 3) ...[
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () {
+                  // Hier könnten wir zu einer gefilterten Ansicht wechseln
+                  setState(() {
+                    _selectedDate = DateTime.now();
+                    _viewType = ProjectViewType.day;
+                  });
+                },
+                child: Text(
+                  localizations.showAll,
+                  style: TextStyle(color: theme.primaryColor),
+                ),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 16),
+          Text(
+            localizations.upcomingDeadlines,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+
+          // Kommende Projekte
+          Builder(builder: (context) {
+            final demnaechstFaelligeProjekte = aktiveProjekte
+                .where((p) => p.endDate.difference(now).inDays <= 7)
+                .toList()
+              ..sort((a, b) => a.endDate.compareTo(b.endDate));
+
+            return demnaechstFaelligeProjekte.isEmpty
+                ? Card(
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Center(
+                        child: Text(
+                          localizations.noUpcomingDeadlines,
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ),
+                    ),
+                  )
+                : Card(
+                    elevation: 2,
+                    child: ListView.separated(
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
+                      itemCount: demnaechstFaelligeProjekte.length > 3
+                          ? 3
+                          : demnaechstFaelligeProjekte.length,
+                      separatorBuilder: (context, index) =>
+                          const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final project = demnaechstFaelligeProjekte[index];
+                        final daysLeft = project.endDate.difference(now).inDays;
+
+                        return ListTile(
+                          leading: Icon(
+                            Icons.event,
+                            color: daysLeft == 0
+                                ? Colors.red
+                                : daysLeft <= 3
+                                    ? Colors.orange
+                                    : Colors.blue,
+                          ),
+                          title: Text(project.name),
+                          subtitle: Text(
+                              '${_formatDate(project.endDate)} • ${project.progress}%'),
+                          trailing: Text(
+                            daysLeft == 0
+                                ? localizations.dueToday
+                                : daysLeft == 1
+                                    ? localizations.dueTomorrow
+                                    : localizations.daysLeft,
+                            style: TextStyle(
+                              color: daysLeft == 0
+                                  ? Colors.red
+                                  : daysLeft <= 3
+                                      ? Colors.orange
+                                      : Colors.blue,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          onTap: () => _showProjectDetailsDialog(project),
+                        );
+                      },
+                    ),
+                  );
+          }),
+
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  // Status-Karte für Dashboard
+  Widget _buildStatusCard({
+    required String title,
+    required int count,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Expanded(
+      child: Card(
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: color, size: 28),
+              const SizedBox(height: 8),
+              Text(
+                count.toString(),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[700],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Fortschrittsbalken für Dashboard
+  Widget _buildProgressBar({
+    required String label,
+    required Color color,
+    required double value,
+    required String text,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: TextStyle(fontWeight: FontWeight.w500)),
+            Text(text, style: TextStyle(fontWeight: FontWeight.w500)),
+          ],
+        ),
+        const SizedBox(height: 6),
+        LinearProgressIndicator(
+          value: value.isNaN ? 0 : value,
+          backgroundColor: Colors.grey[200],
+          valueColor: AlwaysStoppedAnimation<Color>(color),
+          borderRadius: BorderRadius.circular(4),
+          minHeight: 8,
+        ),
+      ],
+    );
+  }
+
+  // Prioritäts-Indikator für Dashboard
+  Widget _buildPriorityIndicator({
+    required String label,
+    required int count,
+    required Color color,
+  }) {
+    return Column(
+      children: [
+        Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.2),
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: 2),
+          ),
+          child: Center(
+            child: Text(
+              count.toString(),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[800],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Prioritäts-Badge für Projektkarten
+  Widget _buildPriorityBadge(int priority) {
+    final localizations = Provider.of<AppLocalizations>(context);
+
+    Color color;
+    String label;
+
+    switch (priority) {
+      case 1:
+        color = Colors.green;
+        label = localizations.lowPriority ?? 'Niedrig';
+        break;
+      case 3:
+        color = Colors.red;
+        label = localizations.highPriority ?? 'Hoch';
+        break;
+      case 2:
+      default:
+        color = Colors.orange;
+        label = localizations.mediumPriority ?? 'Mittel';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color, width: 0.5),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
   }
 
   // Tagesansicht
@@ -1202,7 +1681,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
                       ),
                     ),
                   ),
-                  _buildPriorityIndicator(project.priority),
+                  _buildPriorityBadge(project.priority),
                 ],
               ),
 
@@ -1254,7 +1733,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              '${localizations.progress ?? 'Fortschritt'}: ${project.progress}%',
+                              '${localizations.progress}: ${project.progress}%',
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
@@ -1286,47 +1765,6 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  // Prioritätsindikator erstellen
-  Widget _buildPriorityIndicator(int priority) {
-    final localizations = Provider.of<AppLocalizations>(context);
-
-    Color color;
-    String label;
-
-    switch (priority) {
-      case 1:
-        color = Colors.green;
-        label = localizations.lowPriority ?? 'Niedrig';
-        break;
-      case 3:
-        color = Colors.red;
-        label = localizations.highPriority ?? 'Hoch';
-        break;
-      case 2:
-      default:
-        color = Colors.orange;
-        label = localizations.mediumPriority ?? 'Mittel';
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color, width: 0.5),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
         ),
       ),
     );
@@ -1365,17 +1803,6 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
     } else {
       return Colors.green;
     }
-  }
-
-  // Bestimmt die Textfarbe basierend auf der Hintergrundfarbe
-  Color _getTextColorBasedOnBackground(Color? backgroundColor) {
-    if (backgroundColor == null) return Colors.white;
-
-    // Berechnet die Helligkeit der Farbe
-    final double brightness = backgroundColor.computeLuminance();
-
-    // Bei dunklen Farben weißen Text verwenden, bei hellen Farben schwarzen Text
-    return brightness > 0.5 ? Colors.black : Colors.white;
   }
 
   // Dialog zum Hinzufügen eines neuen Projekts
