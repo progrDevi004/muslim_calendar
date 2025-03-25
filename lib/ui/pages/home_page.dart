@@ -11,6 +11,7 @@ import 'package:Taqvimi/ui/components/platform_adaptive_dialog.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_list_tile.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_navigation.dart';
 import 'package:Taqvimi/ui/components/app_drawer.dart';
+import 'package:Taqvimi/ui/components/platform_adaptive_scaffold_fab.dart';
 
 // Repositories & Services
 import 'package:Taqvimi/data/repositories/appointment_repository.dart';
@@ -1277,11 +1278,23 @@ class HomePageState extends State<HomePage> {
               onAppointmentsChanged: loadAllAppointments,
             ),
       floatingActionButton: _selectedNavIndex >= 1
-          ? AddAppointmentFAB(
-              selectedDate: _selectedDate,
-              onAppointmentAdded: loadAllAppointments,
-              logoColor: logoColor,
-              localizations: localizations,
+          ? PlatformAdaptiveScaffoldFAB.buildFAB(
+              context: context,
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AddAppointmentFAB(
+                    selectedDate: _selectedDate,
+                    onAppointmentAdded: loadAllAppointments,
+                    logoColor: logoColor,
+                    localizations: localizations,
+                  ),
+                );
+              },
+              androidIcon: Icons.add,
+              iOSIcon: CupertinoIcons.add,
+              backgroundColor: logoColor,
+              foregroundColor: Colors.white,
             )
           : null,
       bottomNavigationBar: HomeNavigationBar(

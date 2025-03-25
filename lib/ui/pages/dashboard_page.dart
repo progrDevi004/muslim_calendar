@@ -41,6 +41,7 @@ import 'package:Taqvimi/ui/components/platform_adaptive_app_bar.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_navigation.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_fab.dart';
 import 'package:Taqvimi/ui/components/app_drawer.dart';
+import 'package:Taqvimi/ui/components/platform_adaptive_scaffold_fab.dart';
 
 import 'package:Taqvimi/data/services/prayer_time_service.dart';
 import 'package:Taqvimi/data/services/import_settings_service.dart';
@@ -1212,9 +1213,10 @@ class DashboardPageState extends State<DashboardPage> {
         selectedCategoryIds: _selectedCategoryIds,
       ),
       floatingActionButton: PlatformAdaptiveScaffoldFAB.buildFAB(
+        context: context,
+        onPressed: _createQuickAppointment,
         androidIcon: Icons.add,
         iOSIcon: CupertinoIcons.add,
-        onPressed: _createQuickAppointment,
         backgroundColor: mainColor,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
       ),
