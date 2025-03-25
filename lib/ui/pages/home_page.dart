@@ -39,6 +39,7 @@ import 'package:Taqvimi/ui/widgets/home/add_appointment_fab.dart';
 import 'package:Taqvimi/ui/pages/settings_page.dart';
 import 'package:Taqvimi/ui/pages/dashboard_page.dart';
 import 'package:Taqvimi/ui/pages/qibla_compass_page.dart';
+import 'package:Taqvimi/ui/pages/appointment_creation_page.dart';
 
 // Dialogs
 
@@ -1278,23 +1279,24 @@ class HomePageState extends State<HomePage> {
               onAppointmentsChanged: loadAllAppointments,
             ),
       floatingActionButton: _selectedNavIndex >= 1
-          ? PlatformAdaptiveScaffoldFAB.buildFAB(
-              context: context,
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AddAppointmentFAB(
-                    selectedDate: _selectedDate,
-                    onAppointmentAdded: loadAllAppointments,
-                    logoColor: logoColor,
-                    localizations: localizations,
+          ? FloatingActionButton(
+              onPressed: () async {
+                final result = await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => AppointmentCreationPage(
+                      selectedDate: _selectedDate,
+                    ),
                   ),
                 );
+                if (result == true) {
+                  loadAllAppointments();
+                }
               },
-              androidIcon: Icons.add,
-              iOSIcon: CupertinoIcons.add,
               backgroundColor: logoColor,
-              foregroundColor: Colors.white,
+              child: Icon(
+                Platform.isIOS ? CupertinoIcons.add : Icons.add,
+                color: Colors.white,
+              ),
             )
           : null,
       bottomNavigationBar: HomeNavigationBar(

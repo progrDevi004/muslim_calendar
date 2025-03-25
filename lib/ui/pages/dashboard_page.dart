@@ -39,9 +39,8 @@ import 'package:Taqvimi/ui/components/platform_adaptive_dialog.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_list_tile.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_app_bar.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_navigation.dart';
-import 'package:Taqvimi/ui/components/platform_adaptive_fab.dart';
-import 'package:Taqvimi/ui/components/app_drawer.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_scaffold_fab.dart';
+import 'package:Taqvimi/ui/components/app_drawer.dart';
 
 import 'package:Taqvimi/data/services/prayer_time_service.dart';
 import 'package:Taqvimi/data/services/import_settings_service.dart';
