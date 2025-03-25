@@ -209,30 +209,174 @@ class _ProjectDialogState extends State<ProjectDialog> {
           const SizedBox(height: 16),
 
           // Priorität
-          PlatformAdaptiveForm.buildDropdown<int>(
-            context: context,
-            label: localizations.priority ?? 'Priorität',
-            value: _priority,
-            items: [
-              DropdownMenuItem(
-                value: 1,
-                child: Text(localizations.lowPriority ?? 'Niedrig'),
-              ),
-              DropdownMenuItem(
-                value: 2,
-                child: Text(localizations.mediumPriority ?? 'Mittel'),
-              ),
-              DropdownMenuItem(
-                value: 3,
-                child: Text(localizations.highPriority ?? 'Hoch'),
-              ),
-            ],
-            onChanged: (value) {
-              setState(() {
-                _priority = value ?? 2;
-              });
-            },
-          ),
+          _isIOS
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      localizations.priority ?? 'Priorität',
+                      style: const TextStyle(
+                        fontSize: 15.0,
+                        color: CupertinoColors.label,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // iOS-spezifische Prioritätsauswahl
+                    CupertinoButton(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      color: CupertinoColors.systemGrey6,
+                      borderRadius: BorderRadius.circular(8),
+                      onPressed: () {
+                        // Erstelle eine Liste mit den Prioritätsoptionen
+                        final priorityItems = [
+                          {
+                            'value': 1,
+                            'label': localizations.lowPriority ?? 'Niedrig',
+                            'color': Colors.green,
+                          },
+                          {
+                            'value': 2,
+                            'label': localizations.mediumPriority ?? 'Mittel',
+                            'color': Colors.orange,
+                          },
+                          {
+                            'value': 3,
+                            'label': localizations.highPriority ?? 'Hoch',
+                            'color': Colors.red,
+                          },
+                        ];
+
+                        // Finde den aktuellen Index
+                        final selectedIndex = priorityItems.indexWhere(
+                          (item) => item['value'] == _priority,
+                        );
+
+                        showCupertinoModalPopup(
+                          context: context,
+                          builder: (context) => Container(
+                            height: 250,
+                            padding: const EdgeInsets.only(top: 6.0),
+                            color: CupertinoColors.systemBackground,
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    CupertinoButton(
+                                      child: Text(
+                                          localizations.cancel ?? 'Abbrechen'),
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(),
+                                    ),
+                                    CupertinoButton(
+                                      child:
+                                          Text(localizations.save ?? 'Fertig'),
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 0),
+                                Expanded(
+                                  child: CupertinoPicker(
+                                    scrollController:
+                                        FixedExtentScrollController(
+                                      initialItem: selectedIndex >= 0
+                                          ? selectedIndex
+                                          : 1,
+                                    ),
+                                    itemExtent: 40,
+                                    onSelectedItemChanged: (index) {
+                                      setState(() {
+                                        _priority = priorityItems[index]
+                                            ['value'] as int;
+                                      });
+                                    },
+                                    children: priorityItems.map((item) {
+                                      return Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            width: 16,
+                                            height: 16,
+                                            decoration: BoxDecoration(
+                                              color: item['color'] as Color,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(item['label'] as String),
+                                        ],
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: _getPriorityColor(_priority),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _getPriorityLabel(_priority, localizations),
+                                style: const TextStyle(
+                                  color: CupertinoColors.label,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Icon(
+                            CupertinoIcons.chevron_down,
+                            size: 16,
+                            color: CupertinoColors.secondaryLabel,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              : PlatformAdaptiveForm.buildDropdown<int>(
+                  context: context,
+                  label: localizations.priority ?? 'Priorität',
+                  value: _priority,
+                  items: [
+                    DropdownMenuItem(
+                      value: 1,
+                      child: Text(localizations.lowPriority ?? 'Niedrig'),
+                    ),
+                    DropdownMenuItem(
+                      value: 2,
+                      child: Text(localizations.mediumPriority ?? 'Mittel'),
+                    ),
+                    DropdownMenuItem(
+                      value: 3,
+                      child: Text(localizations.highPriority ?? 'Hoch'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _priority = value ?? 2;
+                    });
+                  },
+                ),
 
           const SizedBox(height: 16),
 
@@ -650,6 +794,32 @@ class _ProjectDialogState extends State<ProjectDialog> {
         ),
         actions: dialogActions,
       );
+    }
+  }
+
+  // Hilfsfunktion zum Abrufen der Prioritätsfarbe basierend auf dem Wert
+  Color _getPriorityColor(int priority) {
+    switch (priority) {
+      case 1:
+        return Colors.green;
+      case 3:
+        return Colors.red;
+      case 2:
+      default:
+        return Colors.orange;
+    }
+  }
+
+  // Hilfsfunktion zum Abrufen des Prioritätslabels basierend auf dem Wert
+  String _getPriorityLabel(int priority, AppLocalizations localizations) {
+    switch (priority) {
+      case 1:
+        return localizations.lowPriority ?? 'Niedrig';
+      case 3:
+        return localizations.highPriority ?? 'Hoch';
+      case 2:
+      default:
+        return localizations.mediumPriority ?? 'Mittel';
     }
   }
 }
