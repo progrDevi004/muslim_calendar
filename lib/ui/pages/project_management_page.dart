@@ -293,14 +293,14 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
           Row(
             children: [
               _buildStatusCard(
-                title: 'Aktive Projekte',
+                title: localizations.activeProjects,
                 count: aktiveProjekte.length,
                 icon: Icons.play_circle_outline,
                 color: Colors.blue,
               ),
               const SizedBox(width: 8),
               _buildStatusCard(
-                title: 'Abgeschlossen',
+                title: localizations.completedProjects,
                 count: abgeschlosseneProjekte.length,
                 icon: Icons.check_circle_outline,
                 color: Colors.green,
@@ -311,14 +311,14 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
           Row(
             children: [
               _buildStatusCard(
-                title: 'Überfällig',
+                title: localizations.overdueProjects,
                 count: overdueProjekte.length,
                 icon: Icons.warning_amber_outlined,
                 color: Colors.red,
               ),
               const SizedBox(width: 8),
               _buildStatusCard(
-                title: 'Bald fällig',
+                title: localizations.upcomingDeadlines,
                 count: heuteFaellig + dieseWocheFaellig,
                 icon: Icons.schedule,
                 color: Colors.orange,
@@ -329,7 +329,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
           // Fortschrittsanzeige
           const SizedBox(height: 24),
           Text(
-            'Projektfortschritt',
+            localizations.projectProgress,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
@@ -340,7 +340,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
               child: Column(
                 children: [
                   _buildProgressBar(
-                    label: 'Abgeschlossen',
+                    label: localizations.completedProjects,
                     color: Colors.green,
                     value: abgeschlosseneProjekte.length / projects.length,
                     text:
@@ -348,14 +348,14 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
                   ),
                   const SizedBox(height: 16),
                   _buildProgressBar(
-                    label: 'Aktiv',
+                    label: localizations.activeProjects,
                     color: Colors.blue,
                     value: aktiveProjekte.length / projects.length,
                     text: '${aktiveProjekte.length} / ${projects.length}',
                   ),
                   const SizedBox(height: 16),
                   _buildProgressBar(
-                    label: 'Überfällig',
+                    label: localizations.overdueProjects,
                     color: Colors.red,
                     value: overdueProjekte.length / projects.length,
                     text: '${overdueProjekte.length} / ${projects.length}',
@@ -368,7 +368,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
           // Prioritätsverteilung
           const SizedBox(height: 24),
           Text(
-            'Prioritätsverteilung',
+            localizations.priorityDistribution,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
@@ -380,23 +380,17 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildPriorityIndicator(
-                    label: localizations.highPriority != null
-                        ? localizations.highPriority!
-                        : 'Hoch',
+                    label: localizations.highPriority,
                     count: hohePrioritaet,
                     color: Colors.red,
                   ),
                   _buildPriorityIndicator(
-                    label: localizations.mediumPriority != null
-                        ? localizations.mediumPriority!
-                        : 'Mittel',
+                    label: localizations.mediumPriority,
                     count: mittlerePrioritaet,
                     color: Colors.orange,
                   ),
                   _buildPriorityIndicator(
-                    label: localizations.lowPriority != null
-                        ? localizations.lowPriority!
-                        : 'Niedrig',
+                    label: localizations.lowPriority,
                     count: niedriegePrioritaet,
                     color: Colors.green,
                   ),
@@ -677,16 +671,16 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
     switch (priority) {
       case 1:
         color = Colors.green;
-        label = localizations.lowPriority ?? 'Niedrig';
+        label = localizations.lowPriority;
         break;
       case 3:
         color = Colors.red;
-        label = localizations.highPriority ?? 'Hoch';
+        label = localizations.highPriority;
         break;
       case 2:
       default:
         color = Colors.orange;
-        label = localizations.mediumPriority ?? 'Mittel';
+        label = localizations.mediumPriority;
         break;
     }
 
@@ -713,6 +707,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
     // Standard-Tag ist heute
     final DateTime now = DateTime.now();
     final DateTime today = DateTime(now.year, now.month, now.day);
+    final localizations = Provider.of<AppLocalizations>(context);
 
     // Zustandsvariable für den ausgewählten Tag
     final DateTime selectedDate = _selectedDate ?? today;
@@ -769,7 +764,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
           child: filteredProjects.isEmpty
               ? Center(
                   child: Text(
-                    'Keine Projekte für diesen Tag',
+                    localizations.noProjectsForThisDay,
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                 )
@@ -1003,6 +998,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
   Widget _buildMonthView(List<ProjectModel> projects) {
     // Standard-Monat ist aktueller Monat
     final DateTime now = DateTime.now();
+    final localizations = Provider.of<AppLocalizations>(context);
     final DateTime today = DateTime(now.year, now.month, now.day);
 
     // Wähle den ersten Tag des ausgewählten Monats
@@ -1228,7 +1224,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
           child: filteredProjects.isEmpty
               ? Center(
                   child: Text(
-                    'Keine Projekte für diesen Monat',
+                    localizations.noProjectsForThisMonth,
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                 )
@@ -1250,20 +1246,8 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
     // Standard-Jahr ist aktuelles Jahr
     final DateTime now = DateTime.now();
     final int selectedYear = _selectedYear ?? now.year;
-    final List<String> months = [
-      'Januar',
-      'Februar',
-      'März',
-      'April',
-      'Mai',
-      'Juni',
-      'Juli',
-      'August',
-      'September',
-      'Oktober',
-      'November',
-      'Dezember'
-    ];
+    final localizations = Provider.of<AppLocalizations>(context);
+    final List<String> months = localizations.months;
 
     // Filtere Projekte für das ausgewählte Jahr
     final filteredProjects = projects.where((project) {
@@ -1373,7 +1357,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${projectsInMonth.length} Projekte',
+                        '${projectsInMonth.length} ${localizations.projects}',
                         style: TextStyle(
                           fontSize: 12,
                           color: projectsInMonth.isEmpty
@@ -1406,7 +1390,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Projekte im Jahr $selectedYear',
+                '${localizations.projectsForThisYear} $selectedYear',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -1418,7 +1402,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
                 child: filteredProjects.isEmpty
                     ? Center(
                         child: Text(
-                          'Keine Projekte für dieses Jahr',
+                          localizations.noProjectsForThisYear,
                           style: TextStyle(color: Colors.grey[600]),
                         ),
                       )
@@ -1557,6 +1541,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
   // Jahresauswahl-Dialog
   Future<void> _selectYear(BuildContext context) async {
     final int currentYear = DateTime.now().year;
+    final localizations = Provider.of<AppLocalizations>(context);
     final List<int> years =
         List.generate(20, (index) => currentYear - 10 + index);
 
@@ -1574,11 +1559,11 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     CupertinoButton(
-                      child: const Text('Abbrechen'),
+                      child: Text(localizations.cancel),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                     CupertinoButton(
-                      child: const Text('OK'),
+                      child: Text(localizations.ok),
                       onPressed: () {
                         Navigator.of(context).pop();
                       },
@@ -1608,7 +1593,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: const Text('Jahr auswählen'),
+            title: Text(localizations.selectYear),
             content: Container(
               width: double.maxFinite,
               height: 300,
@@ -1635,7 +1620,8 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
 
   // Hilfsmethode für formatiertes Datum mit Wochentag
   String _formatDateWithWeekday(DateTime date) {
-    final List<String> weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+    final localizations = Provider.of<AppLocalizations>(context);
+    final List<String> weekdays = localizations.weekdays;
     final String weekday =
         weekdays[date.weekday - 1]; // -1 da weekday 1-7 liefert
     return '$weekday, ${date.day}.${date.month}.${date.year}';
@@ -1643,26 +1629,15 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
 
   // Hilfsmethode für Monat und Jahr als String
   String _getMonthYearString(DateTime date) {
-    final List<String> months = [
-      'Januar',
-      'Februar',
-      'März',
-      'April',
-      'Mai',
-      'Juni',
-      'Juli',
-      'August',
-      'September',
-      'Oktober',
-      'November',
-      'Dezember'
-    ];
+    final localizations = Provider.of<AppLocalizations>(context);
+    final List<String> months = localizations.months;
     return '${months[date.month - 1]} ${date.year}';
   }
 
   // Kurzform des Wochentags
   String _getDayOfWeekShort(DateTime date) {
-    final List<String> weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+    final localizations = Provider.of<AppLocalizations>(context);
+    final List<String> weekdays = localizations.weekdays;
     return weekdays[date.weekday - 1]; // -1 da weekday 1-7 liefert
   }
 
@@ -1859,16 +1834,17 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
   // Get text for remaining days until deadline
   String _getRemainingDaysText(DateTime endDate) {
     final now = DateTime.now();
+    final localizations = Provider.of<AppLocalizations>(context);
     final difference = endDate.difference(now).inDays;
 
     if (difference < 0) {
-      return '${-difference} Tage überfällig';
+      return '${-difference} ${localizations.daysOverdue}';
     } else if (difference == 0) {
-      return 'Heute fällig';
+      return localizations.dueToday;
     } else if (difference == 1) {
-      return '1 Tag übrig';
+      return localizations.oneDayLeft;
     } else {
-      return '$difference Tage übrig';
+      return '$difference ${localizations.daysLeft}';
     }
   }
 
