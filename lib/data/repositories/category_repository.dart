@@ -364,4 +364,29 @@ class CategoryRepository {
       }
     }
   }
+
+  // Kategorie nach ID abrufen
+  Future<CategoryModel?> getCategoryById(int id) async {
+    final db = await dbHelper.database;
+
+    // Stellen Sie sicher, dass die Tabelle korrekt ist
+    await _ensureCategoryTableExists(db);
+
+    try {
+      final List<Map<String, dynamic>> maps = await db.query(
+        'categories',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      if (maps.isEmpty) {
+        return null;
+      }
+
+      return CategoryModel.fromMap(maps.first);
+    } catch (e) {
+      debugPrint("Fehler beim Laden der Kategorie $id: $e");
+      return null;
+    }
+  }
 }

@@ -584,3 +584,239 @@ class DateFormat {
         .replaceAll('yyyy', date.year.toString());
   }
 }
+
+/// Eine plattformspezifische Dropdown-Komponente
+class PlatformAdaptiveDropdown<T> extends StatelessWidget {
+  final String label;
+  final T value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?>? onChanged;
+  final String? hintText;
+  final String? helperText;
+  final String? errorText;
+
+  const PlatformAdaptiveDropdown({
+    Key? key,
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    this.hintText,
+    this.helperText,
+    this.errorText,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    if (Platform.isIOS) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              border: Border.all(color: CupertinoColors.systemGrey4),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButton<T>(
+              value: value,
+              items: items,
+              onChanged: onChanged,
+              underline: const SizedBox(), // Entfernt die untere Linie
+              isExpanded: true,
+              icon: const Icon(CupertinoIcons.chevron_down),
+              hint: hintText != null ? Text(hintText!) : null,
+            ),
+          ),
+          if (errorText != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              errorText!,
+              style: const TextStyle(
+                color: CupertinoColors.destructiveRed,
+                fontSize: 12,
+              ),
+            ),
+          ] else if (helperText != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              helperText!,
+              style: const TextStyle(
+                color: CupertinoColors.systemGrey,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ],
+      );
+    } else {
+      return DropdownButtonFormField<T>(
+        value: value,
+        items: items,
+        onChanged: onChanged,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hintText,
+          helperText: helperText,
+          errorText: errorText,
+          border: const OutlineInputBorder(),
+        ),
+      );
+    }
+  }
+}
+
+/// Eine plattformspezifische Datums-Auswahl-Komponente
+class PlatformAdaptiveDatePicker extends StatelessWidget {
+  final String label;
+  final DateTime initialDate;
+  final DateTime? firstDate;
+  final DateTime? lastDate;
+  final Function(DateTime) onDateSelected;
+  final String? helperText;
+  final String? errorText;
+
+  const PlatformAdaptiveDatePicker({
+    Key? key,
+    required this.label,
+    required this.initialDate,
+    this.firstDate,
+    this.lastDate,
+    required this.onDateSelected,
+    this.helperText,
+    this.errorText,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final formattedDate =
+        "${initialDate.day}.${initialDate.month}.${initialDate.year}";
+
+    if (Platform.isIOS) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          GestureDetector(
+            onTap: () => _showIOSDatePicker(context),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: CupertinoColors.systemGrey4),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(formattedDate),
+                  const Icon(
+                    CupertinoIcons.calendar,
+                    color: CupertinoColors.systemGrey,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (errorText != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              errorText!,
+              style: const TextStyle(
+                color: CupertinoColors.destructiveRed,
+                fontSize: 12,
+              ),
+            ),
+          ] else if (helperText != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              helperText!,
+              style: const TextStyle(
+                color: CupertinoColors.systemGrey,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ],
+      );
+    } else {
+      return InkWell(
+        onTap: () => _showAndroidDatePicker(context),
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: label,
+            helperText: helperText,
+            errorText: errorText,
+            border: const OutlineInputBorder(),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(formattedDate),
+              const Icon(Icons.calendar_today),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showIOSDatePicker(BuildContext context) async {
+    final firstPickerDate = firstDate ?? DateTime(initialDate.year - 5);
+    final lastPickerDate = lastDate ?? DateTime(initialDate.year + 5);
+
+    showCupertinoModalPopup(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          height: 216,
+          padding: const EdgeInsets.only(top: 6.0),
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          color: CupertinoColors.systemBackground.resolveFrom(context),
+          child: SafeArea(
+            top: false,
+            child: CupertinoDatePicker(
+              initialDateTime: initialDate,
+              minimumDate: firstPickerDate,
+              maximumDate: lastPickerDate,
+              mode: CupertinoDatePickerMode.date,
+              onDateTimeChanged: onDateSelected,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showAndroidDatePicker(BuildContext context) async {
+    final firstPickerDate = firstDate ?? DateTime(initialDate.year - 5);
+    final lastPickerDate = lastDate ?? DateTime(initialDate.year + 5);
+
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: firstPickerDate,
+      lastDate: lastPickerDate,
+    );
+
+    if (pickedDate != null) {
+      onDateSelected(pickedDate);
+    }
+  }
+}

@@ -8,6 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:Taqvimi/localization/app_localizations.dart';
 // ThemeNotifier
 import 'package:Taqvimi/providers/theme_notifier.dart';
+// Projektmanagement
+import 'package:Taqvimi/providers/project_provider.dart';
+import 'package:Taqvimi/ui/pages/project_management_page.dart';
 // HomePage
 import 'package:Taqvimi/ui/pages/home_page.dart';
 // InitialLocationPage
@@ -20,9 +23,7 @@ import 'package:Taqvimi/data/services/prayer_time_service.dart';
 import 'package:Taqvimi/data/repositories/prayer_time_repository.dart';
 
 import 'data/repositories/appointment_repository.dart';
-import 'data/repositories/prayer_time_repository.dart';
 import 'package:Taqvimi/data/repositories/category_repository.dart';
-import 'data/repositories/category_repository.dart';
 import 'data/services/calendar_sync_service.dart';
 import 'data/services/google_calendar_service.dart';
 import 'data/services/recurrence_service.dart';
@@ -133,6 +134,10 @@ void main() async {
         Provider(
           create: (_) => appointmentRepository,
         ),
+        // ProjectProvider hinzufügen
+        ChangeNotifierProvider(
+          create: (_) => ProjectProvider(),
+        ),
       ],
       child: const MyApp(),
     ),
@@ -198,7 +203,7 @@ class _MyAppState extends State<MyApp> {
     final darkTheme = PlatformAdaptiveTheme.getDarkTheme(context);
 
     return MaterialApp(
-      title: Provider.of<AppLocalizations>(context).appTitle,
+      title: 'Taqvimi',
       debugShowCheckedModeBanner: false,
       // Übersetzungen bekannt machen
       localizationsDelegates: const [
@@ -208,10 +213,13 @@ class _MyAppState extends State<MyApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [
-        Locale('de'), // Deutsch
-        Locale('en'), // Englisch
-        Locale('tr'), // Türkisch
-        Locale('ar'), // Arabisch
+        Locale('en', ''), // Englisch
+        Locale('de', ''), // Deutsch
+        Locale('tr', ''), // Türkisch
+        Locale('ar', ''), // Arabisch
+        Locale('bs', ''), // Bosnisch
+        Locale('es', ''), // Spanisch
+        Locale('fa', ''), // Persisch
       ],
       // Light, Dark oder System-Theme verwenden
       themeMode: themeMode,
@@ -236,6 +244,7 @@ class _MyAppState extends State<MyApp> {
                 return const HomePage();
               },
             ),
+        '/project-management': (context) => const ProjectManagementPage(),
       },
       // Startroute definieren
       initialRoute: '/',

@@ -25,6 +25,9 @@ import 'package:Taqvimi/data/services/import_settings_service.dart';
 // Logo-Farbe für die Konsistenz der App
 const Color logoColor = Color(0xFF468178);
 
+// Enum für aktuelle Seite
+enum CurrentPage { calendar, projectManagement, other }
+
 /// Gemeinsames Menü für Dashboard und Home Page
 /// Diese Komponente kann in beiden Seiten verwendet werden und bietet das gleiche Menü
 class AppDrawer extends StatelessWidget {
@@ -46,6 +49,9 @@ class AppDrawer extends StatelessWidget {
   /// Set der bereits ausgewählten Kategorie-IDs
   final Set<int> selectedCategoryIds;
 
+  /// Aktuelle Seite zur Steuerung der Menüpunkte
+  final CurrentPage currentPage;
+
   const AppDrawer({
     super.key,
     required this.onSettingsOpen,
@@ -54,6 +60,7 @@ class AppDrawer extends StatelessWidget {
     required this.categories,
     required this.selectedCategoryIds,
     this.onCloseDrawer,
+    this.currentPage = CurrentPage.calendar,
   });
 
   /// Öffnet die Einstellungsseite
@@ -526,9 +533,62 @@ class AppDrawer extends StatelessWidget {
             //   iconColor: logoColor,
             //   onTap: () => _showImportOptionsDialog(context),
             // ),
+
+            // Kalender- oder Projektmanagement-Navigation, je nach aktueller Seite
+            if (currentPage == CurrentPage.projectManagement)
+              // Kalenderverwaltung anzeigen, wenn auf Projektmanagement-Seite
+              _buildDrawerItem(
+                context: context,
+                icon: Platform.isIOS
+                    ? CupertinoIcons.calendar
+                    : Icons.calendar_today,
+                title: loc.calendar ?? 'Kalender',
+                onTap: () {
+                  if (onCloseDrawer != null) {
+                    onCloseDrawer!();
+                  } else {
+                    Navigator.pop(context);
+                  }
+                  Navigator.pushNamed(context, '/');
+                },
+              ),
+
+            // Projektmanagement anzeigen, wenn nicht auf Projektmanagement-Seite
+            if (currentPage != CurrentPage.projectManagement)
+              _buildDrawerItem(
+                context: context,
+                icon: Platform.isIOS
+                    ? CupertinoIcons.chart_bar
+                    : Icons.stacked_bar_chart,
+                title: loc.projectManagement ?? 'Projektmanagement',
+                onTap: () {
+                  if (onCloseDrawer != null) {
+                    onCloseDrawer!();
+                  } else {
+                    Navigator.pop(context);
+                  }
+                  Navigator.pushNamed(context, '/project-management');
+                },
+              ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDrawerItem({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required Function() onTap,
+  }) {
+    return PlatformAdaptiveNavigation.buildNavigationItem(
+      context: context,
+      title: title,
+      androidIcon: icon,
+      iOSIcon: icon,
+      iconColor: logoColor,
+      onTap: onTap,
     );
   }
 }
