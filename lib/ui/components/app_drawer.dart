@@ -553,9 +553,8 @@ class AppDrawer extends StatelessWidget {
                 },
               ),
 
-            if (currentPage == CurrentPage.calendar ||
-                currentPage == CurrentPage.other)
-              // Projektmanagement anzeigen, wenn auf Kalender-Seite oder andere Seite
+            // Projektmanagement anzeigen, wenn nicht auf Projektmanagement-Seite
+            if (currentPage != CurrentPage.projectManagement)
               _buildDrawerItem(
                 context: context,
                 icon: Platform.isIOS
