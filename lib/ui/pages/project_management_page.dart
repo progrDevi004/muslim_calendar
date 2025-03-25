@@ -95,6 +95,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
         categories: _categories,
         selectedCategoryIds: _selectedCategoryIds,
         onCloseDrawer: () => Navigator.pop(context),
+        currentPage: CurrentPage.projectManagement,
       ),
       body: Consumer<ProjectProvider>(
         builder: (context, projectProvider, child) {
