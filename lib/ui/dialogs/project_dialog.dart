@@ -332,35 +332,216 @@ class _ProjectDialogState extends State<ProjectDialog> {
           const SizedBox(height: 16),
 
           // Kategorie
-          PlatformAdaptiveForm.buildDropdown<int>(
-            context: context,
-            label: localizations.categoryLabel ?? 'Kategorie',
-            value: _categoryId,
-            items: widget.categories.map((category) {
-              return DropdownMenuItem(
-                value: category.id!,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: category.color,
-                        shape: BoxShape.circle,
+          if (widget.categories.isEmpty)
+            // Wenn keine Kategorien verfügbar sind
+            _isIOS
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        localizations.categoryLabel ?? 'Kategorie',
+                        style: const TextStyle(
+                          fontSize: 15.0,
+                          color: CupertinoColors.label,
+                        ),
                       ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: CupertinoColors.systemGrey6,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Keine Kategorien verfügbar',
+                          style: const TextStyle(
+                            color: CupertinoColors.secondaryLabel,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Container(
+                    padding: const EdgeInsets.all(16.0),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(4.0),
                     ),
-                    const SizedBox(width: 8),
-                    Text(category.name),
-                  ],
-                ),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _categoryId = value ?? 1;
-              });
-            },
-          ),
+                    child: Text(
+                      'Keine Kategorien verfügbar',
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  )
+          else
+            _isIOS
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        localizations.categoryLabel ?? 'Kategorie',
+                        style: const TextStyle(
+                          fontSize: 15.0,
+                          color: CupertinoColors.label,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // iOS-spezifische Kategorieauswahl
+                      CupertinoButton(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        color: CupertinoColors.systemGrey6,
+                        borderRadius: BorderRadius.circular(8),
+                        onPressed: () {
+                          final categoryIndex = widget.categories.indexWhere(
+                            (category) => category.id == _categoryId,
+                          );
+
+                          showCupertinoModalPopup(
+                            context: context,
+                            builder: (context) => Container(
+                              height: 250,
+                              padding: const EdgeInsets.only(top: 6.0),
+                              color: CupertinoColors.systemBackground,
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      CupertinoButton(
+                                        child: Text(localizations.cancel ??
+                                            'Abbrechen'),
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(),
+                                      ),
+                                      CupertinoButton(
+                                        child: Text(
+                                            localizations.save ?? 'Fertig'),
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(),
+                                      ),
+                                    ],
+                                  ),
+                                  const Divider(height: 0),
+                                  Expanded(
+                                    child: CupertinoPicker(
+                                      scrollController:
+                                          FixedExtentScrollController(
+                                        initialItem: categoryIndex >= 0
+                                            ? categoryIndex
+                                            : 0,
+                                      ),
+                                      itemExtent: 40,
+                                      onSelectedItemChanged: (index) {
+                                        setState(() {
+                                          _categoryId =
+                                              widget.categories[index].id!;
+                                        });
+                                      },
+                                      children:
+                                          widget.categories.map((category) {
+                                        return Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Container(
+                                              width: 16,
+                                              height: 16,
+                                              decoration: BoxDecoration(
+                                                color: category.color,
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(category.name),
+                                          ],
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 16,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    color: widget.categories
+                                        .firstWhere(
+                                          (category) =>
+                                              category.id == _categoryId,
+                                          orElse: () => widget.categories.first,
+                                        )
+                                        .color,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  widget.categories
+                                      .firstWhere(
+                                        (category) =>
+                                            category.id == _categoryId,
+                                        orElse: () => widget.categories.first,
+                                      )
+                                      .name,
+                                  style: const TextStyle(
+                                    color: CupertinoColors.label,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Icon(
+                              CupertinoIcons.chevron_down,
+                              size: 16,
+                              color: CupertinoColors.secondaryLabel,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                : PlatformAdaptiveForm.buildDropdown<int>(
+                    context: context,
+                    label: localizations.categoryLabel ?? 'Kategorie',
+                    value: _categoryId,
+                    items: widget.categories.map((category) {
+                      return DropdownMenuItem(
+                        value: category.id!,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 16,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                color: category.color,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(category.name),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _categoryId = value ?? 1;
+                      });
+                    },
+                  ),
         ],
       ),
     );
