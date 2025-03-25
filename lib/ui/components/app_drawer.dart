@@ -554,22 +554,21 @@ class AppDrawer extends StatelessWidget {
               ),
 
             // Projektmanagement anzeigen, wenn nicht auf Projektmanagement-Seite
-            if (currentPage != CurrentPage.projectManagement)
-              _buildDrawerItem(
-                context: context,
-                icon: Platform.isIOS
-                    ? CupertinoIcons.chart_bar
-                    : Icons.stacked_bar_chart,
-                title: loc.projectManagement ?? 'Projektmanagement',
-                onTap: () {
-                  if (onCloseDrawer != null) {
-                    onCloseDrawer!();
-                  } else {
-                    Navigator.pop(context);
-                  }
-                  Navigator.pushNamed(context, '/project-management');
-                },
-              ),
+            _buildDrawerItem(
+              context: context,
+              icon: Platform.isIOS
+                  ? CupertinoIcons.chart_bar
+                  : Icons.stacked_bar_chart,
+              title: loc.projectManagement ?? 'Projektmanagement',
+              onTap: () {
+                if (onCloseDrawer != null) {
+                  onCloseDrawer!();
+                } else {
+                  Navigator.pop(context);
+                }
+                Navigator.pushNamed(context, '/project-management');
+              },
+            ),
           ],
         ),
       ),
