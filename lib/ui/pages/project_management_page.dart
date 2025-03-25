@@ -27,7 +27,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final CategoryRepository _categoryRepository = CategoryRepository();
 
-  ProjectViewType _viewType = ProjectViewType.month;
+  ProjectViewType _viewType = ProjectViewType.dashboard;
   List<CategoryModel> _categories = [];
   Set<int> _selectedCategoryIds = {};
   bool _isLoading = false;
@@ -35,6 +35,8 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
   @override
   void initState() {
     super.initState();
+    _viewType = ProjectViewType.dashboard; // Start mit Dashboard-Ansicht
+    debugPrint('Initial ViewType: $_viewType'); // Debug-Ausgabe
     _loadCategories();
 
     // Stellen Sie sicher, dass der Provider Daten geladen hat
@@ -156,8 +158,12 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
                 currentIndex: _viewType.index,
                 activeColor: theme.primaryColor,
                 onTap: (index) {
+                  debugPrint(
+                      'Navigation tapped: index=$index'); // Debug-Ausgabe
                   setState(() {
                     _viewType = ProjectViewType.values[index];
+                    debugPrint(
+                        'ViewType changed to: $_viewType'); // Debug-Ausgabe
                   });
                 },
                 items: [
@@ -190,8 +196,12 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
                 type: BottomNavigationBarType.fixed,
                 elevation: 8,
                 onTap: (index) {
+                  debugPrint(
+                      'Navigation tapped: index=$index'); // Debug-Ausgabe
                   setState(() {
                     _viewType = ProjectViewType.values[index];
+                    debugPrint(
+                        'ViewType changed to: $_viewType'); // Debug-Ausgabe
                   });
                 },
                 items: [
@@ -223,6 +233,7 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
 
   // Baut die Projektliste basierend auf dem ausgewählten ViewType
   Widget _buildProjectListByViewType(List<ProjectModel> projects) {
+    debugPrint('Building view for type: $_viewType'); // Debug-Ausgabe
     switch (_viewType) {
       case ProjectViewType.dashboard:
         return _buildDashboard(projects);
@@ -235,7 +246,8 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
       case ProjectViewType.year:
         return _buildYearView(projects);
       default:
-        return _buildDashboard(projects); // Standardansicht: Dashboard
+        debugPrint('Falling back to dashboard view'); // Debug-Ausgabe
+        return _buildDashboard(projects);
     }
   }
 
