@@ -85,6 +85,16 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
         leading: isIOS ? null : const Icon(Icons.menu),
         onLeadingPressed: isIOS ? null : _toggleDrawer,
         centerTitle: isIOS, // Auf iOS zentrieren, auf Android links
+        actions: isIOS
+            ? [
+                // iOS-nativer Hinzufügen-Button in der AppBar
+                CupertinoButton(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: const Icon(CupertinoIcons.add, size: 24),
+                  onPressed: _showAddProjectDialog,
+                ),
+              ]
+            : null,
       ),
       drawer: AppDrawer(
         onSettingsOpen: () => setState(() {}),
@@ -135,14 +145,16 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
           return _buildProjectListByViewType(sortedProjects);
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddProjectDialog,
-        backgroundColor: Theme.of(context).primaryColor,
-        child: Icon(
-          isIOS ? CupertinoIcons.add : Icons.add,
-          color: Colors.white,
-        ),
-      ),
+      floatingActionButton: isIOS
+          ? null // Kein FAB für iOS, da wir den Button in die AppBar gesetzt haben
+          : FloatingActionButton(
+              onPressed: _showAddProjectDialog,
+              backgroundColor: Theme.of(context).primaryColor,
+              child: Icon(
+                Icons.add,
+                color: Colors.white,
+              ),
+            ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
