@@ -5876,4 +5876,407 @@ class AppLocalizations extends ChangeNotifier {
         return 'Please run location detection first';
     }
   }
+
+  // ------------------------------
+  // Projektmanagement-Begriffe
+  // ------------------------------
+  String? get projectManagement {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Projektmanagement';
+      case AppLanguage.turkish:
+        return 'Proje Yönetimi';
+      case AppLanguage.arabic:
+        return 'إدارة المشاريع';
+      case AppLanguage.bosnian:
+        return 'Upravljanje projektima';
+      case AppLanguage.spanish:
+        return 'Gestión de proyectos';
+      case AppLanguage.persian:
+        return 'مدیریت پروژه';
+      case AppLanguage.english:
+      default:
+        return 'Project Management';
+    }
+  }
+
+  String? get projectName {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Projektname';
+      case AppLanguage.turkish:
+        return 'Proje Adı';
+      case AppLanguage.arabic:
+        return 'اسم المشروع';
+      case AppLanguage.bosnian:
+        return 'Naziv projekta';
+      case AppLanguage.spanish:
+        return 'Nombre del proyecto';
+      case AppLanguage.persian:
+        return 'نام پروژه';
+      case AppLanguage.english:
+      default:
+        return 'Project Name';
+    }
+  }
+
+  String? get newProject {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Neues Projekt';
+      case AppLanguage.turkish:
+        return 'Yeni Proje';
+      case AppLanguage.arabic:
+        return 'مشروع جديد';
+      case AppLanguage.bosnian:
+        return 'Novi projekat';
+      case AppLanguage.spanish:
+        return 'Nuevo proyecto';
+      case AppLanguage.persian:
+        return 'پروژه جدید';
+      case AppLanguage.english:
+      default:
+        return 'New Project';
+    }
+  }
+
+  String? get editProject {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Projekt bearbeiten';
+      case AppLanguage.turkish:
+        return 'Projeyi Düzenle';
+      case AppLanguage.arabic:
+        return 'تعديل المشروع';
+      case AppLanguage.bosnian:
+        return 'Uredi projekat';
+      case AppLanguage.spanish:
+        return 'Editar proyecto';
+      case AppLanguage.persian:
+        return 'ویرایش پروژه';
+      case AppLanguage.english:
+      default:
+        return 'Edit Project';
+    }
+  }
+
+  String get category {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Kategorie';
+      case AppLanguage.turkish:
+        return 'Kategori';
+      case AppLanguage.arabic:
+        return 'الفئة';
+      case AppLanguage.bosnian:
+        return 'Kategorija';
+      case AppLanguage.spanish:
+        return 'Categoría';
+      case AppLanguage.persian:
+        return 'دسته بندی';
+      case AppLanguage.english:
+      default:
+        return 'Category';
+    }
+  }
+
+  String? get deleteConfirmation {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Löschen bestätigen';
+      case AppLanguage.turkish:
+        return 'Silmeyi Onayla';
+      case AppLanguage.arabic:
+        return 'تأكيد الحذف';
+      case AppLanguage.bosnian:
+        return 'Potvrdi brisanje';
+      case AppLanguage.spanish:
+        return 'Confirmar eliminación';
+      case AppLanguage.persian:
+        return 'تایید حذف';
+      case AppLanguage.english:
+      default:
+        return 'Confirm Deletion';
+    }
+  }
+
+  String? get fieldRequired {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Pflichtfeld';
+      case AppLanguage.turkish:
+        return 'Gerekli';
+      case AppLanguage.arabic:
+        return 'مطلوب';
+      case AppLanguage.bosnian:
+        return 'Obavezno';
+      case AppLanguage.spanish:
+        return 'Obligatorio';
+      case AppLanguage.persian:
+        return 'الزامی';
+      case AppLanguage.english:
+      default:
+        return 'Required';
+    }
+  }
+
+  String? get calendar {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Kalender';
+      case AppLanguage.turkish:
+        return 'Takvim';
+      case AppLanguage.arabic:
+        return 'التقويم';
+      case AppLanguage.bosnian:
+        return 'Kalendar';
+      case AppLanguage.spanish:
+        return 'Calendario';
+      case AppLanguage.persian:
+        return 'تقویم';
+      case AppLanguage.english:
+      default:
+        return 'Calendar';
+    }
+  }
+
+  String? get priority {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Priorität';
+      case AppLanguage.turkish:
+        return 'Öncelik';
+      case AppLanguage.arabic:
+        return 'الأولوية';
+      case AppLanguage.bosnian:
+        return 'Prioritet';
+      case AppLanguage.spanish:
+        return 'Prioridad';
+      case AppLanguage.persian:
+        return 'اولویت';
+      case AppLanguage.english:
+      default:
+        return 'Priority';
+    }
+  }
+
+  String? get lowPriority {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Niedrig';
+      case AppLanguage.turkish:
+        return 'Düşük';
+      case AppLanguage.arabic:
+        return 'منخفضة';
+      case AppLanguage.bosnian:
+        return 'Nizak';
+      case AppLanguage.spanish:
+        return 'Baja';
+      case AppLanguage.persian:
+        return 'کم';
+      case AppLanguage.english:
+      default:
+        return 'Low';
+    }
+  }
+
+  String? get mediumPriority {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Mittel';
+      case AppLanguage.turkish:
+        return 'Orta';
+      case AppLanguage.arabic:
+        return 'متوسطة';
+      case AppLanguage.bosnian:
+        return 'Srednji';
+      case AppLanguage.spanish:
+        return 'Media';
+      case AppLanguage.persian:
+        return 'متوسط';
+      case AppLanguage.english:
+      default:
+        return 'Medium';
+    }
+  }
+
+  String? get highPriority {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Hoch';
+      case AppLanguage.turkish:
+        return 'Yüksek';
+      case AppLanguage.arabic:
+        return 'عالية';
+      case AppLanguage.bosnian:
+        return 'Visok';
+      case AppLanguage.spanish:
+        return 'Alta';
+      case AppLanguage.persian:
+        return 'بالا';
+      case AppLanguage.english:
+      default:
+        return 'High';
+    }
+  }
+
+  String? get progress {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Fortschritt';
+      case AppLanguage.turkish:
+        return 'İlerleme';
+      case AppLanguage.arabic:
+        return 'التقدم';
+      case AppLanguage.bosnian:
+        return 'Napredak';
+      case AppLanguage.spanish:
+        return 'Progreso';
+      case AppLanguage.persian:
+        return 'پیشرفت';
+      case AppLanguage.english:
+      default:
+        return 'Progress';
+    }
+  }
+
+  String? get viewType {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Ansichtstyp';
+      case AppLanguage.turkish:
+        return 'Görünüm Türü';
+      case AppLanguage.arabic:
+        return 'نوع العرض';
+      case AppLanguage.bosnian:
+        return 'Tip pregleda';
+      case AppLanguage.spanish:
+        return 'Tipo de vista';
+      case AppLanguage.persian:
+        return 'نوع نمایش';
+      case AppLanguage.english:
+      default:
+        return 'View Type';
+    }
+  }
+
+  String? get dayView {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Tagesansicht';
+      case AppLanguage.turkish:
+        return 'Gün Görünümü';
+      case AppLanguage.arabic:
+        return 'عرض اليوم';
+      case AppLanguage.bosnian:
+        return 'Dnevni pregled';
+      case AppLanguage.spanish:
+        return 'Vista diaria';
+      case AppLanguage.persian:
+        return 'نمای روزانه';
+      case AppLanguage.english:
+      default:
+        return 'Day View';
+    }
+  }
+
+  String? get weekView {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Wochenansicht';
+      case AppLanguage.turkish:
+        return 'Hafta Görünümü';
+      case AppLanguage.arabic:
+        return 'عرض الأسبوع';
+      case AppLanguage.bosnian:
+        return 'Sedmični pregled';
+      case AppLanguage.spanish:
+        return 'Vista semanal';
+      case AppLanguage.persian:
+        return 'نمای هفتگی';
+      case AppLanguage.english:
+      default:
+        return 'Week View';
+    }
+  }
+
+  String? get monthView {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Monatsansicht';
+      case AppLanguage.turkish:
+        return 'Ay Görünümü';
+      case AppLanguage.arabic:
+        return 'عرض الشهر';
+      case AppLanguage.bosnian:
+        return 'Mjesečni pregled';
+      case AppLanguage.spanish:
+        return 'Vista mensual';
+      case AppLanguage.persian:
+        return 'نمای ماهانه';
+      case AppLanguage.english:
+      default:
+        return 'Month View';
+    }
+  }
+
+  String? get yearView {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Jahresansicht';
+      case AppLanguage.turkish:
+        return 'Yıl Görünümü';
+      case AppLanguage.arabic:
+        return 'عرض السنة';
+      case AppLanguage.bosnian:
+        return 'Godišnji pregled';
+      case AppLanguage.spanish:
+        return 'Vista anual';
+      case AppLanguage.persian:
+        return 'نمای سالانه';
+      case AppLanguage.english:
+      default:
+        return 'Year View';
+    }
+  }
+
+  String? get deleteProjectConfirmation {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Möchtest du dieses Projekt wirklich löschen?';
+      case AppLanguage.turkish:
+        return 'Bu projeyi gerçekten silmek istiyor musunuz?';
+      case AppLanguage.arabic:
+        return 'هل تريد حقًا حذف هذا المشروع؟';
+      case AppLanguage.bosnian:
+        return 'Da li zaista želite izbrisati ovaj projekat?';
+      case AppLanguage.spanish:
+        return '¿Realmente desea eliminar este proyecto?';
+      case AppLanguage.persian:
+        return 'آیا واقعاً می‌خواهید این پروژه را حذف کنید؟';
+      case AppLanguage.english:
+      default:
+        return 'Do you really want to delete this project?';
+    }
+  }
+
+  String? get noProjects {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Keine Projekte gefunden';
+      case AppLanguage.turkish:
+        return 'Proje bulunamadı';
+      case AppLanguage.arabic:
+        return 'لم يتم العثور على مشاريع';
+      case AppLanguage.bosnian:
+        return 'Nije pronađen nijedan projekat';
+      case AppLanguage.spanish:
+        return 'No se encontraron proyectos';
+      case AppLanguage.persian:
+        return 'هیچ پروژه‌ای یافت نشد';
+      case AppLanguage.english:
+      default:
+        return 'No projects found';
+    }
+  }
 }

@@ -11,6 +11,7 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   syncfusion_flutter_calendar: ^28.1.33
+  syncfusion_flutter_gantt: ^24.2.7
   shared_preferences: ^2.3.3
   flutter_colorpicker: ^1.0.3
   sqflite: ^2.0.0+4

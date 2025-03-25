@@ -526,9 +526,59 @@ class AppDrawer extends StatelessWidget {
             //   iconColor: logoColor,
             //   onTap: () => _showImportOptionsDialog(context),
             // ),
+
+            // Kalenderverwaltung
+            _buildDrawerItem(
+              context: context,
+              icon: Platform.isIOS
+                  ? CupertinoIcons.calendar
+                  : Icons.calendar_today,
+              title: loc.calendar ?? 'Kalender',
+              onTap: () {
+                if (onCloseDrawer != null) {
+                  onCloseDrawer!();
+                } else {
+                  Navigator.pop(context);
+                }
+                Navigator.pushNamed(context, '/');
+              },
+            ),
+
+            // Projektmanagement (NEU)
+            _buildDrawerItem(
+              context: context,
+              icon: Platform.isIOS
+                  ? CupertinoIcons.chart_bar
+                  : Icons.stacked_bar_chart,
+              title: loc.projectManagement ?? 'Projektmanagement',
+              onTap: () {
+                if (onCloseDrawer != null) {
+                  onCloseDrawer!();
+                } else {
+                  Navigator.pop(context);
+                }
+                Navigator.pushNamed(context, '/project-management');
+              },
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDrawerItem({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required Function() onTap,
+  }) {
+    return PlatformAdaptiveNavigation.buildNavigationItem(
+      context: context,
+      title: title,
+      androidIcon: icon,
+      iOSIcon: icon,
+      iconColor: logoColor,
+      onTap: onTap,
     );
   }
 }
