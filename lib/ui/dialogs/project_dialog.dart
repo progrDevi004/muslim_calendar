@@ -140,163 +140,233 @@ class _ProjectDialogState extends State<ProjectDialog> {
         ? localizations.editProject ?? 'Projekt bearbeiten'
         : localizations.newProject ?? 'Neues Projekt';
 
-    final content = SingleChildScrollView(
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Projektname
-            PlatformAdaptiveForm.buildTextField(
-              context: context,
-              label: localizations.projectName ?? 'Projektname',
-              initialValue: _name,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return localizations.fieldRequired ??
-                      'Dieses Feld ist erforderlich';
+    // Optimierter Dialog-Inhalt für beide Plattformen
+    final dialogContent = Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Projektname
+          PlatformAdaptiveForm.buildTextField(
+            context: context,
+            label: localizations.projectName ?? 'Projektname',
+            initialValue: _name,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return localizations.fieldRequired ??
+                    'Dieses Feld ist erforderlich';
+              }
+              return null;
+            },
+            onChanged: (value) => _name = value,
+          ),
+
+          const SizedBox(height: 16),
+
+          // Projektbeschreibung
+          PlatformAdaptiveForm.buildTextField(
+            context: context,
+            label: localizations.description ?? 'Beschreibung',
+            initialValue: _description,
+            maxLines: 3,
+            onChanged: (value) => _description = value,
+          ),
+
+          const SizedBox(height: 16),
+
+          // Startdatum
+          PlatformAdaptiveForm.buildDatePicker(
+            context: context,
+            label: localizations.startDate ?? 'Startdatum',
+            selectedDate: _startDate,
+            onDateChanged: (date) {
+              setState(() {
+                _startDate = date;
+                // Wenn das Enddatum vor dem Startdatum liegt, passen wir es an
+                if (_endDate.isBefore(_startDate)) {
+                  _endDate = _startDate.add(const Duration(days: 1));
                 }
-                return null;
-              },
-              onChanged: (value) => _name = value,
-            ),
+              });
+            },
+          ),
 
-            const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-            // Projektbeschreibung
-            PlatformAdaptiveForm.buildTextField(
-              context: context,
-              label: localizations.description ?? 'Beschreibung',
-              initialValue: _description,
-              maxLines: 3,
-              onChanged: (value) => _description = value,
-            ),
+          // Enddatum
+          PlatformAdaptiveForm.buildDatePicker(
+            context: context,
+            label: localizations.endDate ?? 'Enddatum',
+            selectedDate: _endDate,
+            firstDate: _startDate, // Enddatum muss nach Startdatum liegen
+            onDateChanged: (date) {
+              setState(() {
+                _endDate = date;
+              });
+            },
+          ),
 
-            const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-            // Startdatum
-            PlatformAdaptiveForm.buildDatePicker(
-              context: context,
-              label: localizations.startDate ?? 'Startdatum',
-              selectedDate: _startDate,
-              onDateChanged: (date) {
-                setState(() {
-                  _startDate = date;
-                  // Wenn das Enddatum vor dem Startdatum liegt, passen wir es an
-                  if (_endDate.isBefore(_startDate)) {
-                    _endDate = _startDate.add(const Duration(days: 1));
-                  }
-                });
-              },
-            ),
+          // Priorität
+          PlatformAdaptiveForm.buildDropdown<int>(
+            context: context,
+            label: localizations.priority ?? 'Priorität',
+            value: _priority,
+            items: [
+              DropdownMenuItem(
+                value: 1,
+                child: Text(localizations.lowPriority ?? 'Niedrig'),
+              ),
+              DropdownMenuItem(
+                value: 2,
+                child: Text(localizations.mediumPriority ?? 'Mittel'),
+              ),
+              DropdownMenuItem(
+                value: 3,
+                child: Text(localizations.highPriority ?? 'Hoch'),
+              ),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _priority = value ?? 2;
+              });
+            },
+          ),
 
-            const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-            // Enddatum
-            PlatformAdaptiveForm.buildDatePicker(
-              context: context,
-              label: localizations.endDate ?? 'Enddatum',
-              selectedDate: _endDate,
-              firstDate: _startDate, // Enddatum muss nach Startdatum liegen
-              onDateChanged: (date) {
-                setState(() {
-                  _endDate = date;
-                });
-              },
-            ),
-
-            const SizedBox(height: 16),
-
-            // Priorität
-            PlatformAdaptiveForm.buildDropdown<int>(
-              context: context,
-              label: localizations.priority ?? 'Priorität',
-              value: _priority,
-              items: [
-                DropdownMenuItem(
-                  value: 1,
-                  child: Text(localizations.lowPriority ?? 'Niedrig'),
-                ),
-                DropdownMenuItem(
-                  value: 2,
-                  child: Text(localizations.mediumPriority ?? 'Mittel'),
-                ),
-                DropdownMenuItem(
-                  value: 3,
-                  child: Text(localizations.highPriority ?? 'Hoch'),
-                ),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _priority = value ?? 2;
-                });
-              },
-            ),
-
-            const SizedBox(height: 16),
-
-            // Fortschritt
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${localizations.progress ?? 'Fortschritt'}: $_progress%',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                Slider(
-                  value: _progress.toDouble(),
-                  min: 0,
-                  max: 100,
-                  divisions: 20,
-                  label: '$_progress%',
-                  onChanged: (value) {
-                    setState(() {
-                      _progress = value.toInt();
-                    });
-                  },
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // Kategorie
-            PlatformAdaptiveForm.buildDropdown<int>(
-              context: context,
-              label: localizations.categoryLabel ?? 'Kategorie',
-              value: _categoryId,
-              items: widget.categories.map((category) {
-                return DropdownMenuItem(
-                  value: category.id!,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 16,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: category.color,
-                          shape: BoxShape.circle,
+          // Fortschritt mit plattformspezifischem Slider
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${localizations.progress ?? 'Fortschritt'}: $_progress%',
+                style: _isIOS
+                    ? const TextStyle(
+                        fontSize: 15.0,
+                        color: CupertinoColors.label,
+                      )
+                    : Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 8),
+              _isIOS
+                  ? Column(
+                      children: [
+                        CupertinoSlider(
+                          value: _progress.toDouble(),
+                          min: 0,
+                          max: 100,
+                          divisions: 20,
+                          thumbColor: CupertinoColors.systemBlue,
+                          activeColor: CupertinoColors.systemBlue,
+                          onChanged: (value) {
+                            setState(() {
+                              _progress = value.toInt();
+                            });
+                          },
                         ),
+                        // iOS-typische Beschriftung unter dem Slider
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '0%',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: CupertinoColors.secondaryLabel
+                                      .resolveFrom(context),
+                                ),
+                              ),
+                              Text(
+                                '100%',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: CupertinoColors.secondaryLabel
+                                      .resolveFrom(context),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        Slider(
+                          value: _progress.toDouble(),
+                          min: 0,
+                          max: 100,
+                          divisions: 20,
+                          label: '$_progress%',
+                          onChanged: (value) {
+                            setState(() {
+                              _progress = value.toInt();
+                            });
+                          },
+                        ),
+                        // Material Design typische Beschriftung
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '0%',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              Text(
+                                '100%',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Kategorie
+          PlatformAdaptiveForm.buildDropdown<int>(
+            context: context,
+            label: localizations.categoryLabel ?? 'Kategorie',
+            value: _categoryId,
+            items: widget.categories.map((category) {
+              return DropdownMenuItem(
+                value: category.id!,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: category.color,
+                        shape: BoxShape.circle,
                       ),
-                      const SizedBox(width: 8),
-                      Text(category.name),
-                    ],
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _categoryId = value ?? 1;
-                });
-              },
-            ),
-          ],
-        ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(category.name),
+                  ],
+                ),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _categoryId = value ?? 1;
+              });
+            },
+          ),
+        ],
       ),
     );
 
-    final actions = [
+    // Aktionen für den Dialog
+    final List<Widget> dialogActions = [
       if (isEditing && widget.onDelete != null)
         PlatformAdaptiveDialog.adaptiveDialogAction(
           context: context,
@@ -316,17 +386,89 @@ class _ProjectDialogState extends State<ProjectDialog> {
       ),
     ];
 
-    // Plattformspezifischer Dialog
-    return _isIOS
-        ? CupertinoAlertDialog(
-            title: Text(title),
-            content: content,
-            actions: actions,
-          )
-        : AlertDialog(
-            title: Text(title),
-            content: content,
-            actions: actions,
-          );
+    // Plattformspezifischen Dialog zurückgeben
+    if (_isIOS) {
+      // iOS-spezifischer Dialog mit besserer Scrolling-Unterstützung
+      return Dialog(
+        insetPadding:
+            const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14.0),
+        ),
+        backgroundColor: CupertinoColors.systemBackground,
+        child: Container(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Titel im iOS-Stil
+              Center(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 17.0,
+                    fontWeight: FontWeight.w600,
+                    color: CupertinoColors.label,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16.0),
+              // Scrollbarer Inhalt
+              Flexible(
+                child: SingleChildScrollView(
+                  physics:
+                      const BouncingScrollPhysics(), // iOS-typische Scroll-Physik
+                  child: dialogContent,
+                ),
+              ),
+              const SizedBox(height: 16.0),
+              // iOS-Stil Aktionsbuttons
+              Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(
+                      color: CupertinoColors.separator.resolveFrom(context),
+                      width: 0.5,
+                    ),
+                  ),
+                ),
+                padding: const EdgeInsets.only(top: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: dialogActions.map((action) {
+                    // Spezielle Gestaltung für iOS-Buttons
+                    if (action is CupertinoButton) {
+                      return Expanded(
+                        child: action,
+                      );
+                    } else if (action is TextButton) {
+                      // Anpassen der TextButtons für iOS-Stil
+                      return Expanded(
+                        child: CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          onPressed: action.onPressed,
+                          child: action.child ?? const Text(''),
+                        ),
+                      );
+                    }
+                    return Expanded(child: action);
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      // Material Design Dialog für Android
+      return AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: dialogContent,
+        ),
+        actions: dialogActions,
+      );
+    }
   }
 }

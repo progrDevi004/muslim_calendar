@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 
 // Modelle & Lokalisierung
 import 'package:Taqvimi/localization/app_localizations.dart';
-import 'package:Taqvimi/models/enums.dart';
 import 'package:Taqvimi/models/category_model.dart';
 
 // Komponenten
@@ -470,14 +469,6 @@ class AppDrawer extends StatelessWidget {
                     height: 40,
                   ),
                   const SizedBox(width: 16),
-                  Text(
-                    loc.appTitle,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: isIOS
-                          ? CupertinoColors.label
-                          : theme.textTheme.titleLarge?.color,
-                    ),
-                  ),
                 ],
               ),
             ),

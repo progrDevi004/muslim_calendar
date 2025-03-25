@@ -1124,47 +1124,8 @@ class DashboardPageState extends State<DashboardPage> {
                 IconButton(
                   icon: const Icon(CupertinoIcons.ellipsis),
                   onPressed: () {
-                    showCupertinoModalPopup(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return CupertinoActionSheet(
-                          actions: [
-                            CupertinoActionSheetAction(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _openSettings();
-                              },
-                              child: Text(loc.settings),
-                            ),
-                            CupertinoActionSheetAction(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _showCategoryFilterDialog(context);
-                              },
-                              child: Text(loc.filterCategories),
-                            ),
-                            CupertinoActionSheetAction(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _showSyncOptionsDialog(context);
-                              },
-                              child: Text(loc.googleCalendar),
-                            ),
-                            CupertinoActionSheetAction(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _openQiblaCompass();
-                              },
-                              child: Text(loc.qiblaCompass),
-                            ),
-                          ],
-                          cancelButton: CupertinoActionSheetAction(
-                            onPressed: () => Navigator.pop(context),
-                            child: Text(loc.cancel),
-                          ),
-                        );
-                      },
-                    );
+                    // Statt CupertinoActionSheet den Drawer öffnen wie in der HomePage
+                    scaffoldKey.currentState?.openDrawer();
                   },
                 ),
               ]
