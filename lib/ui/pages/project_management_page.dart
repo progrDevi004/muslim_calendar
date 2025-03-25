@@ -867,7 +867,19 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
                           isSameDay(project.startDate, day)) &&
                       (project.endDate.isAfter(day) ||
                           isSameDay(project.endDate, day)))
-                  .length;
+                  .toList();
+
+              // Gruppiere nach Kategorien für die Farbdarstellung
+              final Map<Color, int> projectsByCategory = {};
+              for (final project in projectsForDay) {
+                final color =
+                    project.category?.color ?? Theme.of(context).primaryColor;
+                if (projectsByCategory.containsKey(color)) {
+                  projectsByCategory[color] = projectsByCategory[color]! + 1;
+                } else {
+                  projectsByCategory[color] = 1;
+                }
+              }
 
               return Expanded(
                 child: GestureDetector(
@@ -914,15 +926,45 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
                                 isToday ? Theme.of(context).primaryColor : null,
                           ),
                         ),
-                        if (projectsForDay > 0)
+                        // Projekt-Indikatoren (farbige Punkte nach Kategorie)
+                        if (projectsByCategory.isNotEmpty)
                           Container(
-                            margin: const EdgeInsets.only(top: 2),
-                            width: 8,
+                            margin: const EdgeInsets.only(top: 4),
                             height: 8,
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).primaryColor,
-                              shape: BoxShape.circle,
-                            ),
+                            child: projectsByCategory.length <= 3
+                                ? Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children:
+                                        projectsByCategory.entries.map((entry) {
+                                      return Container(
+                                        margin: const EdgeInsets.symmetric(
+                                            horizontal: 1),
+                                        width: 6,
+                                        height: 6,
+                                        decoration: BoxDecoration(
+                                          color: entry.key,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      );
+                                    }).toList(),
+                                  )
+                                : Container(
+                                    width: 30,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).primaryColor,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        '${projectsForDay.length}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 7,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                           ),
                       ],
                     ),
@@ -1072,11 +1114,24 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
                   final isToday = isSameDay(date, today);
 
                   // Prüfe, ob an diesem Tag Projekte aktiv sind
-                  final hasProjects = projects.any((project) =>
+                  final projectsForDate = projects.where((project) =>
                       (project.startDate.isBefore(date) ||
                           isSameDay(project.startDate, date)) &&
                       (project.endDate.isAfter(date) ||
                           isSameDay(project.endDate, date)));
+
+                  // Gruppiere nach Kategorien für die Farbdarstellung
+                  final Map<Color, int> projectsByCategory = {};
+                  for (final project in projectsForDate) {
+                    final color = project.category?.color ??
+                        Theme.of(context).primaryColor;
+                    if (projectsByCategory.containsKey(color)) {
+                      projectsByCategory[color] =
+                          projectsByCategory[color]! + 1;
+                    } else {
+                      projectsByCategory[color] = 1;
+                    }
+                  }
 
                   return GestureDetector(
                     onTap: () {
@@ -1096,10 +1151,10 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
                         border: Border.all(
                           color: isToday
                               ? Theme.of(context).primaryColor
-                              : hasProjects
+                              : projectsForDate.isNotEmpty
                                   ? Colors.grey[400]!
                                   : Colors.grey[200]!,
-                          width: hasProjects ? 1.0 : 0.5,
+                          width: projectsForDate.isNotEmpty ? 1.0 : 0.5,
                         ),
                       ),
                       child: Stack(
@@ -1117,18 +1172,44 @@ class _ProjectManagementPageState extends State<ProjectManagementPage> {
                               ),
                             ),
                           ),
-                          if (hasProjects)
+                          // Projekt-Indikatoren basierend auf der Kategorie
+                          if (projectsByCategory.isNotEmpty)
                             Positioned(
-                              right: 4,
-                              top: 4,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).primaryColor,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
+                              right: 2,
+                              top: 2,
+                              child: projectsByCategory.length <= 3
+                                  ? Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: projectsByCategory.entries
+                                          .map((entry) {
+                                        return Container(
+                                          margin:
+                                              const EdgeInsets.only(left: 1),
+                                          width: 6,
+                                          height: 6,
+                                          decoration: BoxDecoration(
+                                            color: entry.key,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        );
+                                      }).toList(),
+                                    )
+                                  : Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 3, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).primaryColor,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        '${projectsForDate.length}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 7,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
                             ),
                         ],
                       ),
