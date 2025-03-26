@@ -285,7 +285,7 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     await prefs.setBool('wasLocationAsked', true);
 
     // Stelle sicher, dass Google-Kalender verbunden ist und alle Kalender automatisch ausgewählt werden
-    try {
+    /*try {
       // Auto-SignIn versuchen
       await _googleCalendarService.autoSignIn();
 
@@ -369,7 +369,7 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     } catch (e) {
       debugPrint("❌ Fehler beim Auswählen der Google-Kalender: $e");
       // Fehler bei der Kalenderauswahl sollten nicht den gesamten Initialisierungsprozess blockieren
-    }
+    }*/ 
 
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
