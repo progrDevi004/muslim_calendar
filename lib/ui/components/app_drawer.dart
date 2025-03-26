@@ -351,9 +351,10 @@ class AppDrawer extends StatelessWidget {
               child: Row(
                 children: [
                   Image.asset(
-                    'assets/images/logo.png',
-                    width: 40,
-                    height: 40,
+                    Theme.of(context).brightness == Brightness.dark
+                        ? 'assets/images/text_dark.png'
+                        : 'assets/images/text_light.png',
+                    height: 30,
                   ),
                   const SizedBox(width: 16),
                 ],

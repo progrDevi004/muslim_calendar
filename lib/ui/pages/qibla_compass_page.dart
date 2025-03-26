@@ -293,18 +293,18 @@ class _QiblaCompassPageState extends State<QiblaCompassPage> {
                   textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () => navigateBack(),
-                icon: Icon(Platform.isIOS
-                    ? CupertinoIcons.arrow_left
-                    : Icons.arrow_back),
-                label: const Text('Zurück zur App'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: logoColor,
-                  foregroundColor: Colors.white,
-                ),
-              ),
+              // const SizedBox(height: 24),
+              // ElevatedButton.icon(
+              //   onPressed: () => navigateBack(),
+              //   icon: Icon(Platform.isIOS
+              //       ? CupertinoIcons.arrow_left
+              //       : Icons.arrow_back),
+              //   label: const Text('Zurück zur App'),
+              //   style: ElevatedButton.styleFrom(
+              //     backgroundColor: logoColor,
+              //     foregroundColor: Colors.white,
+              //   ),
+              // ),
             ],
           ),
         ),
