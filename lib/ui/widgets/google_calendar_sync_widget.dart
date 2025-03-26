@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:Taqvimi/data/services/google_calendar_sync_service.dart';
 import 'package:Taqvimi/data/repositories/appointment_repository.dart';
 import 'package:Taqvimi/models/appointment_model.dart';
+import 'package:Taqvimi/data/services/google_sign_in_service.dart';
 
 class GoogleCalendarSyncWidget extends StatefulWidget {
   final AppointmentModel? appointment;
@@ -29,14 +30,8 @@ class _GoogleCalendarSyncWidgetState extends State<GoogleCalendarSyncWidget> {
   late bool _syncEnabled;
   DateTime? _lastTokenRefresh;
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      'email',
-      'https://www.googleapis.com/auth/calendar',
-    ],
-    clientId:
-        '778895687512-t7lq66jbs8ljd1rredheoeoqfe5g8in8.apps.googleusercontent.com',
-  );
+  final GoogleSignInService _signInService = GoogleSignInService();
+  final GoogleSignIn _googleSignIn = GoogleSignInService().googleSignIn;
 
   @override
   void initState() {

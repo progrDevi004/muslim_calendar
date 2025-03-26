@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:googleapis/calendar/v3.dart' as gCal;
 import 'package:googleapis/calendar/v3.dart' as calendar;
@@ -14,6 +14,7 @@ import 'package:Taqvimi/data/services/google_calendar_service.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:Taqvimi/data/repositories/category_repository.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:Taqvimi/data/services/google_sign_in_service.dart';
 
 // Wir verwenden die GoogleHttpClient-Klasse direkt aus GoogleCalendarService
 
@@ -72,6 +73,7 @@ class GoogleCalendarSyncService with ChangeNotifier {
   final GoogleEventMappingRepository _mappingRepo;
   final PrayerTimeAppointmentAdapter _appointmentAdapter;
   final CategoryRepository _categoryRepo;
+  final GoogleSignInService _signInService = GoogleSignInService();
 
   // Google API Client
   gCal.CalendarApi? _calendarApi;
@@ -921,14 +923,8 @@ class GoogleCalendarSyncService with ChangeNotifier {
         // debugPrint('Google API nicht initialisiert. Initialisiere...');
 
         // Versuche die Initialisierung (ähnlich wie bei anderen Sync-Methoden)
-        final googleSignIn = GoogleSignIn(
-          scopes: [
-            'email',
-            'https://www.googleapis.com/auth/calendar',
-          ],
-          clientId:
-              '778895687512-t7lq66jbs8ljd1rredheoeoqfe5g8in8.apps.googleusercontent.com', // Client ID für iOS
-        );
+        final GoogleSignInService _signInService = GoogleSignInService();
+        final googleSignIn = _signInService.googleSignIn;
 
         // Versuche, aktuellen Benutzer zu bekommen oder neu anzumelden
         final account =
@@ -1262,15 +1258,8 @@ class GoogleCalendarSyncService with ChangeNotifier {
     try {
       debugPrint("🔄 Initialisiere Google Calendar API");
 
-      // Google SignIn-Instance erstellen
-      final GoogleSignIn googleSignIn = GoogleSignIn(
-        scopes: [
-          'email',
-          'https://www.googleapis.com/auth/calendar',
-        ],
-        clientId:
-            '778895687512-t7lq66jbs8ljd1rredheoeoqfe5g8in8.apps.googleusercontent.com', // Client ID für iOS
-      );
+      // Google SignIn-Instance aus dem Service verwenden
+      final googleSignIn = _signInService.googleSignIn;
 
       // Prüfen, ob bereits angemeldet
       bool isSignedIn = await googleSignIn.isSignedIn();

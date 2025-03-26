@@ -13,6 +13,7 @@ import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:syncfusion_flutter_calendar/src/calendar/common/enums.dart'
     as sf;
 import 'package:Taqvimi/utils/recurrence_rule_converter.dart';
+import 'package:Taqvimi/data/services/google_sign_in_service.dart';
 
 /// GoogleCalendarService - Low-Level API-Schnittstelle
 ///
@@ -47,14 +48,8 @@ class GoogleCalendarService {
     return _instance;
   }
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      'email',
-      'https://www.googleapis.com/auth/calendar',
-    ],
-    clientId:
-        '778895687512-t7lq66jbs8ljd1rredheoeoqfe5g8in8.apps.googleusercontent.com', // Client ID für iOS
-  );
+  final GoogleSignInService _signInService = GoogleSignInService();
+  final GoogleSignIn _googleSignIn = GoogleSignInService().googleSignIn;
 
   GoogleSignInAccount? _currentUser;
   calendar.CalendarApi? _calendarApi;
