@@ -48,7 +48,6 @@ class GoogleCalendarService {
     return _instance;
   }
 
-  final GoogleSignInService _signInService = GoogleSignInService();
   final GoogleSignIn _googleSignIn = GoogleSignInService().googleSignIn;
 
   GoogleSignInAccount? _currentUser;

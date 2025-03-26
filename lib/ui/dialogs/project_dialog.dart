@@ -108,18 +108,17 @@ class _ProjectDialogState extends State<ProjectDialog> {
 
     PlatformAdaptiveDialog.showAdaptiveDialog(
       context: context,
-      title: localizations.deleteConfirmation ?? 'Löschen bestätigen',
-      content: Text(localizations.deleteProjectConfirmation ??
-          'Möchtest du dieses Projekt wirklich löschen?'),
+      title: localizations.deleteConfirmation,
+      content: Text(localizations.deleteProjectConfirmation),
       actions: [
         PlatformAdaptiveDialog.adaptiveDialogAction(
           context: context,
-          text: localizations.cancel ?? 'Abbrechen',
+          text: localizations.cancel,
           onPressed: () => Navigator.of(context).pop(),
         ),
         PlatformAdaptiveDialog.adaptiveDialogAction(
           context: context,
-          text: localizations.delete ?? 'Löschen',
+          text: localizations.delete,
           isDestructiveAction: true,
           onPressed: () {
             Navigator.of(context).pop();
@@ -136,9 +135,8 @@ class _ProjectDialogState extends State<ProjectDialog> {
     final isEditing = widget.project != null;
 
     // Bestimme den Dialog-Titel
-    final title = isEditing
-        ? localizations.editProject ?? 'Projekt bearbeiten'
-        : localizations.newProject ?? 'Neues Projekt';
+    final title =
+        isEditing ? localizations.editProject : localizations.newProject;
 
     // Optimierter Dialog-Inhalt für beide Plattformen
     final dialogContent = Form(
@@ -167,7 +165,7 @@ class _ProjectDialogState extends State<ProjectDialog> {
           // Projektbeschreibung
           PlatformAdaptiveForm.buildTextField(
             context: context,
-            label: localizations.description ?? 'Beschreibung',
+            label: localizations.description,
             initialValue: _description,
             maxLines: 3,
             onChanged: (value) => _description = value,
@@ -178,7 +176,7 @@ class _ProjectDialogState extends State<ProjectDialog> {
           // Startdatum
           PlatformAdaptiveForm.buildDatePicker(
             context: context,
-            label: localizations.startDate ?? 'Startdatum',
+            label: localizations.startDate,
             selectedDate: _startDate,
             onDateChanged: (date) {
               setState(() {
@@ -196,7 +194,7 @@ class _ProjectDialogState extends State<ProjectDialog> {
           // Enddatum
           PlatformAdaptiveForm.buildDatePicker(
             context: context,
-            label: localizations.endDate ?? 'Enddatum',
+            label: localizations.endDate,
             selectedDate: _endDate,
             firstDate: _startDate, // Enddatum muss nach Startdatum liegen
             onDateChanged: (date) {
@@ -234,17 +232,17 @@ class _ProjectDialogState extends State<ProjectDialog> {
                         final priorityItems = [
                           {
                             'value': 1,
-                            'label': localizations.lowPriority ?? 'Niedrig',
+                            'label': localizations.lowPriority,
                             'color': Colors.green,
                           },
                           {
                             'value': 2,
-                            'label': localizations.mediumPriority ?? 'Mittel',
+                            'label': localizations.mediumPriority,
                             'color': Colors.orange,
                           },
                           {
                             'value': 3,
-                            'label': localizations.highPriority ?? 'Hoch',
+                            'label': localizations.highPriority,
                             'color': Colors.red,
                           },
                         ];
@@ -267,14 +265,12 @@ class _ProjectDialogState extends State<ProjectDialog> {
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     CupertinoButton(
-                                      child: Text(
-                                          localizations.cancel ?? 'Abbrechen'),
+                                      child: Text(localizations.cancel),
                                       onPressed: () =>
                                           Navigator.of(context).pop(),
                                     ),
                                     CupertinoButton(
-                                      child:
-                                          Text(localizations.save ?? 'Fertig'),
+                                      child: Text(localizations.save),
                                       onPressed: () =>
                                           Navigator.of(context).pop(),
                                     ),
@@ -360,15 +356,15 @@ class _ProjectDialogState extends State<ProjectDialog> {
                   items: [
                     DropdownMenuItem(
                       value: 1,
-                      child: Text(localizations.lowPriority ?? 'Niedrig'),
+                      child: Text(localizations.lowPriority),
                     ),
                     DropdownMenuItem(
                       value: 2,
-                      child: Text(localizations.mediumPriority ?? 'Mittel'),
+                      child: Text(localizations.mediumPriority),
                     ),
                     DropdownMenuItem(
                       value: 3,
-                      child: Text(localizations.highPriority ?? 'Hoch'),
+                      child: Text(localizations.highPriority),
                     ),
                   ],
                   onChanged: (value) {
@@ -483,7 +479,7 @@ class _ProjectDialogState extends State<ProjectDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        localizations.categoryLabel ?? 'Kategorie',
+                        localizations.categoryLabel,
                         style: const TextStyle(
                           fontSize: 15.0,
                           color: CupertinoColors.label,
@@ -500,7 +496,7 @@ class _ProjectDialogState extends State<ProjectDialog> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          'Keine Kategorien verfügbar',
+                          localizations.noCategoriesAvailable,
                           style: const TextStyle(
                             color: CupertinoColors.secondaryLabel,
                           ),
@@ -515,7 +511,7 @@ class _ProjectDialogState extends State<ProjectDialog> {
                       borderRadius: BorderRadius.circular(4.0),
                     ),
                     child: Text(
-                      'Keine Kategorien verfügbar',
+                      localizations.noCategoriesAvailable,
                       style: const TextStyle(color: Colors.grey),
                     ),
                   )
@@ -525,7 +521,7 @@ class _ProjectDialogState extends State<ProjectDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        localizations.categoryLabel ?? 'Kategorie',
+                        localizations.categoryLabel,
                         style: const TextStyle(
                           fontSize: 15.0,
                           color: CupertinoColors.label,
@@ -558,14 +554,12 @@ class _ProjectDialogState extends State<ProjectDialog> {
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                       CupertinoButton(
-                                        child: Text(localizations.cancel ??
-                                            'Abbrechen'),
+                                        child: Text(localizations.cancel),
                                         onPressed: () =>
                                             Navigator.of(context).pop(),
                                       ),
                                       CupertinoButton(
-                                        child: Text(
-                                            localizations.save ?? 'Fertig'),
+                                        child: Text(localizations.save),
                                         onPressed: () =>
                                             Navigator.of(context).pop(),
                                       ),
@@ -659,7 +653,7 @@ class _ProjectDialogState extends State<ProjectDialog> {
                   )
                 : PlatformAdaptiveForm.buildDropdown<int>(
                     context: context,
-                    label: localizations.categoryLabel ?? 'Kategorie',
+                    label: localizations.categoryLabel,
                     value: _categoryId,
                     items: widget.categories.map((category) {
                       return DropdownMenuItem(
@@ -695,18 +689,18 @@ class _ProjectDialogState extends State<ProjectDialog> {
       if (isEditing && widget.onDelete != null)
         PlatformAdaptiveDialog.adaptiveDialogAction(
           context: context,
-          text: localizations.delete ?? 'Löschen',
+          text: localizations.delete,
           isDestructiveAction: true,
           onPressed: _showDeleteConfirmationDialog,
         ),
       PlatformAdaptiveDialog.adaptiveDialogAction(
         context: context,
-        text: localizations.cancel ?? 'Abbrechen',
+        text: localizations.cancel,
         onPressed: () => Navigator.of(context).pop(),
       ),
       PlatformAdaptiveDialog.adaptiveDialogAction(
         context: context,
-        text: localizations.save ?? 'Speichern',
+        text: localizations.save,
         onPressed: _saveProject,
       ),
     ];
@@ -768,7 +762,7 @@ class _ProjectDialogState extends State<ProjectDialog> {
                           padding: EdgeInsets.zero,
                           onPressed: _showDeleteConfirmationDialog,
                           child: Text(
-                            localizations.delete ?? 'Löschen',
+                            localizations.delete,
                             style: const TextStyle(color: Colors.red),
                           ),
                         ),
@@ -777,14 +771,14 @@ class _ProjectDialogState extends State<ProjectDialog> {
                       child: CupertinoButton(
                         padding: EdgeInsets.zero,
                         onPressed: () => Navigator.of(context).pop(),
-                        child: Text(localizations.cancel ?? 'Abbrechen'),
+                        child: Text(localizations.cancel),
                       ),
                     ),
                     Expanded(
                       child: CupertinoButton(
                         padding: EdgeInsets.zero,
                         onPressed: _saveProject,
-                        child: Text(localizations.save ?? 'Speichern'),
+                        child: Text(localizations.save),
                       ),
                     ),
                   ],
@@ -823,12 +817,12 @@ class _ProjectDialogState extends State<ProjectDialog> {
   String _getPriorityLabel(int priority, AppLocalizations localizations) {
     switch (priority) {
       case 1:
-        return localizations.lowPriority ?? 'Niedrig';
+        return localizations.lowPriority;
       case 3:
-        return localizations.highPriority ?? 'Hoch';
+        return localizations.highPriority;
       case 2:
       default:
-        return localizations.mediumPriority ?? 'Mittel';
+        return localizations.mediumPriority;
     }
   }
 }

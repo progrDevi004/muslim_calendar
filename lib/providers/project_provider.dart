@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:Taqvimi/models/project_model.dart';
 import 'package:Taqvimi/data/repositories/project_repository.dart';
-import 'package:Taqvimi/models/category_model.dart';
 
 class ProjectProvider extends ChangeNotifier {
   final ProjectRepository _projectRepository = ProjectRepository();

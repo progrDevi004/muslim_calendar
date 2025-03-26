@@ -315,15 +315,15 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
           ),
         );
 
-        // Wenn der Nutzer zustimmt, Anmeldung durchführen
-        if (result == true) {
-          final signedIn = await _connectToGoogleAccount();
-          if (!signedIn) {
-            debugPrint("⚠️ Manuelle Google-Anmeldung fehlgeschlagen");
-          }
-        } else {
-          debugPrint("ℹ️ Google-Anmeldung übersprungen");
-        }
+        // // Wenn der Nutzer zustimmt, Anmeldung durchführen
+        // if (result == true) {
+        //   final signedIn = await _connectToGoogleAccount();
+        //   if (!signedIn) {
+        //     debugPrint("⚠️ Manuelle Google-Anmeldung fehlgeschlagen");
+        //   }
+        // } else {
+        //   debugPrint("ℹ️ Google-Anmeldung übersprungen");
+        // }
       }
 
       if (_googleCalendarService.isSignedIn) {

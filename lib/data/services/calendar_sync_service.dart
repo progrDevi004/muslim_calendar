@@ -679,12 +679,6 @@ class CalendarSyncService extends ChangeNotifier {
             continue;
           }
 
-          // Wichtig: Erstelle für jeden Termin eine KOPIE ohne Wiederholungsregel
-          // und mit eindeutiger ID basierend auf dem Original-Termin und dem Datum
-          final formattedDate =
-              "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-          final uniqueId = "prayer_${appointment.id}_$formattedDate";
-
           await calendarProvider.syncAppointmentEvent(
             appointment: appointment.copyWith(
               // Keine Wiederholungsregel für die einzelnen Instanzen

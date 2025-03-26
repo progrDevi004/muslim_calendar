@@ -19,7 +19,6 @@ import 'package:Taqvimi/ui/widgets/home/category_filter_dialog.dart';
 
 // Services
 import 'package:Taqvimi/data/services/calendar_sync_service.dart';
-import 'package:Taqvimi/data/services/import_settings_service.dart';
 
 // Logo-Farbe für die Konsistenz der App
 const Color logoColor = Color(0xFF468178);
@@ -322,139 +321,6 @@ class AppDrawer extends StatelessWidget {
     });
   }
 
-  /// Zeigt einen Dialog für Import-Optionen an
-  void _showImportOptionsDialog(BuildContext context) {
-    // Schließe den Drawer, falls vorhanden
-    if (onCloseDrawer != null) {
-      onCloseDrawer!();
-    } else {
-      Navigator.pop(context);
-    }
-
-    // Zuerst den BuildContext für später speichern, da der ursprüngliche Kontext nach Navigator.pop()
-    // nicht mehr gültig sein könnte
-    final globalContext = Navigator.of(context).context;
-
-    // Verzögerung hinzufügen, um sicherzustellen, dass der Drawer vollständig geschlossen ist
-    Future.delayed(const Duration(milliseconds: 300), () {
-      // Sicherstellen, dass der Kontext noch gültig ist
-      if (!Navigator.canPop(globalContext) &&
-          !Navigator.of(globalContext).mounted) return;
-
-      // Explizit den aktuellen Fokus zurücksetzen
-      FocusManager.instance.primaryFocus?.unfocus();
-
-      // Dialog in einem separaten Future.microtask anzeigen, um die Trennung vom vorherigen Frame zu gewährleisten
-      Future.microtask(() {
-        if (!Navigator.of(globalContext).mounted) return;
-
-        final localizations =
-            Provider.of<AppLocalizations>(globalContext, listen: false);
-        final scaffold = ScaffoldMessenger.of(globalContext);
-        final Color iconColor = logoColor;
-
-        // Dialog-Inhalt erstellen, der für beide Plattformen passt
-        final content = Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            PlatformAdaptiveListTile(
-              title: localizations.howToHandleCategories,
-              titleStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                inherit: true,
-              ),
-            ),
-
-            // Bestehende Kategorien verwenden
-            PlatformAdaptiveListTile(
-              leading: Icon(
-                  Platform.isIOS ? CupertinoIcons.tag : Icons.category_outlined,
-                  color: iconColor),
-              title: localizations.useExistingCategories,
-              subtitle: localizations.searchForMatchingCategories,
-              titleStyle:
-                  const TextStyle(fontWeight: FontWeight.bold, inherit: true),
-              onTap: () async {
-                final navContext = globalContext;
-                Navigator.pop(navContext);
-
-                try {
-                  // Speichere zuerst die Import-Option
-                  await ImportSettingsService.saveImportOption(2);
-
-                  // Prüfen, ob das Widget noch im Baum ist
-                  if (scaffold.mounted) {
-                    ScaffoldMessenger.of(navContext).showSnackBar(
-                      SnackBar(content: Text(localizations.importOptionSaved)),
-                    );
-                  }
-
-                  // Nach dem Speichern der Option neu laden
-                  onReloadAppointments();
-                } catch (e) {
-                  debugPrint('Fehler beim Speichern der Import-Option: $e');
-                }
-              },
-            ),
-
-            // Neue Kategorien erstellen
-            PlatformAdaptiveListTile(
-              leading: Icon(
-                  Platform.isIOS
-                      ? CupertinoIcons.add_circled
-                      : Icons.add_circle_outline,
-                  color: iconColor),
-              title: localizations.createNewCategories,
-              subtitle: localizations.forEachNewAppointment,
-              titleStyle:
-                  const TextStyle(fontWeight: FontWeight.bold, inherit: true),
-              onTap: () async {
-                final navContext = globalContext;
-                Navigator.pop(navContext);
-
-                try {
-                  // Speichere zuerst die Import-Option
-                  await ImportSettingsService.saveImportOption(0);
-
-                  // Prüfen, ob das Widget noch im Baum ist
-                  if (scaffold.mounted) {
-                    ScaffoldMessenger.of(navContext).showSnackBar(
-                      SnackBar(content: Text(localizations.importOptionSaved)),
-                    );
-                  }
-
-                  // Nach dem Speichern der Option neu laden
-                  onReloadAppointments();
-                } catch (e) {
-                  debugPrint('Fehler beim Speichern der Import-Option: $e');
-                }
-              },
-            ),
-          ],
-        );
-
-        // Dialog-Aktionen erstellen
-        final actions = [
-          PlatformAdaptiveDialog.adaptiveDialogAction(
-            context: globalContext,
-            text: localizations.cancel,
-            onPressed: () => Navigator.pop(globalContext),
-            color: logoColor,
-          ),
-        ];
-
-        // Plattformspezifischen Dialog anzeigen
-        PlatformAdaptiveDialog.showAdaptiveDialog(
-          context: globalContext,
-          title: localizations.importOptions,
-          content: content,
-          actions: actions,
-        );
-      });
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final isIOS = Platform.isIOS;
@@ -536,15 +402,6 @@ class AppDrawer extends StatelessWidget {
               iconColor: logoColor,
               onTap: () => _showSyncOptionsDialog(context),
             ),
-
-            // PlatformAdaptiveNavigation.buildNavigationItem(
-            //   context: context,
-            //   title: loc.importOptions,
-            //   androidIcon: Icons.settings_applications,
-            //   iOSIcon: CupertinoIcons.gear_alt,
-            //   iconColor: logoColor,
-            //   onTap: () => _showImportOptionsDialog(context),
-            // ),
 
             // Kalender- oder Projektmanagement-Navigation, je nach aktueller Seite
             if (currentPage == CurrentPage.projectManagement)

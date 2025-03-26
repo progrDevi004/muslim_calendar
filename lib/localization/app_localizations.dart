@@ -5920,7 +5920,27 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
-  String? get newProject {
+  String get noCategoriesAvailable {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Keine Kategorien verfügbar';
+      case AppLanguage.turkish:
+        return 'Kategori yok';
+      case AppLanguage.arabic:
+        return 'لا توجد فئات';
+      case AppLanguage.bosnian:
+        return 'Nema dostupnih kategorija';
+      case AppLanguage.spanish:
+        return 'No hay categorías disponibles';
+      case AppLanguage.persian:
+        return 'دسته‌بندی موجود نیست';
+      case AppLanguage.english:
+      default:
+        return 'No categories available';
+    }
+  }
+
+  String get newProject {
     switch (_currentLanguage) {
       case AppLanguage.german:
         return 'Neues Projekt';
@@ -5940,7 +5960,7 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
-  String? get editProject {
+  String get editProject {
     switch (_currentLanguage) {
       case AppLanguage.german:
         return 'Projekt bearbeiten';
@@ -5980,7 +6000,7 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
-  String? get deleteConfirmation {
+  String get deleteConfirmation {
     switch (_currentLanguage) {
       case AppLanguage.german:
         return 'Löschen bestätigen';
@@ -6380,7 +6400,7 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
-  String? get deleteProjectConfirmation {
+  String get deleteProjectConfirmation {
     switch (_currentLanguage) {
       case AppLanguage.german:
         return 'Möchtest du dieses Projekt wirklich löschen?';

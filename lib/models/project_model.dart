@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:Taqvimi/models/category_model.dart';
 
 class ProjectModel {
