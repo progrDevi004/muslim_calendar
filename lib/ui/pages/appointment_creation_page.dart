@@ -3250,32 +3250,57 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
         child: Column(
           children: [
             Container(
-              height: 40,
-              color: CupertinoColors.systemGrey6.resolveFrom(context),
+              height: 44,
+              decoration: BoxDecoration(
+                color: CupertinoColors.systemGrey6.resolveFrom(context),
+                border: Border(
+                  bottom: BorderSide(
+                    color: CupertinoColors.separator.resolveFrom(context),
+                    width: 0.5,
+                  ),
+                ),
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   CupertinoButton(
-                    padding: EdgeInsets.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      Provider.of<AppLocalizations>(context).cancel,
+                      style: const TextStyle(
+                        fontSize: 17,
+                      ),
+                    ),
                     onPressed: () => Navigator.pop(context),
-                    child: Text(Provider.of<AppLocalizations>(context).cancel),
                   ),
-                  Text(label,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   CupertinoButton(
-                    padding: EdgeInsets.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      Provider.of<AppLocalizations>(context).ok,
+                      style: const TextStyle(
+                        fontSize: 17,
+                      ),
+                    ),
                     onPressed: () {
                       onSelectedItemChanged(tempSelectedItem);
                       Navigator.pop(context);
                     },
-                    child: Text(Provider.of<AppLocalizations>(context).ok),
                   ),
                 ],
               ),
             ),
             Expanded(
               child: CupertinoPicker(
-                itemExtent: 32,
+                itemExtent: 44.0,
+                backgroundColor:
+                    CupertinoColors.systemBackground.resolveFrom(context),
                 scrollController: FixedExtentScrollController(
                   initialItem: selectedItem - 1,
                 ),
@@ -3283,7 +3308,15 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                   tempSelectedItem = index;
                 },
                 children: items
-                    .map((i) => Center(child: Text(i.toString())))
+                    .map((i) => Center(
+                          child: Text(
+                            i.toString(),
+                            style: const TextStyle(
+                              fontSize: 20,
+                              color: CupertinoColors.label,
+                            ),
+                          ),
+                        ))
                     .toList(),
               ),
             ),
