@@ -5920,6 +5920,106 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
+  String get automaticLocationDetectionActive {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Automatische Standorterkennung ist aktiv';
+      case AppLanguage.turkish:
+        return 'Otomatik konum algılama etkin';
+      case AppLanguage.arabic:
+        return 'الكشف التلقائي عن الموقع نشط';
+      case AppLanguage.bosnian:
+        return 'Automatsko otkrivanje lokacije je aktivno';
+      case AppLanguage.spanish:
+        return 'La detección automática de ubicación está activa';
+      case AppLanguage.persian:
+        return 'تشخیص خودکار مکان فعال است';
+      case AppLanguage.english:
+      default:
+        return 'Automatic location detection is active';
+    }
+  }
+
+  String get detectedLocation {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Erkannter Standort';
+      case AppLanguage.turkish:
+        return 'Algılanan Konum';
+      case AppLanguage.arabic:
+        return 'الموقع المكتشف';
+      case AppLanguage.bosnian:
+        return 'Otkrivena lokacija';
+      case AppLanguage.spanish:
+        return 'Ubicación detectada';
+      case AppLanguage.persian:
+        return 'مکان شناسایی شده';
+      case AppLanguage.english:
+      default:
+        return 'Detected Location';
+    }
+  }
+
+  String get locationDetectionInProgress {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Standorterkennung läuft...';
+      case AppLanguage.turkish:
+        return 'Konum algılama devam ediyor...';
+      case AppLanguage.arabic:
+        return 'الكشف عن الموقع قيد التقدم...';
+      case AppLanguage.bosnian:
+        return 'Otkrivanje lokacije u toku...';
+      case AppLanguage.spanish:
+        return 'Detección de ubicación en progreso...';
+      case AppLanguage.persian:
+        return 'تشخیص مکان در حال انجام است...';
+      case AppLanguage.english:
+      default:
+        return 'Location detection in progress...';
+    }
+  }
+
+  String get automaticLocationDetectionInactive {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Automatische Standorterkennung ist inaktiv';
+      case AppLanguage.turkish:
+        return 'Otomatik konum algılama devre dışı';
+      case AppLanguage.arabic:
+        return 'الكشف التلقائي عن الموقع غير نشط';
+      case AppLanguage.bosnian:
+        return 'Automatsko otkrivanje lokacije je neaktivno';
+      case AppLanguage.spanish:
+        return 'La detección automática de ubicación está inactiva';
+      case AppLanguage.persian:
+        return 'تشخیص خودکار مکان غیرفعال است';
+      case AppLanguage.english:
+      default:
+        return 'Automatic location detection is inactive';
+    }
+  }
+
+  String get automaticLocationDetection {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Automatische Standorterkennung';
+      case AppLanguage.turkish:
+        return 'Otomatik Konum Algılama';
+      case AppLanguage.arabic:
+        return 'الكشف التلقائي عن الموقع';
+      case AppLanguage.bosnian:
+        return 'Automatsko otkrivanje lokacije';
+      case AppLanguage.spanish:
+        return 'Detección automática de ubicación';
+      case AppLanguage.persian:
+        return 'تشخیص خودکار مکان';
+      case AppLanguage.english:
+      default:
+        return 'Automatic Location Detection';
+    }
+  }
+
   String get locationSettingsMissing {
     switch (_currentLanguage) {
       case AppLanguage.german:

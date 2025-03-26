@@ -284,92 +284,92 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     // Markiere, dass die Einstellungen bereits erfasst wurden
     await prefs.setBool('wasLocationAsked', true);
 
-    // Stelle sicher, dass Google-Kalender verbunden ist und alle Kalender automatisch ausgewählt werden
-    try {
-      // Auto-SignIn versuchen
-      await _googleCalendarService.autoSignIn();
+    // // Stelle sicher, dass Google-Kalender verbunden ist und alle Kalender automatisch ausgewählt werden
+    // try {
+    //   // Auto-SignIn versuchen
+    //   await _googleCalendarService.autoSignIn();
 
-      if (!_googleCalendarService.isSignedIn) {
-        debugPrint(
-            "⚠️ Nicht bei Google angemeldet, versuche manuelle Anmeldung");
+    //   if (!_googleCalendarService.isSignedIn) {
+    //     debugPrint(
+    //         "⚠️ Nicht bei Google angemeldet, versuche manuelle Anmeldung");
 
-        // Anmelde-Dialog anzeigen
-        final result = await showDialog<bool>(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            title: const Text("Google-Kalender verbinden"),
-            content: const Text(
-              "Möchten Sie sich jetzt bei Google anmelden, um Ihre Kalender zu synchronisieren?",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text("Überspringen"),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text("Anmelden"),
-              ),
-            ],
-          ),
-        );
+    //     // Anmelde-Dialog anzeigen
+    //     final result = await showDialog<bool>(
+    //       context: context,
+    //       barrierDismissible: false,
+    //       builder: (context) => AlertDialog(
+    //         title: const Text("Google-Kalender verbinden"),
+    //         content: const Text(
+    //           "Möchten Sie sich jetzt bei Google anmelden, um Ihre Kalender zu synchronisieren?",
+    //         ),
+    //         actions: [
+    //           TextButton(
+    //             onPressed: () => Navigator.of(context).pop(false),
+    //             child: const Text("Überspringen"),
+    //           ),
+    //           ElevatedButton(
+    //             onPressed: () => Navigator.of(context).pop(true),
+    //             child: const Text("Anmelden"),
+    //           ),
+    //         ],
+    //       ),
+    //     );
 
-        // // Wenn der Nutzer zustimmt, Anmeldung durchführen
-        // if (result == true) {
-        //   final signedIn = await _connectToGoogleAccount();
-        //   if (!signedIn) {
-        //     debugPrint("⚠️ Manuelle Google-Anmeldung fehlgeschlagen");
-        //   }
-        // } else {
-        //   debugPrint("ℹ️ Google-Anmeldung übersprungen");
-        // }
-      }
+    //     // // Wenn der Nutzer zustimmt, Anmeldung durchführen
+    //     // if (result == true) {
+    //     //   final signedIn = await _connectToGoogleAccount();
+    //     //   if (!signedIn) {
+    //     //     debugPrint("⚠️ Manuelle Google-Anmeldung fehlgeschlagen");
+    //     //   }
+    //     // } else {
+    //     //   debugPrint("ℹ️ Google-Anmeldung übersprungen");
+    //     // }
+    //   }
 
-      if (_googleCalendarService.isSignedIn) {
-        debugPrint("🔄 Automatisch bei Google angemeldet");
+    //   if (_googleCalendarService.isSignedIn) {
+    //     debugPrint("🔄 Automatisch bei Google angemeldet");
 
-        // Hole alle verfügbaren Kalender
-        final calendarList = await _googleCalendarService.fetchCalendarList();
+    //     // Hole alle verfügbaren Kalender
+    //     final calendarList = await _googleCalendarService.fetchCalendarList();
 
-        if (calendarList.isNotEmpty) {
-          // Alle Kalender als ausgewählt markieren
-          final allCalendars = calendarList
-              .map((calendar) => SelectedCalendar(
-                    id: calendar.id ?? 'primary',
-                    title: calendar.summary ?? 'Kalender',
-                    isSelected: true, // Alle als ausgewählt markieren
-                  ))
-              .toList();
+    //     if (calendarList.isNotEmpty) {
+    //       // Alle Kalender als ausgewählt markieren
+    //       final allCalendars = calendarList
+    //           .map((calendar) => SelectedCalendar(
+    //                 id: calendar.id ?? 'primary',
+    //                 title: calendar.summary ?? 'Kalender',
+    //                 isSelected: true, // Alle als ausgewählt markieren
+    //               ))
+    //           .toList();
 
-          // Speichere alle Kalender als ausgewählt
-          await _calendarSyncService.saveSelectedCalendars(allCalendars);
+    //       // Speichere alle Kalender als ausgewählt
+    //       await _calendarSyncService.saveSelectedCalendars(allCalendars);
 
-          debugPrint(
-              "✅ Alle ${allCalendars.length} Google-Kalender wurden automatisch ausgewählt");
+    //       debugPrint(
+    //           "✅ Alle ${allCalendars.length} Google-Kalender wurden automatisch ausgewählt");
 
-          // Information, dass die Kalender nun bereit sind, aber kein automatischer Import
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text("Alle Google-Kalender wurden ausgewählt"),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
-            ));
-          }
+    //       // Information, dass die Kalender nun bereit sind, aber kein automatischer Import
+    //       if (mounted) {
+    //         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+    //           content: Text("Alle Google-Kalender wurden ausgewählt"),
+    //           backgroundColor: Colors.green,
+    //           duration: Duration(seconds: 3),
+    //         ));
+    //       }
 
-          // Der automatische Import wurde entfernt, damit der Nutzer selbst entscheiden kann,
-          // wann er den Import starten möchte
-        } else {
-          debugPrint("⚠️ Keine Google-Kalender gefunden");
-        }
-      } else {
-        debugPrint(
-            "⚠️ Nicht bei Google angemeldet, Kalender können nicht ausgewählt werden");
-      }
-    } catch (e) {
-      debugPrint("❌ Fehler beim Auswählen der Google-Kalender: $e");
-      // Fehler bei der Kalenderauswahl sollten nicht den gesamten Initialisierungsprozess blockieren
-    }
+    //       // Der automatische Import wurde entfernt, damit der Nutzer selbst entscheiden kann,
+    //       // wann er den Import starten möchte
+    //     } else {
+    //       debugPrint("⚠️ Keine Google-Kalender gefunden");
+    //     }
+    //   } else {
+    //     debugPrint(
+    //         "⚠️ Nicht bei Google angemeldet, Kalender können nicht ausgewählt werden");
+    //   }
+    // } catch (e) {
+    //   debugPrint("❌ Fehler beim Auswählen der Google-Kalender: $e");
+    //   // Fehler bei der Kalenderauswahl sollten nicht den gesamten Initialisierungsprozess blockieren
+    // }
 
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
@@ -608,10 +608,10 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
 
                       // Switch für Standort-Modus
                       SwitchListTile.adaptive(
-                        title: const Text("Automatische Standorterkennung"),
+                        title: Text(loc.automaticLocationDetection),
                         subtitle: Text(_useAutomaticLocation
-                            ? "Standort automatisch erkennen"
-                            : "Standort manuell auswählen"),
+                            ? loc.automaticLocationDetectionActive
+                            : loc.automaticLocationDetectionInactive),
                         value: _useAutomaticLocation,
                         activeColor: logoColor,
                         contentPadding: EdgeInsets.zero,
@@ -640,7 +640,7 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                                   const CircularProgressIndicator(),
                                   const SizedBox(height: 8),
                                   Text(
-                                    "Standort wird ermittelt...",
+                                    loc.locationDetectionInProgress,
                                     style:
                                         Theme.of(context).textTheme.bodyMedium,
                                   ),
@@ -667,7 +667,7 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                "Erkannter Standort:",
+                                                loc.detectedLocation,
                                                 style: Theme.of(context)
                                                     .textTheme
                                                     .bodySmall,
@@ -696,7 +696,7 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                           children: [
                             // Land auswählen
                             Text(
-                              "Land",
+                              loc.country,
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             const SizedBox(height: 8),
@@ -712,11 +712,10 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
                               popupProps: const PopupProps.menu(
                                 showSearchBox: true,
                               ),
-                              dropdownDecoratorProps:
-                                  const DropDownDecoratorProps(
+                              dropdownDecoratorProps: DropDownDecoratorProps(
                                 dropdownSearchDecoration: InputDecoration(
-                                  hintText: "Land auswählen",
-                                  border: OutlineInputBorder(),
+                                  hintText: loc.selectCountry,
+                                  border: const OutlineInputBorder(),
                                 ),
                               ),
                             ),
