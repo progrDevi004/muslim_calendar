@@ -165,11 +165,10 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) {
         // Zeige eine Fehlermeldung an
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Standorteinstellungen fehlen. Sie werden zur Standortkonfiguration weitergeleitet.'),
+          SnackBar(
+            content: Text(loc.locationSettingsMissing),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 5),
+            duration: const Duration(seconds: 5),
           ),
         );
 
@@ -917,50 +916,80 @@ class _SettingsPageState extends State<SettingsPage> {
 
       // Prayer Time Calculation Method
       Text(
-        'Prayer Time Calculation Method',
+        loc.prayerTimeCalculationMethod,
         style: theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.bold,
         ),
       ),
       const SizedBox(height: 16),
-      Container(
-        // Definiert eine maximale Breite, um zu verhindern, dass der Text zu breit wird
-        constraints:
-            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.9),
-        child: DropdownButtonFormField<int>(
-          value: _selectedCalcMethod,
-          isExpanded:
-              true, // Stellt sicher, dass das Dropdown die volle Breite nutzt
-          menuMaxHeight: 350, // Begrenzt die maximale Höhe des Dropdown-Menüs
-          decoration: const InputDecoration(
-            labelText: 'Calculation Method',
-            border: OutlineInputBorder(),
-            // Fügt zusätzlichen Platz für die Label-Text hinzu
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-          ),
-          onChanged: (value) async {
-            setState(() {
-              _selectedCalcMethod = value ?? 0;
-            });
-            await _saveSettings();
-            await _updatePrayerTimes();
-          },
-          items: _calcMethodMap.entries.map((entry) {
-            return DropdownMenuItem<int>(
-              value: entry.key,
-              // Verwendet FittedBox um sicherzustellen, dass der Text passt
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  entry.value,
-                  overflow: TextOverflow.ellipsis,
+      Platform.isIOS
+          ? GestureDetector(
+              onTap: () {
+                _showCalculationMethodPicker(context);
+              },
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: CupertinoColors.systemGrey4.resolveFrom(context),
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _calcMethodMap[_selectedCalcMethod] ?? '',
+                        style: const TextStyle(fontSize: 16),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const Icon(
+                      CupertinoIcons.chevron_down,
+                      size: 16,
+                      color: CupertinoColors.systemGrey,
+                    ),
+                  ],
                 ),
               ),
-            );
-          }).toList(),
-        ),
-      ),
+            )
+          : Container(
+              constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.9),
+              child: DropdownButtonFormField<int>(
+                value: _selectedCalcMethod,
+                isExpanded: true,
+                menuMaxHeight: 350,
+                decoration: InputDecoration(
+                  labelText: loc.calculationMethod,
+                  border: const OutlineInputBorder(),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                ),
+                onChanged: (value) async {
+                  setState(() {
+                    _selectedCalcMethod = value ?? 0;
+                  });
+                  await _saveSettings();
+                  await _updatePrayerTimes();
+                },
+                items: _calcMethodMap.entries.map((entry) {
+                  return DropdownMenuItem<int>(
+                    value: entry.key,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        entry.value,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
 
       // New Calendar Sync Section
       const Divider(height: 40),
@@ -1018,7 +1047,7 @@ class _SettingsPageState extends State<SettingsPage> {
           padding:
               const EdgeInsets.only(left: 16, right: 16, bottom: 8, top: 16),
           child: Text(
-            'Google Calendar',
+            loc.googleCalendar,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -1160,7 +1189,7 @@ class _SettingsPageState extends State<SettingsPage> {
           padding:
               const EdgeInsets.only(left: 16, right: 16, bottom: 8, top: 16),
           child: Text(
-            'Outlook Calendar',
+            loc.outlookCalendar,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -1299,51 +1328,6 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _showSyncFrequencyDialog(BuildContext context,
-      bool isSyncFrequency, SyncFrequency currentFrequency) {
-    final loc = Provider.of<AppLocalizations>(context, listen: false);
-    return showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(loc.syncFrequency),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(loc.syncFrequencyDescription),
-              const SizedBox(height: 16),
-              ...SyncFrequency.values.map((frequency) {
-                return ListTile(
-                  title: Text(
-                    _syncFrequencyToString(frequency, context),
-                  ),
-                  leading: Radio<SyncFrequency>(
-                    value: frequency,
-                    groupValue: currentFrequency,
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _googleCalendarSyncFrequency = value;
-                        });
-                      }
-                    },
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(loc.cancel),
-          ),
-        ],
-      ),
-    );
-  }
-
   /// Prüft den aktuellen Zustand der Google Calendar-Verbindung
   Future<bool> _checkGoogleCalendarState() async {
     final googleService =
@@ -1428,5 +1412,93 @@ class _SettingsPageState extends State<SettingsPage> {
   void _showImportOptionsDialog(BuildContext context) {
     // Die gemeinsame Implementierung von ImportSettingsService verwenden
     ImportSettingsService.showImportOptionsDialog(context);
+  }
+
+  // Neue Methode für den iOS Picker
+  void _showCalculationMethodPicker(BuildContext context) {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          height: 250,
+          color: CupertinoColors.systemBackground.resolveFrom(context),
+          child: Column(
+            children: [
+              Container(
+                height: 44,
+                decoration: BoxDecoration(
+                  color: CupertinoColors.systemGrey6.resolveFrom(context),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: CupertinoColors.separator.resolveFrom(context),
+                      width: 0.5,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    CupertinoButton(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        Provider.of<AppLocalizations>(context).cancel,
+                        style: const TextStyle(fontSize: 17),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    Text(
+                      Provider.of<AppLocalizations>(context)
+                          .prayerTimeCalculationMethod,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    CupertinoButton(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        Provider.of<AppLocalizations>(context).ok,
+                        style: const TextStyle(fontSize: 17),
+                      ),
+                      onPressed: () async {
+                        await _saveSettings();
+                        await _updatePrayerTimes();
+                        if (mounted) Navigator.pop(context);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: CupertinoPicker(
+                  itemExtent: 44.0,
+                  backgroundColor:
+                      CupertinoColors.systemBackground.resolveFrom(context),
+                  onSelectedItemChanged: (index) {
+                    setState(() {
+                      _selectedCalcMethod =
+                          _calcMethodMap.keys.elementAt(index);
+                    });
+                  },
+                  children: _calcMethodMap.entries
+                      .map(
+                        (entry) => Center(
+                          child: Text(
+                            entry.value,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              color: CupertinoColors.label,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

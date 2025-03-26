@@ -5920,6 +5920,46 @@ class AppLocalizations extends ChangeNotifier {
     }
   }
 
+  String get locationSettingsMissing {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Standorteinstellungen fehlen. Sie werden zur Standortkonfiguration weitergeleitet.';
+      case AppLanguage.turkish:
+        return 'Konum ayarları eksik. Konum yapılandırmasına yönlendiriliyorsunuz.';
+      case AppLanguage.arabic:
+        return 'إعدادات الموقع مفقودة. سيتم توجيهك إلى تكوين الموقع.';
+      case AppLanguage.bosnian:
+        return 'Nedostaju postavke lokacije. Bit ćete preusmjereni na konfiguraciju lokacije.';
+      case AppLanguage.spanish:
+        return 'Faltan ajustes de ubicación. Será redirigido a la configuración de ubicación.';
+      case AppLanguage.persian:
+        return 'تنظیمات مکان وجود ندارد. شما به پیکربندی مکان هدایت خواهید شد.';
+      case AppLanguage.english:
+      default:
+        return 'Location settings are missing. You will be redirected to location configuration.';
+    }
+  }
+
+  String get prayerTimeCalculationMethod {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Gebetszeit-Berechnungsmethode';
+      case AppLanguage.turkish:
+        return 'Namaz Vakti Hesaplama Yöntemi';
+      case AppLanguage.arabic:
+        return 'طريقة حساب أوقات الصلاة';
+      case AppLanguage.bosnian:
+        return 'Metoda izračuna vremena molitve';
+      case AppLanguage.spanish:
+        return 'Método de cálculo del tiempo de oración';
+      case AppLanguage.persian:
+        return 'روش محاسبه زمان نماز';
+      case AppLanguage.english:
+      default:
+        return 'Prayer Time Calculation Method';
+    }
+  }
+
   String get noCategoriesAvailable {
     switch (_currentLanguage) {
       case AppLanguage.german:
