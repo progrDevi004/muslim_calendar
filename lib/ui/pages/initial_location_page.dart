@@ -284,10 +284,17 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     // Markiere, dass die Einstellungen bereits erfasst wurden
     await prefs.setBool('wasLocationAsked', true);
 
+<<<<<<< HEAD
     // // Stelle sicher, dass Google-Kalender verbunden ist und alle Kalender automatisch ausgewählt werden
     // try {
     //   // Auto-SignIn versuchen
     //   await _googleCalendarService.autoSignIn();
+=======
+    // Stelle sicher, dass Google-Kalender verbunden ist und alle Kalender automatisch ausgewählt werden
+    /*try {
+      // Auto-SignIn versuchen
+      await _googleCalendarService.autoSignIn();
+>>>>>>> d050b1c094df3c0842b41e12dad81179ef02ad0d
 
     //   if (!_googleCalendarService.isSignedIn) {
     //     debugPrint(
@@ -357,6 +364,7 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     //         ));
     //       }
 
+<<<<<<< HEAD
     //       // Der automatische Import wurde entfernt, damit der Nutzer selbst entscheiden kann,
     //       // wann er den Import starten möchte
     //     } else {
@@ -370,6 +378,21 @@ class _InitialLocationPageState extends State<InitialLocationPage> {
     //   debugPrint("❌ Fehler beim Auswählen der Google-Kalender: $e");
     //   // Fehler bei der Kalenderauswahl sollten nicht den gesamten Initialisierungsprozess blockieren
     // }
+=======
+          // Der automatische Import wurde entfernt, damit der Nutzer selbst entscheiden kann,
+          // wann er den Import starten möchte
+        } else {
+          debugPrint("⚠️ Keine Google-Kalender gefunden");
+        }
+      } else {
+        debugPrint(
+            "⚠️ Nicht bei Google angemeldet, Kalender können nicht ausgewählt werden");
+      }
+    } catch (e) {
+      debugPrint("❌ Fehler beim Auswählen der Google-Kalender: $e");
+      // Fehler bei der Kalenderauswahl sollten nicht den gesamten Initialisierungsprozess blockieren
+    }*/ 
+>>>>>>> d050b1c094df3c0842b41e12dad81179ef02ad0d
 
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
