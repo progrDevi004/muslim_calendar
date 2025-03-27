@@ -4348,7 +4348,7 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.spanish:
         return "Opciones de importación";
       case AppLanguage.persian:
-        return "گزینه های وارد کردن";
+        return "گزینه های ورود";
       case AppLanguage.english:
       default:
         return "Import Options";
@@ -6968,6 +6968,63 @@ class AppLocalizations extends ChangeNotifier {
       case AppLanguage.english:
       default:
         return 'No projects for this year';
+    }
+  }
+
+  String get notes {
+    switch (_currentLanguage) {
+      case 'de':
+        return 'Notizen';
+      case 'tr':
+        return 'Notlar';
+      case 'ar':
+        return 'ملاحظات';
+      case 'bs':
+        return 'Bilješke';
+      case 'es':
+        return 'Notas';
+      case 'fa':
+        return 'یادداشت‌ها';
+      default:
+        return 'Notes';
+    }
+  }
+
+  String get additionalInfo {
+    switch (_currentLanguage) {
+      case 'de':
+        return 'Zusätzliche Informationen';
+      case 'tr':
+        return 'Ek Bilgiler';
+      case 'ar':
+        return 'معلومات إضافية';
+      case 'bs':
+        return 'Dodatne informacije';
+      case 'es':
+        return 'Información adicional';
+      case 'fa':
+        return 'اطلاعات اضافی';
+      default:
+        return 'Additional Information';
+    }
+  }
+
+  String get reminder {
+    switch (_currentLanguage) {
+      case 'de':
+        return 'Erinnerung';
+      case 'tr':
+        return 'Hatırlatıcı';
+      case 'ar':
+        return 'تذكير';
+      case 'bs':
+        return 'Podsjetnik';
+      case 'es':
+        return 'Recordatorio';
+      case 'fa':
+        return 'یادآوری';
+      default:
+        return 'Reminder';
     }
   }
 }

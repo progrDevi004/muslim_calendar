@@ -349,6 +349,11 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
       return CupertinoPageScaffold(
         navigationBar: CupertinoNavigationBar(
           middle: Text(loc.editAppointment),
+          trailing: CupertinoButton(
+            padding: EdgeInsets.zero,
+            child: const Icon(CupertinoIcons.pencil),
+            onPressed: _editAppointment,
+          ),
         ),
         child: SafeArea(
           child: _buildBody(loc),
@@ -733,6 +738,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
           content: Text(content),
           actions: [
             CupertinoDialogAction(
+              isDestructiveAction: true,
               onPressed: () => Navigator.of(ctx).pop(false),
               child: Text(cancelText),
             ),
