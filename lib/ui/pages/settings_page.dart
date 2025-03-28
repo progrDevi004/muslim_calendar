@@ -445,7 +445,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return [
       // Appearance Section
-      /*Text(
+      Text(
         loc.appearance,
         style: theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.bold,
@@ -473,7 +473,7 @@ class _SettingsPageState extends State<SettingsPage> {
             setState(() => _isDarkMode = value);
             await _saveSettings();
           },
-        ),*/
+        ),
       const Divider(height: 32),
 
       // Time Format Section

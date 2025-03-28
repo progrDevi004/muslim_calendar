@@ -397,6 +397,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
           _appointment!.subject,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
               ),
         ),
         const SizedBox(height: 8),
@@ -416,7 +417,9 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                   Expanded(
                     child: Text(
                       _appointment!.notes!,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
                     ),
                   ),
                 ],
@@ -438,7 +441,9 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                 Expanded(
                   child: Text(
                     '${loc.categoryLabel}: ${_category?.name ?? loc.privateCategory}',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                        ),
                   ),
                 ),
               ],
@@ -462,7 +467,10 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                     Expanded(
                       child: Text(
                         '${loc.startTime}: ${_formatDateTime(_computedStartTime)}',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color:
+                                  Theme.of(context).textTheme.bodyLarge?.color,
+                            ),
                       ),
                     ),
                   ],
@@ -475,7 +483,10 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                     Expanded(
                       child: Text(
                         '${loc.endTime}: ${_formatDateTime(_computedEndTime)}',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color:
+                                  Theme.of(context).textTheme.bodyLarge?.color,
+                            ),
                       ),
                     ),
                   ],
@@ -501,7 +512,9 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                   Expanded(
                     child: Text(
                       '${loc.location}: ${_appointment!.location!}',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
                     ),
                   ),
                 ],
@@ -524,7 +537,9 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                     const SizedBox(width: 8),
                     Text(
                       loc.allDay,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
                     ),
                     const Spacer(),
                   ],
@@ -539,12 +554,28 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                             children: [
                               Text(
                                 loc.relatedToPrayerTimes,
-                                style: Theme.of(context).textTheme.bodyMedium,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge
+                                          ?.color,
+                                    ),
                               ),
                               if (_appointment!.prayerTime != null) ...[
                                 Text(
                                   ': ',
-                                  style: Theme.of(context).textTheme.bodyMedium,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.color,
+                                      ),
                                 ),
                                 Text(
                                   loc.getPrayerTimeLabel(
@@ -554,6 +585,10 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                                       .bodyMedium
                                       ?.copyWith(
                                         fontWeight: FontWeight.bold,
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.color,
                                       ),
                                 ),
                               ],
@@ -566,13 +601,28 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                               children: [
                                 Text(
                                   '${loc.getTimeRelationLabel(_appointment!.timeRelation!)} ',
-                                  style: Theme.of(context).textTheme.bodySmall,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.color,
+                                      ),
                                 ),
                                 if (_appointment!.minutesBeforeAfter != null)
                                   Text(
                                     '(${_appointment!.minutesBeforeAfter} ${loc.minutesBeforeAfter})',
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .textTheme
+                                              .bodyLarge
+                                              ?.color,
+                                        ),
                                   ),
                               ],
                             ),
@@ -607,13 +657,23 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                           style:
                               Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodyLarge
+                                        ?.color,
                                   ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           _getRecurrenceTypeText(
                               _appointment!.recurrenceRule!, loc),
-                          style: Theme.of(context).textTheme.bodySmall,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodyLarge
+                                        ?.color,
+                                  ),
                         ),
                       ],
                     ),
@@ -638,7 +698,9 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                     child: Text(
                       _formatReminderText(
                           _appointment!.reminderMinutesBefore!, loc),
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
                     ),
                   ),
                 ],
@@ -693,7 +755,10 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                         _appointment!.lastSyncedAt != null
                             ? "Zuletzt synchronisiert: ${DateFormat('dd.MM.yyyy, HH:mm').format(_appointment!.lastSyncedAt!)}"
                             : "Termin mit Google Kalender synchronisiert",
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color:
+                                  Theme.of(context).textTheme.bodyLarge?.color,
+                            ),
                       ),
                     ),
                   ],

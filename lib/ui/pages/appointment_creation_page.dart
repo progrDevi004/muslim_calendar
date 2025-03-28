@@ -953,8 +953,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           child: isIOS
               ? CupertinoTextFormFieldRow(
                   controller: _titleController,
-                  style: const TextStyle(
-                      fontSize: 24, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                   placeholder: loc.titleLabel,
                   padding: EdgeInsets.zero,
                   decoration: const BoxDecoration(
@@ -966,8 +969,11 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                 )
               : TextFormField(
                   controller: _titleController,
-                  style: const TextStyle(
-                      fontSize: 24, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                   decoration: InputDecoration(
                     hintText: loc.titleLabel,
                     border: InputBorder.none,
@@ -1185,7 +1191,15 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                                     initialValue:
                                         _duration?.inMinutes.toString() ?? '30',
                                     keyboardType: TextInputType.number,
-                                    prefix: Text(loc.durationMinutes),
+                                    prefix: Text(
+                                      loc.durationMinutes,
+                                      style: TextStyle(
+                                        color: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.color,
+                                      ),
+                                    ),
                                     padding: EdgeInsets.zero,
                                     onChanged: (value) {
                                       setState(() {
@@ -1326,6 +1340,12 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                                 keyboardType: TextInputType.number,
                                 decoration: InputDecoration(
                                   labelText: loc.durationMinutes,
+                                  labelStyle: TextStyle(
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodyLarge
+                                        ?.color,
+                                  ),
                                   border: const OutlineInputBorder(),
                                   contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 12.0, vertical: 8.0),
@@ -1369,8 +1389,13 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                                 _startTime != null
                                     ? _formatDate(_startTime!)
                                     : '---',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w500)),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodyLarge
+                                      ?.color,
+                                )),
                           ),
                           onTap: () async {
                             await _pickStartDate();
@@ -1389,8 +1414,13 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                                 _startTime != null
                                     ? _formatTime(_startTime!)
                                     : '--:--',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w500)),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodyLarge
+                                      ?.color,
+                                )),
                           ),
                           onTap: () async {
                             await _pickStartTime();
@@ -1413,8 +1443,13 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                                 _endTime != null
                                     ? _formatDate(_endTime!)
                                     : '---',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w500)),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodyLarge
+                                      ?.color,
+                                )),
                           ),
                           onTap: () async {
                             await _pickEndDate();
@@ -1433,8 +1468,13 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
                                 _endTime != null
                                     ? _formatTime(_endTime!)
                                     : '--:--',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w500)),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodyLarge
+                                      ?.color,
+                                )),
                           ),
                           onTap: () async {
                             await _pickEndTime();
@@ -1553,9 +1593,14 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
             leading: CircleAvatar(
               backgroundColor: _color,
             ),
-            title: Text(_selectedCategory != null
-                ? _selectedCategory!.name
-                : loc.selectCategoryLabel),
+            title: Text(
+              _selectedCategory != null
+                  ? _selectedCategory!.name
+                  : loc.selectCategoryLabel,
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+              ),
+            ),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
               _showCategorySelectionDialog(loc);
@@ -1570,13 +1615,23 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
               ? CupertinoTextFormFieldRow(
                   controller: _descriptionController,
                   placeholder: loc.description,
-                  prefix: Text(loc.description),
+                  prefix: Text(
+                    loc.description,
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                    ),
+                  ),
                   minLines: 1,
                   maxLines: 3,
                 )
               : TextFormField(
                   controller: _descriptionController,
-                  decoration: InputDecoration(labelText: loc.description),
+                  decoration: InputDecoration(
+                    labelText: loc.description,
+                    labelStyle: TextStyle(
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                    ),
+                  ),
                   minLines: 1,
                   maxLines: 3,
                 ),
@@ -1591,7 +1646,10 @@ class _AppointmentCreationPageState extends State<AppointmentCreationPage> {
           child: ListTile(
             leading: const Icon(Icons.more_horiz),
             title: Text(
-                _showAdvancedOptions ? loc.fewerOptions : loc.advancedOptions),
+                _showAdvancedOptions ? loc.fewerOptions : loc.advancedOptions,
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                )),
             trailing: Icon(
               _showAdvancedOptions
                   ? Icons.arrow_drop_up
