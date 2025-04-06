@@ -34,16 +34,18 @@ class Transaction {
   final String notes;
   final DateTime date;
   final TransactionType type;
+  final int recurrenceType; // 0 = none, 1 = fixed
 
   Transaction({
-    String? id,
+    this.id,
     required this.title,
     required this.amount,
     required this.category,
-    required this.notes,
+    this.notes = '',
     required this.date,
     required this.type,
-  }) : id = id ?? const Uuid().v4();
+    this.recurrenceType = 0,
+  });
 
   /// Convert transaction to JSON
   Map<String, dynamic> toJson() {
@@ -53,21 +55,52 @@ class Transaction {
       'amount': amount,
       'category': category,
       'notes': notes,
-      'date': date.toIso8601String(),
+      'date': date.millisecondsSinceEpoch,
       'type': type.index,
+      'recurrenceType': recurrenceType,
     };
   }
 
   /// Create transaction from JSON
   factory Transaction.fromJson(Map<String, dynamic> json) {
+    // Datumsverarbeitung - verarbeite sowohl Timestamp als auch ISO-String
+    DateTime parsedDate;
+    if (json['date'] is int) {
+      parsedDate = DateTime.fromMillisecondsSinceEpoch(json['date']);
+    } else if (json['date'] is String) {
+      try {
+        parsedDate = DateTime.parse(json['date']);
+      } catch (e) {
+        // Fallback auf aktuelles Datum bei Parsing-Fehler
+        parsedDate = DateTime.now();
+      }
+    } else {
+      parsedDate = DateTime.now();
+    }
+
+    // RecurrenceType verarbeiten - verarbeite sowohl String als auch int
+    int recurrenceTypeValue = 0;
+    if (json['recurrenceType'] != null) {
+      if (json['recurrenceType'] is int) {
+        recurrenceTypeValue = json['recurrenceType'];
+      } else if (json['recurrenceType'] is String) {
+        recurrenceTypeValue =
+            int.tryParse(json['recurrenceType'] as String) ?? 0;
+      }
+    }
+
     return Transaction(
       id: json['id'],
       title: json['title'],
-      amount: json['amount'],
-      category: json['category'],
-      notes: json['notes'],
-      date: DateTime.parse(json['date']),
-      type: TransactionType.values[json['type']],
+      amount: json['amount'] is int
+          ? (json['amount'] as int).toDouble()
+          : json['amount'],
+      category: json['category'] ?? '',
+      notes: json['notes'] ?? '',
+      date: parsedDate,
+      type: TransactionType.values[
+          json['type'] is String ? int.parse(json['type']) : json['type']],
+      recurrenceType: recurrenceTypeValue,
     );
   }
 
@@ -80,6 +113,7 @@ class Transaction {
     String? notes,
     DateTime? date,
     TransactionType? type,
+    int? recurrenceType,
   }) {
     return Transaction(
       id: id ?? this.id,
@@ -89,6 +123,7 @@ class Transaction {
       notes: notes ?? this.notes,
       date: date ?? this.date,
       type: type ?? this.type,
+      recurrenceType: recurrenceType ?? this.recurrenceType,
     );
   }
 }

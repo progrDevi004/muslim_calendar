@@ -35,14 +35,18 @@ import 'data/services/location_service.dart';
 import 'ui/components/platform_adaptive_theme.dart';
 // Für Lokalisierung
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:Taqvimi/ui/pages/finance/finance_page.dart';
+// NEU: Importiere FinanceService
+import 'package:Taqvimi/data/services/finance_service.dart';
 
 void main() async {
   // Widgets binding sicherstellen, da asynchrone Aufrufe vor runApp durchgeführt werden sollen.
   WidgetsFlutterBinding.ensureInitialized();
 
   // NotificationService initialisieren (und ggf. um Berechtigung fragen, wenn iOS)
+  NotificationService notificationService = NotificationService();
   try {
-    await NotificationService().init();
+    await notificationService.init();
   } catch (e) {
     // Bei Fehlern mit dem NotificationService loggen, aber App trotzdem starten
     debugPrint("Fehler bei der Initialisierung des NotificationService: $e");
@@ -137,6 +141,10 @@ void main() async {
         // ProjectProvider hinzufügen
         ChangeNotifierProvider(
           create: (_) => ProjectProvider(),
+        ),
+        // NEU: FinanceService als Provider
+        ChangeNotifierProvider(
+          create: (_) => FinanceService(notificationService)..init(),
         ),
       ],
       child: const MyApp(),
@@ -245,6 +253,7 @@ class _MyAppState extends State<MyApp> {
               },
             ),
         '/project-management': (context) => const ProjectManagementPage(),
+        '/finance': (context) => const FinancePage(),
       },
       // Startroute definieren
       initialRoute: '/',

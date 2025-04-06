@@ -54,46 +54,63 @@ class FinanceService extends ChangeNotifier {
 
   // Lade Daten für den aktuellen Monat
   Future<void> loadTransactionsForMonth() async {
-    final startOfMonth = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
-    final endOfMonth =
-        DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0);
+    try {
+      final startOfMonth =
+          DateTime(_selectedMonth.year, _selectedMonth.month, 1);
+      final endOfMonth =
+          DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0);
 
-    _transactions = await _repository.getTransactions(
-      startDate: startOfMonth,
-      endDate: endOfMonth,
-    );
-
-    // Feste Transaktionen hinzufügen
-    final fixedTransactions = await _repository.getFixedTransactions();
-
-    for (var fixed in fixedTransactions) {
-      // Erstelle eine Kopie für den aktuellen Monat
-      final monthlyTransaction = models.Transaction(
-        title: fixed.title,
-        amount: fixed.amount,
-        category: fixed.category,
-        notes: fixed.notes,
-        date: DateTime(
-          _selectedMonth.year,
-          _selectedMonth.month,
-          fixed.date.day >
-                  DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0).day
-              ? DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0).day
-              : fixed.date.day,
-        ),
-        type: fixed.type,
+      _transactions = await _repository.getTransactions(
+        startDate: startOfMonth,
+        endDate: endOfMonth,
       );
 
-      // Nur hinzufügen, wenn nicht bereits vorhanden
-      if (!_transactions.any((t) =>
-          t.title == monthlyTransaction.title &&
-          t.amount == monthlyTransaction.amount &&
-          t.type == monthlyTransaction.type)) {
-        _transactions.add(monthlyTransaction);
-      }
-    }
+      // Feste Transaktionen hinzufügen
+      try {
+        final fixedTransactions = await _repository.getFixedTransactions();
 
-    notifyListeners();
+        for (var fixed in fixedTransactions) {
+          // Prüfe, ob die Transaktion gültig ist und Pflichtfelder hat
+          if (fixed.title.isEmpty || fixed.amount <= 0) continue;
+
+          // Erstelle eine Kopie für den aktuellen Monat
+          final monthlyTransaction = models.Transaction(
+            title: fixed.title,
+            amount: fixed.amount,
+            category: fixed.category,
+            notes: fixed.notes,
+            date: DateTime(
+              _selectedMonth.year,
+              _selectedMonth.month,
+              fixed.date.day >
+                      DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0)
+                          .day
+                  ? DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0)
+                      .day
+                  : fixed.date.day,
+            ),
+            type: fixed.type,
+          );
+
+          // Nur hinzufügen, wenn nicht bereits vorhanden
+          if (!_transactions.any((t) =>
+              t.title == monthlyTransaction.title &&
+              t.amount == monthlyTransaction.amount &&
+              t.type == monthlyTransaction.type)) {
+            _transactions.add(monthlyTransaction);
+          }
+        }
+      } catch (e) {
+        print('Fehler beim Laden der festen Transaktionen: $e');
+      }
+
+      notifyListeners();
+    } catch (e) {
+      print('Fehler beim Laden der Transaktionen: $e');
+      // Stelle sicher, dass _transactions zumindest eine leere Liste ist
+      _transactions = [];
+      notifyListeners();
+    }
   }
 
   // Lade alle anderen Finanzdaten
@@ -116,9 +133,21 @@ class FinanceService extends ChangeNotifier {
     await loadTransactionsForMonth();
   }
 
+  /// Löscht eine Transaktion anhand ihrer ID
   Future<void> deleteTransaction(String id) async {
     await _repository.deleteTransaction(id);
-    await loadTransactionsForMonth();
+    _refreshFinanceData();
+  }
+
+  /// Löscht alle wiederkehrenden Transaktionen mit gleichem Titel und Typ
+  Future<void> deleteRecurringTransaction(
+      models.Transaction transaction) async {
+    // Hier werden alle Transaktionen gelöscht, die den gleichen Titel und Typ haben und als "fixed" markiert sind
+    await _repository.deleteRecurringTransactions(
+      title: transaction.title,
+      type: transaction.type,
+    );
+    _refreshFinanceData();
   }
 
   // Schulden verwalten
@@ -330,5 +359,11 @@ class FinanceService extends ChangeNotifier {
         _deadlines[i] = deadline.copyWith(status: newStatus);
       }
     }
+  }
+
+  void _refreshFinanceData() {
+    // Implementiere die Logik, um alle relevanten Daten zu aktualisieren
+    // Dies kann die Methode loadAllFinancialData() aufrufen oder andere Logiken implementieren
+    loadAllFinancialData();
   }
 }

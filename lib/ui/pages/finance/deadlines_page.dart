@@ -100,12 +100,6 @@ class _DeadlinesPageState extends State<DeadlinesPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () =>
-            _showDeadlineDialog(context, financeService, financeLoc),
-        tooltip: financeLoc.addDeadline,
-        child: const Icon(Icons.add),
-      ),
     );
   }
 

@@ -2,6 +2,7 @@
 
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:Taqvimi/data/repositories/finance_repository.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -10,7 +11,7 @@ class DatabaseHelper {
 
   static Database? _database;
 
-  // >>> Version von 6 auf 7 erhöht
+  // >>> Version von 7 auf 8 erhöht
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDatabase();
@@ -21,14 +22,14 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'appointments.db');
     return await openDatabase(
       path,
-      version: 7, // <-- NEU: DB-Version auf 7 erhöht
+      version: 8, // <-- NEU: DB-Version auf 8 erhöht
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    // Version 7 bedeutet, wir führen gleich alles an.
+    // Version 8 bedeutet, wir führen gleich alles an.
 
     // appointments
     await db.execute('''
@@ -125,6 +126,10 @@ class DatabaseHelper {
           ON DELETE CASCADE
       )
     ''');
+
+    // NEU: Finanztabellen erstellen
+    final financeRepository = FinanceRepository();
+    await financeRepository.initTables(db);
   }
 
   void _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -221,6 +226,12 @@ class DatabaseHelper {
       await db.execute('''
         ALTER TABLE appointments ADD COLUMN recurrenceEndDate TEXT
       ''');
+    }
+
+    if (oldVersion < 8) {
+      // Finanztabellen erstellen
+      final financeRepository = FinanceRepository();
+      await financeRepository.initTables(db);
     }
   }
 }

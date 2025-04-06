@@ -126,7 +126,7 @@ class FinanceRepository {
       CREATE TABLE IF NOT EXISTS $transactionTable (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
-        description TEXT,
+        notes TEXT,
         amount REAL NOT NULL,
         date TEXT NOT NULL,
         type INTEGER NOT NULL,
@@ -221,14 +221,26 @@ class FinanceRepository {
 
   Future<List<models.Transaction>> getFixedTransactions() async {
     final db = await _databaseHelper.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      transactionTable,
-      where: 'recurrenceType = ?',
-      whereArgs: [RecurrenceType.fixed.index],
-      orderBy: 'date DESC',
-    );
+
+    // Direkte SQL-Abfrage ohne Parameter-Binding, um Typprobleme zu vermeiden
+    final List<Map<String, dynamic>> maps = await db.rawQuery(
+        'SELECT * FROM $transactionTable WHERE recurrenceType = 1 OR recurrenceType = "1" ORDER BY date DESC');
+
     return List.generate(maps.length, (i) {
-      return models.Transaction.fromJson(maps[i]);
+      try {
+        return models.Transaction.fromJson(maps[i]);
+      } catch (e) {
+        print('Error parsing transaction: ${e.toString()}');
+        // Wenn ein Parsing-Fehler auftritt, erstelle eine "leere" Transaktion
+        return models.Transaction(
+          id: 'error_${i}_${DateTime.now().millisecondsSinceEpoch}',
+          title: 'Fehlerhafte Transaktion',
+          amount: 0,
+          category: 'Fehler',
+          date: DateTime.now(),
+          type: models.TransactionType.expense,
+        );
+      }
     });
   }
 
@@ -257,6 +269,19 @@ class FinanceRepository {
       transactionTable,
       where: 'id = ?',
       whereArgs: [id],
+    );
+  }
+
+  /// Löscht alle wiederkehrenden Transaktionen mit gleichem Titel und Typ
+  Future<void> deleteRecurringTransactions({
+    required String title,
+    required models.TransactionType type,
+  }) async {
+    final db = await _databaseHelper.database;
+    await db.delete(
+      transactionTable,
+      where: 'title = ? AND type = ? AND recurrenceType = 1',
+      whereArgs: [title, type.index],
     );
   }
 

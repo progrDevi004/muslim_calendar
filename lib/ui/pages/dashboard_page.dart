@@ -38,7 +38,6 @@ import 'package:Taqvimi/ui/widgets/home/category_filter_dialog.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_dialog.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_list_tile.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_app_bar.dart';
-import 'package:Taqvimi/ui/components/platform_adaptive_navigation.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_scaffold_fab.dart';
 import 'package:Taqvimi/ui/components/app_drawer.dart';
 

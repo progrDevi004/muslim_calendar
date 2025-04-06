@@ -6,6 +6,8 @@ import 'package:Taqvimi/localization/app_localizations.dart';
 import 'package:Taqvimi/localization/finance_localizations.dart';
 import 'package:Taqvimi/models/finance_models.dart';
 
+enum RecurrenceType { variable, fixed }
+
 class TransactionDialog extends StatefulWidget {
   final Transaction? transaction;
 
@@ -22,13 +24,44 @@ class _TransactionDialogState extends State<TransactionDialog> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
-  final _categoryController = TextEditingController();
+  final _customCategoryController = TextEditingController();
   final _notesController = TextEditingController();
 
   late DateTime _selectedDate;
   late TransactionType _selectedType;
+  late RecurrenceType _recurrenceType;
+  String _selectedCategory = '';
+  bool _isCustomCategory = false;
 
   bool _isProcessing = false;
+
+  // Vordefinierte Kategorien für Einnahmen und Ausgaben
+  final List<String> _incomeCategories = [
+    'Gehalt',
+    'Freelance',
+    'Geschenk',
+    'Rückerstattung',
+    'Sonstige Einnahmen',
+    'Benutzerdefiniert',
+  ];
+
+  final List<String> _expenseCategories = [
+    'Lebensmittel',
+    'Wohnen',
+    'Transport',
+    'Unterhaltung',
+    'Gesundheit',
+    'Kleidung',
+    'Bildung',
+    'Reisen',
+    'Geschenke',
+    'Sonstige Ausgaben',
+    'Benutzerdefiniert',
+  ];
+
+  List<String> get _currentCategories => _selectedType == TransactionType.income
+      ? _incomeCategories
+      : _expenseCategories;
 
   @override
   void initState() {
@@ -38,13 +71,34 @@ class _TransactionDialogState extends State<TransactionDialog> {
     if (widget.transaction != null) {
       _titleController.text = widget.transaction!.title;
       _amountController.text = widget.transaction!.amount.toString();
-      _categoryController.text = widget.transaction!.category;
       _notesController.text = widget.transaction!.notes;
       _selectedDate = widget.transaction!.date;
       _selectedType = widget.transaction!.type;
+
+      // Kategorie initialisieren
+      _selectedCategory = widget.transaction!.category;
+
+      // Prüfen, ob es eine benutzerdefinierte Kategorie ist
+      if (_selectedCategory.isNotEmpty) {
+        if (!_currentCategories.contains(_selectedCategory)) {
+          _isCustomCategory = true;
+          _customCategoryController.text = _selectedCategory;
+          _selectedCategory = 'Benutzerdefiniert';
+        }
+      } else {
+        // Default-Kategorie wählen, wenn keine vorhanden
+        _selectedCategory = _currentCategories.first;
+      }
+
+      // Wiederholungstyp (0 = variabel, 1 = fest)
+      _recurrenceType = widget.transaction?.recurrenceType == 1
+          ? RecurrenceType.fixed
+          : RecurrenceType.variable;
     } else {
       _selectedDate = DateTime.now();
       _selectedType = TransactionType.expense;
+      _selectedCategory = _expenseCategories.first;
+      _recurrenceType = RecurrenceType.variable;
     }
   }
 
@@ -52,7 +106,7 @@ class _TransactionDialogState extends State<TransactionDialog> {
   void dispose() {
     _titleController.dispose();
     _amountController.dispose();
-    _categoryController.dispose();
+    _customCategoryController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -72,6 +126,15 @@ class _TransactionDialogState extends State<TransactionDialog> {
     }
   }
 
+  // Methode zum Abrufen der aktuellen Kategorie
+  String _getCurrentCategory() {
+    if (_isCustomCategory) {
+      return _customCategoryController.text;
+    } else {
+      return _selectedCategory != 'Benutzerdefiniert' ? _selectedCategory : '';
+    }
+  }
+
   Future<void> _saveTransaction() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
@@ -82,14 +145,29 @@ class _TransactionDialogState extends State<TransactionDialog> {
         final financeService =
             Provider.of<FinanceService>(context, listen: false);
 
+        // Bestimme die endgültige Kategorie
+        final category = _getCurrentCategory();
+        if (category.isEmpty) {
+          // Zeige einen Fehler, wenn keine Kategorie ausgewählt wurde
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Bitte wählen Sie eine Kategorie aus')),
+          );
+          setState(() {
+            _isProcessing = false;
+          });
+          return;
+        }
+
         final transaction = Transaction(
           id: widget.transaction?.id,
           title: _titleController.text,
           amount: double.parse(_amountController.text),
-          category: _categoryController.text,
+          category: category,
           notes: _notesController.text,
           date: _selectedDate,
           type: _selectedType,
+          recurrenceType: _recurrenceType == RecurrenceType.fixed ? 1 : 0,
         );
 
         if (widget.transaction == null) {
@@ -199,7 +277,7 @@ class _TransactionDialogState extends State<TransactionDialog> {
                   border: const OutlineInputBorder(),
                 ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.trim().isEmpty) {
                     return financeLoc.requiredField;
                   }
                   return null;
@@ -213,28 +291,81 @@ class _TransactionDialogState extends State<TransactionDialog> {
                   border: const OutlineInputBorder(),
                   prefixText: '€ ',
                 ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: TextInputType.number,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.trim().isEmpty) {
                     return financeLoc.requiredField;
                   }
-                  if (double.tryParse(value) == null) {
-                    return financeLoc.invalidNumberFormat;
-                  }
-                  if (double.parse(value) <= 0) {
-                    return financeLoc.amountGreaterThanZero;
+                  try {
+                    final amount = double.parse(value);
+                    if (amount <= 0) {
+                      return 'Betrag muss größer als 0 sein';
+                    }
+                  } catch (e) {
+                    return 'Bitte geben Sie einen gültigen Betrag ein';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _categoryController,
+
+              // Kategorieauswahl Dropdown
+              DropdownButtonFormField<String>(
+                value: _selectedCategory,
                 decoration: InputDecoration(
                   labelText: financeLoc.category,
                   border: const OutlineInputBorder(),
                 ),
+                items: _currentCategories.map((category) {
+                  return DropdownMenuItem<String>(
+                    value: category,
+                    child: Text(category),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      _selectedCategory = newValue;
+                      _isCustomCategory = newValue == 'Benutzerdefiniert';
+                    });
+                  }
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return financeLoc.requiredField;
+                  }
+                  return null;
+                },
+              ),
+
+              // Benutzerdefinierte Kategorie
+              if (_isCustomCategory) ...[
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _customCategoryController,
+                  decoration: InputDecoration(
+                    labelText: 'Benutzerdefinierte Kategorie',
+                    hintText: 'Eigene Kategorie eingeben',
+                    border: const OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (_isCustomCategory &&
+                        (value == null || value.trim().isEmpty)) {
+                      return 'Bitte geben Sie eine Kategorie ein';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _notesController,
+                decoration: InputDecoration(
+                  labelText: financeLoc.notes,
+                  border: const OutlineInputBorder(),
+                ),
+                maxLines: 2,
               ),
               const SizedBox(height: 16),
               InkWell(
@@ -253,14 +384,45 @@ class _TransactionDialogState extends State<TransactionDialog> {
                   ),
                 ),
               ),
+
+              // Wiederholungstyp Auswahl
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _notesController,
-                decoration: InputDecoration(
-                  labelText: financeLoc.notes,
-                  border: const OutlineInputBorder(),
-                ),
-                maxLines: 3,
+              Text('Wiederholungstyp',
+                  style: TextStyle(color: Colors.grey[700])),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: RadioListTile<RecurrenceType>(
+                      title: const Text('Variabel'),
+                      subtitle: const Text('Einmalig'),
+                      value: RecurrenceType.variable,
+                      groupValue: _recurrenceType,
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _recurrenceType = value;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  Expanded(
+                    child: RadioListTile<RecurrenceType>(
+                      title: const Text('Fest'),
+                      subtitle: const Text('Jeden Monat'),
+                      value: RecurrenceType.fixed,
+                      groupValue: _recurrenceType,
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _recurrenceType = value;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -270,14 +432,13 @@ class _TransactionDialogState extends State<TransactionDialog> {
         if (widget.transaction != null)
           TextButton(
             onPressed: _isProcessing ? null : _deleteTransaction,
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: Text(financeLoc.delete),
           ),
         TextButton(
           onPressed: _isProcessing ? null : () => Navigator.of(context).pop(),
           child: Text(financeLoc.cancel),
         ),
-        FilledButton(
+        ElevatedButton(
           onPressed: _isProcessing ? null : _saveTransaction,
           child: _isProcessing
               ? const SizedBox(
@@ -285,7 +446,6 @@ class _TransactionDialogState extends State<TransactionDialog> {
                   width: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
                   ),
                 )
               : Text(financeLoc.save),
@@ -328,6 +488,19 @@ class _TransactionDialogState extends State<TransactionDialog> {
           onSelectionChanged: (Set<TransactionType> selected) {
             setState(() {
               _selectedType = selected.first;
+
+              // Bei Änderung des Transaktionstyps eine gültige Kategorie auswählen
+              List<String> newCategories =
+                  _selectedType == TransactionType.income
+                      ? _incomeCategories
+                      : _expenseCategories;
+
+              // Prüfe, ob aktuelle Kategorie in der neuen Liste existiert
+              if (!newCategories.contains(_selectedCategory)) {
+                // Wenn nicht, wähle eine Standard-Kategorie aus der neuen Liste
+                _selectedCategory = newCategories.first;
+                _isCustomCategory = false;
+              }
             });
           },
         ),

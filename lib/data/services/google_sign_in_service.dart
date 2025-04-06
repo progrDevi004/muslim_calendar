@@ -31,6 +31,11 @@ class GoogleSignInService {
         scopes: scopes,
       );
     }
+
+    // // Verwende die Android-Version ohne Client-ID
+    // _googleSignIn = GoogleSignIn(
+    //   scopes: scopes,
+    // );
   }
 
   GoogleSignIn get googleSignIn => _googleSignIn;

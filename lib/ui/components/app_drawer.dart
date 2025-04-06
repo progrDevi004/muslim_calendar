@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 // Modelle & Lokalisierung
 import 'package:Taqvimi/localization/app_localizations.dart';
+import 'package:Taqvimi/localization/finance_localizations.dart';
 import 'package:Taqvimi/models/category_model.dart';
 
 // Komponenten
@@ -15,6 +16,7 @@ import 'package:Taqvimi/ui/components/platform_adaptive_dialog.dart';
 // Seiten für Navigation
 import 'package:Taqvimi/ui/pages/settings_page.dart';
 import 'package:Taqvimi/ui/pages/qibla_compass_page.dart';
+import 'package:Taqvimi/ui/pages/finance/finance_page.dart';
 import 'package:Taqvimi/ui/widgets/home/category_filter_dialog.dart';
 
 // Services
@@ -535,6 +537,23 @@ class AppDrawer extends StatelessWidget {
               iOSIcon: CupertinoIcons.arrow_2_circlepath,
               iconColor: logoColor,
               onTap: () => _showSyncOptionsDialog(context),
+            ),
+
+            // Buchhaltung/Finanzen
+            _buildDrawerItem(
+              context: context,
+              icon: Platform.isIOS
+                  ? CupertinoIcons.money_dollar
+                  : Icons.account_balance_wallet,
+              title: FinanceLocalizations(loc).finance,
+              onTap: () {
+                if (onCloseDrawer != null) {
+                  onCloseDrawer!();
+                } else {
+                  Navigator.pop(context);
+                }
+                Navigator.pushNamed(context, '/finance');
+              },
             ),
 
             // Kalender- oder Projektmanagement-Navigation, je nach aktueller Seite

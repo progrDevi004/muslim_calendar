@@ -87,8 +87,12 @@ class _FinancePageState extends State<FinancePage>
 
   Widget? _buildFloatingActionButton(FinanceLocalizations financeLoc) {
     switch (_tabController.index) {
-      case 0: // Overview - no FAB
-        return null;
+      case 0: // Overview - now also showing a FAB for adding transactions
+        return FloatingActionButton(
+          onPressed: () => _showTransactionDialog(context),
+          tooltip: financeLoc.addTransaction,
+          child: const Icon(Icons.add),
+        );
       case 1: // Transactions
         return FloatingActionButton(
           onPressed: () => _showTransactionDialog(context),

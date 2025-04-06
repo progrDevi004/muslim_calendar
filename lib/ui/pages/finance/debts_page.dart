@@ -97,11 +97,6 @@ class _DebtsPageState extends State<DebtsPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showDebtDialog(context, financeService, financeLoc),
-        tooltip: financeLoc.addDebt,
-        child: const Icon(Icons.add),
-      ),
     );
   }
 

@@ -104,12 +104,6 @@ class _SavingsGoalsPageState extends State<SavingsGoalsPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () =>
-            _showSavingsGoalDialog(context, financeService, financeLoc),
-        tooltip: financeLoc.addSavingsGoal,
-        child: const Icon(Icons.add),
-      ),
     );
   }
 
