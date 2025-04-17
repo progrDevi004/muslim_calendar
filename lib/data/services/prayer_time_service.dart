@@ -7,6 +7,21 @@ import '../repositories/prayer_time_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:Taqvimi/data/repositories/appointment_repository.dart';
 
+
+///TODO
+/// 1. Gebetszeiten für ein Jahr und die letzten 3 Monate laden (ein Jahr ebreits vorhanden)
+/// 2. Beim Eintragen eines Termins prüfen, ob Gebetszeit für den Standort vorhanden ist
+///   True: Nehme die Gebetszeit
+///   False: Lade die Gebetszeit anhand der Location, die in dem Termin eingestellt war
+///   Anmerkung: Dafür soll Standort und Datum kombiniert als Schlüssel geprüft werden. (Auch bereits vorhanden im prayer_time_repository.dart in getPrayerTimeMinutes)
+/// Hintergrund: Man könnte in Deutschland einen Termin für die Türkei eintragen. Dann möchte man den Standort
+/// beim Erstellend es Termins für diesen Termin ändern. Dann sollten die Gebetszeiten für den Tag und den entsprechenden Standort ausgewählt werden.
+/// 3. Anfang jeden Monats soll ein weiterer Monat Gebetszeiten aufgestockt werden, sobald Internetverbindung vorhanden ist
+///   Schritte:
+///   a. Flag erstellen z.B. newMonthPrayerTimesUpdated oder eine bessere Bezeichnung. Initial: False
+///   b. Flag jeden Tag prüfen, ob False. Wenn ja, neuer Monat und Internetverbindung vorhanden?
+///   c. True: lade die Gebetszeiten für den nächsten Monat herunter.
+///   d. False: continue. Beim nächsten Start der App wieder ausführen.
 class PrayerTimeService with ChangeNotifier {
   final PrayerTimeRepository prayerTimeRepo;
   // Für das automatische Update der vorhandenen Termine:
@@ -14,6 +29,7 @@ class PrayerTimeService with ChangeNotifier {
 
   PrayerTimeService(this.prayerTimeRepo);
 
+  //// Startzeit für gebetszeitenbezogene Termine berechnen 
   Future<DateTime?> getCalculatedStartTime(
     AppointmentModel appointment,
     DateTime fallbackDate, {
@@ -62,7 +78,8 @@ class PrayerTimeService with ChangeNotifier {
 
     return baseTime;
   }
-
+  
+  /// Endzeit für gebetszeitenbezogene Termine berechnen 
   Future<DateTime?> getCalculatedEndTime(
     AppointmentModel appointment,
     DateTime date,
@@ -95,6 +112,7 @@ class PrayerTimeService with ChangeNotifier {
   }
 
   /// Lädt alle Gebetszeiten neu herunter und aktualisiert Termine
+  // TODO: Wann wird das verwendet? Hier kurz aufzählen
   Future<void> reDownloadAndRecalcAll() async {
     debugPrint("📅 PrayerTimeService: Starte reDownloadAndRecalcAll()");
 

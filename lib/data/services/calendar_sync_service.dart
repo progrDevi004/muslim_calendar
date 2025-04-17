@@ -16,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:Taqvimi/data/services/google_calendar_sync_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:Taqvimi/data/services/import_settings_service.dart';
+import 'package:Taqvimi/data/repositories/google_event_mapping_repository.dart';
 
 /// CalendarSyncService - Fassade (Facade) für alle Kalendersynchronisierungsdienste
 ///
@@ -389,6 +390,14 @@ class CalendarSyncService extends ChangeNotifier {
             : null;
       }
 
+      // WICHTIG: Prüfen, ob ein Termin mit dieser Google-ID bereits existiert
+      if (existingAppointment == null && event.id != null) {
+        existingAppointment = await appointmentRepository.getAppointmentByExternalIdGoogle(event.id!);
+        if (existingAppointment != null) {
+          debugPrint("🔍 Termin mit Google-ID ${event.id} bereits in der Datenbank gefunden (ID: ${existingAppointment.id})");
+        }
+      }
+
       AppointmentModel appointment = AppointmentModel(
         id: existingAppointment?.id,
         subject: event.summary ?? '',
@@ -478,6 +487,17 @@ class CalendarSyncService extends ChangeNotifier {
 
     debugPrint(
         "✅ Import abgeschlossen: $importCount neue Termine, $updateCount aktualisiert, $deleteCount gelöscht, $skippedCount übersprungen, $skippedAppExportedCount von App exportierte übersprungen, $newCategoryCount neue Kategorien erstellt");
+    
+    // Bereinige doppelte Mappings nach dem Import, um zukünftige Duplikate zu vermeiden
+    try {
+      final mappingRepo = GoogleEventMappingRepository();
+      final cleanedCount = await mappingRepo.cleanupDuplicateMappings();
+      if (cleanedCount > 0) {
+        debugPrint("🧹 $cleanedCount doppelte Mapping-Einträge bereinigt");
+      }
+    } catch (e) {
+      debugPrint("⚠️ Fehler beim Bereinigen doppelter Mappings: $e");
+    }
   }
 
   /// Gemeinsame Export-Funktion: Überträgt Termine aus der lokalen Datenbank zum Provider (Google).
@@ -526,6 +546,13 @@ class CalendarSyncService extends ChangeNotifier {
             appointment.externalIdGoogle == null ||
             appointment.externalIdGoogle!.isEmpty)
         .toList();
+
+    // DEBUG-ANMERKUNG: Die obige Filterung filtert nur Termine OHNE Google-ID
+    // Dies ist korrekt für den Export, da wir nur neue Termine exportieren wollen.
+    // Termine mit Google-ID wurden entweder bereits exportiert oder von Google importiert.
+    debugPrint("📊 Ursprüngliche Anzahl Termine: ${allAppointments.length}");
+    debugPrint("📊 Anzahl Termine zum Export: ${appointments.length}");
+    debugPrint("📊 Oversprungene Termine (bereits mit Google synchronisiert): ${allAppointments.length - appointments.length}");
 
     // Lade alle Kategorien für das Mapping
     final categories = await categoryRepository.getAllCategories();
@@ -773,70 +800,27 @@ class CalendarSyncService extends ChangeNotifier {
     //debugPrint("✅ Wiederholungsregel-Prüfung abgeschlossen: $fixedCount Termine korrigiert");
   }
 
-  /// Führt sofort einen vollständigen Synchronisierungsprozess durch
-  /// (Import und Export nacheinander).
-  ///
-  /// Wenn categoryOption=2 verwendet wird, werden Kategorien beim Import basierend auf den Kalendernamen erstellt.
-  /// Beim Export werden Termine in die entsprechenden Google-Kalender eingefügt, deren Namen mit den Kategorien übereinstimmen.
-  Future<void> syncGoogleCalendarNow(
-      {int? categoryOption, bool useCategoryMapping = true}) async {
-    debugPrint("Starte vollständige Synchronisierung mit Google Calendar");
+  /// Startet sofort eine Synchronisation mit Google Calendar
+  Future<void> syncGoogleCalendarNow() async {
+    // Debug-Info für den Beginn des Synchronisationsprozesses
+    debugPrint("🔄 Starte Google Calendar Synchronisierung...");
 
-    // Zuerst fehlerhafte Wiederholungsregeln korrigieren
-    await fixInvalidRecurrenceRules();
+    // Überprüfe, ob der Benutzer bei Google angemeldet ist
+    await calendarProvider.autoSignIn();
 
-    try {
-      // Aktiviere das Sync-Flag für alle Termine automatisch
-      final updatedCount =
-          await appointmentRepository.enableSyncForAllAppointments();
-      debugPrint("Sync-Flag für $updatedCount Termine aktiviert");
+    // Import - Importiere Termine von Google in die App
+    debugPrint("📥 SCHRITT 1: Importiere Termine von Google...");
+    await importAppointments();
 
-      // 1. Import durchführen
-      debugPrint("Starte Import von Google Calendar Terminen...");
-      await importAppointments(categoryOption: categoryOption);
-      debugPrint("Import von Google Calendar abgeschlossen");
+    // Kurze Pause, um sicherzustellen, dass alle DB-Operationen abgeschlossen sind
+    await Future.delayed(const Duration(milliseconds: 500));
 
-      // 2. Export durchführen (mit verbessertem Kategorie-zu-Kalender-Mapping)
-      debugPrint("Starte Export zu Google Calendar...");
+    // Export - Exportiere lokale Termine zu Google
+    debugPrint("📤 SCHRITT 2: Exportiere lokale Termine zu Google...");
+    await exportAppointments();
 
-      if (useCategoryMapping) {
-        // Wenn Kategorie-Mapping gewünscht ist, verwenden wir nur die Standard-Export-Methode
-        debugPrint(
-            "📋 Verwende Standard-Export mit Kategorie-zu-Kalender-Zuordnung");
-        await exportAppointments();
-      } else {
-        // Nur wenn explizit kein Kategorie-Mapping gewünscht ist, versuchen wir den optimierten Export
-        bool exportSuccess = false;
-
-        // Wenn der optimierte GoogleCalendarSyncService verfügbar ist, verwende diesen für den Export
-        if (googleCalendarSyncService != null) {
-          exportSuccess = await efficientSyncWithGoogle();
-          if (!exportSuccess) {
-            // Fallback auf Standard-Export-Methode mit Kategorie-Mapping
-            debugPrint(
-                "Optimierter Export fehlgeschlagen, verwende Standard-Export mit Kategorie-Mapping");
-            await exportAppointments();
-          }
-        } else {
-          // Standard-Export-Methode verwenden (jetzt mit Kategorie-Mapping)
-          await exportAppointments();
-        }
-      }
-
-      debugPrint("Export zu Google Calendar abgeschlossen");
-
-      // 3. Lokal gelöschte Termine auch in Google löschen
-      if (googleCalendarSyncService != null) {
-        debugPrint("Bereinige lokal gelöschte Termine in Google Calendar...");
-        await googleCalendarSyncService!.deleteMissingLocalAppointments();
-        debugPrint("Bereinigung abgeschlossen");
-      }
-    } catch (e) {
-      debugPrint("Fehler bei der Synchronisierung: $e");
-    }
-
-    debugPrint(
-        "Vollständige Synchronisierung mit Google Calendar abgeschlossen");
+    // Abschluss
+    debugPrint("✅ Google Calendar Synchronisation abgeschlossen");
   }
 
   /// Führt nur einen Import von Google Calendar durch

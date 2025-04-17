@@ -7,11 +7,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:Taqvimi/models/enums.dart';
 import '../database_helper.dart';
 import 'package:flutter/foundation.dart';
-
+///TODO: Erklären, was heir gemacht wird. Liste von den Funktionen kurz beschrieben in 1-3 Worten.
+///
 class PrayerTimeRepository {
   final DatabaseHelper dbHelper = DatabaseHelper();
 
-  // >>> NEU: Machen wir es einfach per Getter:
+  // Machen wir es einfach per Getter:
   DatabaseHelper get databaseHelper => dbHelper;
 
   // Prüft, ob wir schon das ganze Jahr im DB-Cache haben.

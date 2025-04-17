@@ -8,9 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:Taqvimi/localization/app_localizations.dart';
 // ThemeNotifier
 import 'package:Taqvimi/providers/theme_notifier.dart';
-// Projektmanagement
-import 'package:Taqvimi/providers/project_provider.dart';
-import 'package:Taqvimi/ui/pages/project_management_page.dart';
+
 // HomePage
 import 'package:Taqvimi/ui/pages/home_page.dart';
 // InitialLocationPage
@@ -134,10 +132,7 @@ void main() async {
         Provider(
           create: (_) => appointmentRepository,
         ),
-        // ProjectProvider hinzufügen
-        ChangeNotifierProvider(
-          create: (_) => ProjectProvider(),
-        ),
+        
       ],
       child: const MyApp(),
     ),
@@ -244,7 +239,6 @@ class _MyAppState extends State<MyApp> {
                 return const HomePage();
               },
             ),
-        '/project-management': (context) => const ProjectManagementPage(),
       },
       // Startroute definieren
       initialRoute: '/',

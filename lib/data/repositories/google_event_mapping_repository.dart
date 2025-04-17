@@ -2,6 +2,7 @@
 
 import 'package:sqflite/sqflite.dart';
 import '../database_helper.dart';
+import 'package:flutter/foundation.dart';
 
 class GoogleEventMapping {
   final int? id;
@@ -153,5 +154,65 @@ class GoogleEventMappingRepository {
       lastSyncedAt: today,
     );
     return await saveMapping(mapping);
+  }
+
+  // Findet ein Mapping anhand der Google Event ID
+  Future<GoogleEventMapping?> getMappingByGoogleId(String googleEventId) async {
+    final db = await dbHelper.database;
+    final maps = await db.query(
+      'google_event_mappings',
+      where: 'google_event_id = ?',
+      whereArgs: [googleEventId],
+    );
+    if (maps.isEmpty) return null;
+    return GoogleEventMapping.fromMap(maps.first);
+  }
+
+  // Neue Methode: Suche und bereinige doppelte Mappings
+  Future<int> cleanupDuplicateMappings() async {
+    final db = await dbHelper.database;
+    
+    // Hole alle GoogleEventIDs, die mehr als einmal vorkommen
+    final duplicateQuery = '''
+      SELECT google_event_id, COUNT(*) as count 
+      FROM google_event_mappings 
+      GROUP BY google_event_id 
+      HAVING count > 1
+    ''';
+    
+    final duplicates = await db.rawQuery(duplicateQuery);
+    int cleanedCount = 0;
+    
+    // Für jede doppelte ID
+    for (final dupMap in duplicates) {
+      final googleEventId = dupMap['google_event_id'] as String;
+      debugPrint("🧹 Bereinige doppelte Mappings für Google-Event-ID: $googleEventId");
+      
+      // Hole alle Mappings für diese ID
+      final mappings = await db.query(
+        'google_event_mappings',
+        where: 'google_event_id = ?',
+        whereArgs: [googleEventId],
+        orderBy: 'last_synced_at DESC', // Neueste zuerst
+      );
+      
+      // Behalte nur das neueste Mapping
+      if (mappings.length > 1) {
+        final newestMapping = mappings.first;
+        final newestId = newestMapping['id'] as int;
+        
+        // Lösche alle anderen Mappings für diese Google-ID
+        final deleteCount = await db.delete(
+          'google_event_mappings',
+          where: 'google_event_id = ? AND id != ?',
+          whereArgs: [googleEventId, newestId],
+        );
+        
+        debugPrint("✅ $deleteCount doppelte Mappings für Google-ID $googleEventId entfernt");
+        cleanedCount += deleteCount;
+      }
+    }
+    
+    return cleanedCount;
   }
 }
