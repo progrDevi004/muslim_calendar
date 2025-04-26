@@ -347,12 +347,24 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
     if (_isIos) {
       return CupertinoPageScaffold(
+        backgroundColor: CupertinoTheme.of(context).scaffoldBackgroundColor,
         navigationBar: CupertinoNavigationBar(
           middle: Text(loc.editAppointment),
-          trailing: CupertinoButton(
-            padding: EdgeInsets.zero,
-            child: const Icon(CupertinoIcons.pencil),
-            onPressed: _editAppointment,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                child: const Icon(CupertinoIcons.trash),
+                onPressed: _deleteAppointment,
+              ),
+              const SizedBox(width: 8),
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                child: const Icon(CupertinoIcons.pencil),
+                onPressed: _editAppointment,
+              ),
+            ],
           ),
         ),
         child: SafeArea(
@@ -363,6 +375,18 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
       return Scaffold(
         appBar: AppBar(
           title: Text(loc.editAppointment),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.delete),
+              tooltip: loc.delete,
+              onPressed: _deleteAppointment,
+            ),
+            IconButton(
+              icon: const Icon(Icons.edit),
+              tooltip: loc.edit,
+              onPressed: _editAppointment,
+            ),
+          ],
         ),
         body: _buildBody(loc),
       );
@@ -389,117 +413,381 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   }
 
   Widget _buildDetailsContent(AppLocalizations loc) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Überschrift
-        Text(
-          _appointment!.subject,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).textTheme.bodyLarge?.color,
-              ),
-        ),
-        const SizedBox(height: 8),
-
-        // Beschreibung
-        if ((_appointment!.notes?.isNotEmpty ?? false))
-          Card(
-            color: Theme.of(context).cardColor,
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.notes, color: Colors.grey),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _appointment!.notes!,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
-                          ),
-                    ),
-                  ),
-                ],
-              ),
+    if (_isIos) {
+      // iOS-optimized layout with cleaner design
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title with larger padding
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+            child: Text(
+              _appointment!.subject,
+              style:
+                  CupertinoTheme.of(context).textTheme.navLargeTitleTextStyle,
             ),
           ),
-        const SizedBox(height: 8),
 
-        // Kategorie
-        Card(
-          color: Theme.of(context).cardColor,
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
+          // Notes section
+          if (_appointment!.notes?.isNotEmpty ?? false) ...[
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Text(
+                loc.notes,
+                style: CupertinoTheme.of(context).textTheme.navTitleTextStyle,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
+                _appointment!.notes!,
+                style: CupertinoTheme.of(context).textTheme.textStyle,
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Divider(),
+            ),
+          ],
+
+          // Details section - without gray background
+          Padding(
+            padding: const EdgeInsets.only(
+                left: 16.0, right: 16.0, top: 16.0, bottom: 8.0),
+            child: Text(
+              loc.details,
+              style: CupertinoTheme.of(context).textTheme.navTitleTextStyle,
+            ),
+          ),
+
+          // Category
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Row(
               children: [
-                Icon(Icons.category, color: _category?.color ?? Colors.grey),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${loc.categoryLabel}: ${_category?.name ?? loc.privateCategory}',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).textTheme.bodyLarge?.color,
-                        ),
-                  ),
+                Icon(CupertinoIcons.tag,
+                    color: _category?.color ?? CupertinoColors.systemGrey),
+                const SizedBox(width: 10),
+                Text(
+                  loc.categoryLabel,
+                  style: CupertinoTheme.of(context).textTheme.textStyle,
+                ),
+                const Spacer(),
+                Text(
+                  _category?.name ?? loc.privateCategory,
+                  style:
+                      CupertinoTheme.of(context).textTheme.textStyle.copyWith(
+                            color: CupertinoColors.systemGrey,
+                          ),
                 ),
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 8),
 
-        // Start/End Times
-        Card(
-          color: Theme.of(context).cardColor,
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
+          // Start time
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.access_time_filled, color: Colors.green),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '${loc.startTime}: ${_formatDateTime(_computedStartTime)}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color:
-                                  Theme.of(context).textTheme.bodyLarge?.color,
-                            ),
-                      ),
-                    ),
-                  ],
+                const Icon(CupertinoIcons.time,
+                    color: CupertinoColors.systemGreen),
+                const SizedBox(width: 10),
+                Text(
+                  loc.startTime,
+                  style: CupertinoTheme.of(context).textTheme.textStyle,
                 ),
-                const Divider(),
-                Row(
-                  children: [
-                    const Icon(Icons.access_time, color: Colors.orange),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '${loc.endTime}: ${_formatDateTime(_computedEndTime)}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color:
-                                  Theme.of(context).textTheme.bodyLarge?.color,
-                            ),
-                      ),
-                    ),
-                  ],
+                const Spacer(),
+                Text(
+                  _formatDateTime(_computedStartTime),
+                  style:
+                      CupertinoTheme.of(context).textTheme.textStyle.copyWith(
+                            color: CupertinoColors.systemGrey,
+                          ),
                 ),
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 8),
 
-        // Standort, falls vorhanden
-        if (_appointment!.location != null &&
-            _appointment!.location!.isNotEmpty)
+          // End time
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Row(
+              children: [
+                const Icon(CupertinoIcons.time_solid,
+                    color: CupertinoColors.systemOrange),
+                const SizedBox(width: 10),
+                Text(
+                  loc.endTime,
+                  style: CupertinoTheme.of(context).textTheme.textStyle,
+                ),
+                const Spacer(),
+                Text(
+                  _formatDateTime(_computedEndTime),
+                  style:
+                      CupertinoTheme.of(context).textTheme.textStyle.copyWith(
+                            color: CupertinoColors.systemGrey,
+                          ),
+                ),
+              ],
+            ),
+          ),
+
+          // Location if available
+          if (_appointment!.location != null &&
+              _appointment!.location!.isNotEmpty)
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                children: [
+                  const Icon(CupertinoIcons.location_solid,
+                      color: CupertinoColors.systemRed),
+                  const SizedBox(width: 10),
+                  Text(
+                    loc.location,
+                    style: CupertinoTheme.of(context).textTheme.textStyle,
+                  ),
+                  const Spacer(),
+                  Text(
+                    _appointment!.location!,
+                    style:
+                        CupertinoTheme.of(context).textTheme.textStyle.copyWith(
+                              color: CupertinoColors.systemGrey,
+                            ),
+                  ),
+                ],
+              ),
+            ),
+
+          // All day if true
+          if (_appointment!.isAllDay)
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                children: [
+                  const Icon(CupertinoIcons.calendar,
+                      color: CupertinoColors.systemBlue),
+                  const SizedBox(width: 10),
+                  Text(
+                    loc.allDay,
+                    style: CupertinoTheme.of(context).textTheme.textStyle,
+                  ),
+                  const Spacer(),
+                  Text(
+                    loc.yes,
+                    style:
+                        CupertinoTheme.of(context).textTheme.textStyle.copyWith(
+                              color: CupertinoColors.systemGrey,
+                            ),
+                  ),
+                ],
+              ),
+            ),
+
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            child: Divider(),
+          ),
+
+          // Prayer time details if related
+          if (_appointment!.isRelatedToPrayerTimes) ...[
+            Padding(
+              padding: const EdgeInsets.only(
+                  left: 16.0, right: 16.0, top: 16.0, bottom: 8.0),
+              child: Text(
+                loc.prayerTimeDetails,
+                style: CupertinoTheme.of(context).textTheme.navTitleTextStyle,
+              ),
+            ),
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                children: [
+                  const Icon(CupertinoIcons.star_fill,
+                      color: CupertinoColors.systemGreen),
+                  const SizedBox(width: 10),
+                  Text(
+                    loc.relatedToPrayerTimes,
+                    style: CupertinoTheme.of(context).textTheme.textStyle,
+                  ),
+                ],
+              ),
+            ),
+            if (_appointment!.prayerTime != null)
+              Padding(
+                padding:
+                    const EdgeInsets.only(left: 46.0, right: 16.0, bottom: 8.0),
+                child: Text(
+                  loc.getPrayerTimeLabel(_appointment!.prayerTime!),
+                  style:
+                      CupertinoTheme.of(context).textTheme.textStyle.copyWith(
+                            color: CupertinoColors.systemGrey,
+                          ),
+                ),
+              ),
+            if (_appointment!.timeRelation != null &&
+                _appointment!.prayerTime != null)
+              Padding(
+                padding:
+                    const EdgeInsets.only(left: 46.0, right: 16.0, bottom: 8.0),
+                child: Text(
+                  '${loc.getTimeRelationLabel(_appointment!.timeRelation!)} ${_appointment!.minutesBeforeAfter != null ? "(${_appointment!.minutesBeforeAfter} ${loc.minutesBeforeAfter})" : ""}',
+                  style:
+                      CupertinoTheme.of(context).textTheme.textStyle.copyWith(
+                            color: CupertinoColors.systemGrey,
+                          ),
+                ),
+              ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Divider(),
+            ),
+          ],
+
+          // Recurrence details if present
+          if (_appointment!.recurrenceRule != null &&
+              _appointment!.recurrenceRule!.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(
+                  left: 16.0, right: 16.0, top: 16.0, bottom: 8.0),
+              child: Text(
+                loc.recurrence,
+                style: CupertinoTheme.of(context).textTheme.navTitleTextStyle,
+              ),
+            ),
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                children: [
+                  const Icon(CupertinoIcons.repeat,
+                      color: CupertinoColors.systemPurple),
+                  const SizedBox(width: 10),
+                  Text(
+                    _getRecurrenceTypeText(_appointment!.recurrenceRule!, loc),
+                    style: CupertinoTheme.of(context).textTheme.textStyle,
+                  ),
+                ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Divider(),
+            ),
+          ],
+
+          // Reminder details if present
+          if (_appointment!.reminderMinutesBefore != null &&
+              _appointment!.reminderMinutesBefore! > 0) ...[
+            Padding(
+              padding: const EdgeInsets.only(
+                  left: 16.0, right: 16.0, top: 16.0, bottom: 8.0),
+              child: Text(
+                loc.reminder,
+                style: CupertinoTheme.of(context).textTheme.navTitleTextStyle,
+              ),
+            ),
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                children: [
+                  const Icon(CupertinoIcons.bell_fill,
+                      color: CupertinoColors.systemPurple),
+                  const SizedBox(width: 10),
+                  Text(
+                    _formatReminderText(
+                        _appointment!.reminderMinutesBefore!, loc),
+                    style: CupertinoTheme.of(context).textTheme.textStyle,
+                  ),
+                ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Divider(),
+            ),
+          ],
+
+          // Google Sync Status if available
+          if (_appointment!.externalIdGoogle != null)
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+              child: Row(
+                children: [
+                  const Icon(CupertinoIcons.check_mark_circled_solid,
+                      color: CupertinoColors.systemGreen, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _appointment!.lastSyncedAt != null
+                          ? "${loc.lastSync}: ${DateFormat('dd.MM.yyyy, HH:mm').format(_appointment!.lastSyncedAt!)}"
+                          : loc.syncedWithGoogle,
+                      style: CupertinoTheme.of(context)
+                          .textTheme
+                          .textStyle
+                          .copyWith(
+                            color: CupertinoColors.systemGrey,
+                            fontSize: 14,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      );
+    } else {
+      // Existing Material Design Layout for Android and other platforms
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Überschrift
+          Text(
+            _appointment!.subject,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
+          ),
+          const SizedBox(height: 8),
+
+          // Beschreibung
+          if ((_appointment!.notes?.isNotEmpty ?? false))
+            Card(
+              color: Theme.of(context).cardColor,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.notes, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _appointment!.notes!,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color:
+                                  Theme.of(context).textTheme.bodyLarge?.color,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: 8),
+
+          // Kategorie
           Card(
             color: Theme.of(context).cardColor,
             margin: const EdgeInsets.symmetric(vertical: 8),
@@ -507,11 +795,11 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
               padding: const EdgeInsets.all(12.0),
               child: Row(
                 children: [
-                  const Icon(Icons.location_on, color: Colors.redAccent),
+                  Icon(Icons.category, color: _category?.color ?? Colors.grey),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '${loc.location}: ${_appointment!.location!}',
+                      '${loc.categoryLabel}: ${_category?.name ?? loc.privateCategory}',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Theme.of(context).textTheme.bodyLarge?.color,
                           ),
@@ -521,89 +809,121 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
               ),
             ),
           ),
+          const SizedBox(height: 8),
 
-        // Gebetszeiten-Info + Ganztägig
-        // FIX: Nur anzeigen, wenn mindestens eine Bedingung true ist.
-        if (_appointment!.isAllDay || _appointment!.isRelatedToPrayerTimes)
+          // Start/End Times
           Card(
             color: Theme.of(context).cardColor,
             margin: const EdgeInsets.symmetric(vertical: 8),
             child: Padding(
               padding: const EdgeInsets.all(12.0),
-              child: Row(
+              child: Column(
                 children: [
-                  if (_appointment!.isAllDay) ...[
-                    const Icon(Icons.calendar_today, color: Colors.blue),
-                    const SizedBox(width: 8),
-                    Text(
-                      loc.allDay,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
-                          ),
-                    ),
-                    const Spacer(),
-                  ],
-                  if (_appointment!.isRelatedToPrayerTimes) ...[
-                    const Icon(Icons.star, color: Colors.green),
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time_filled, color: Colors.green),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${loc.startTime}: ${_formatDateTime(_computedStartTime)}',
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodyLarge
+                                        ?.color,
+                                  ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time, color: Colors.orange),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${loc.endTime}: ${_formatDateTime(_computedEndTime)}',
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodyLarge
+                                        ?.color,
+                                  ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Standort, falls vorhanden
+          if (_appointment!.location != null &&
+              _appointment!.location!.isNotEmpty)
+            Card(
+              color: Theme.of(context).cardColor,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.location_on, color: Colors.redAccent),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                loc.relatedToPrayerTimes,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: Theme.of(context)
-                                          .textTheme
-                                          .bodyLarge
-                                          ?.color,
-                                    ),
-                              ),
-                              if (_appointment!.prayerTime != null) ...[
-                                Text(
-                                  ': ',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        color: Theme.of(context)
-                                            .textTheme
-                                            .bodyLarge
-                                            ?.color,
-                                      ),
-                                ),
-                                Text(
-                                  loc.getPrayerTimeLabel(
-                                      _appointment!.prayerTime!),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context)
-                                            .textTheme
-                                            .bodyLarge
-                                            ?.color,
-                                      ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          if (_appointment!.timeRelation != null &&
-                              _appointment!.prayerTime != null) ...[
-                            const SizedBox(height: 4),
+                      child: Text(
+                        '${loc.location}: ${_appointment!.location!}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color:
+                                  Theme.of(context).textTheme.bodyLarge?.color,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // Gebetszeiten-Info + Ganztägig
+          // FIX: Nur anzeigen, wenn mindestens eine Bedingung true ist.
+          if (_appointment!.isAllDay || _appointment!.isRelatedToPrayerTimes)
+            Card(
+              color: Theme.of(context).cardColor,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Row(
+                  children: [
+                    if (_appointment!.isAllDay) ...[
+                      const Icon(Icons.calendar_today, color: Colors.blue),
+                      const SizedBox(width: 8),
+                      Text(
+                        loc.allDay,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color:
+                                  Theme.of(context).textTheme.bodyLarge?.color,
+                            ),
+                      ),
+                      const Spacer(),
+                    ],
+                    if (_appointment!.isRelatedToPrayerTimes) ...[
+                      const Icon(Icons.star, color: Colors.green),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Row(
                               children: [
                                 Text(
-                                  '${loc.getTimeRelationLabel(_appointment!.timeRelation!)} ',
+                                  loc.relatedToPrayerTimes,
                                   style: Theme.of(context)
                                       .textTheme
-                                      .bodySmall
+                                      .bodyMedium
                                       ?.copyWith(
                                         color: Theme.of(context)
                                             .textTheme
@@ -611,9 +931,43 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                                             ?.color,
                                       ),
                                 ),
-                                if (_appointment!.minutesBeforeAfter != null)
+                                if (_appointment!.prayerTime != null) ...[
                                   Text(
-                                    '(${_appointment!.minutesBeforeAfter} ${loc.minutesBeforeAfter})',
+                                    ': ',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .textTheme
+                                              .bodyLarge
+                                              ?.color,
+                                        ),
+                                  ),
+                                  Text(
+                                    loc.getPrayerTimeLabel(
+                                        _appointment!.prayerTime!),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: Theme.of(context)
+                                              .textTheme
+                                              .bodyLarge
+                                              ?.color,
+                                        ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            if (_appointment!.timeRelation != null &&
+                                _appointment!.prayerTime != null) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Text(
+                                    '${loc.getTimeRelationLabel(_appointment!.timeRelation!)} ',
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodySmall
@@ -624,138 +978,96 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                                               ?.color,
                                         ),
                                   ),
-                              ],
-                            ),
+                                  if (_appointment!.minutesBeforeAfter != null)
+                                    Text(
+                                      '(${_appointment!.minutesBeforeAfter} ${loc.minutesBeforeAfter})',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .textTheme
+                                                .bodyLarge
+                                                ?.color,
+                                          ),
+                                    ),
+                                ],
+                              ),
+                            ],
                           ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
+          // NEU: Wiederholungsregel anzeigen, falls vorhanden
+          if (_appointment!.recurrenceRule != null &&
+              _appointment!.recurrenceRule!.isNotEmpty)
+            Card(
+              color: Theme.of(context).cardColor,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Row(
+                  children: [
+                    const Icon(Icons.repeat, color: Colors.purple),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            loc.recurrence,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodyLarge
+                                      ?.color,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _getRecurrenceTypeText(
+                                _appointment!.recurrenceRule!, loc),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge
+                                          ?.color,
+                                    ),
+                          ),
                         ],
                       ),
                     ),
                   ],
-                ],
-              ),
-            ),
-          ),
-
-        // NEU: Wiederholungsregel anzeigen, falls vorhanden
-        if (_appointment!.recurrenceRule != null &&
-            _appointment!.recurrenceRule!.isNotEmpty)
-          Card(
-            color: Theme.of(context).cardColor,
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Row(
-                children: [
-                  const Icon(Icons.repeat, color: Colors.purple),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          loc.recurrence,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context)
-                                        .textTheme
-                                        .bodyLarge
-                                        ?.color,
-                                  ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _getRecurrenceTypeText(
-                              _appointment!.recurrenceRule!, loc),
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .textTheme
-                                        .bodyLarge
-                                        ?.color,
-                                  ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        // Erinnerung anzeigen (wenn vorhanden)
-        if (_appointment!.reminderMinutesBefore != null &&
-            _appointment!.reminderMinutesBefore! > 0)
-          Card(
-            color: Theme.of(context).cardColor,
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Row(
-                children: [
-                  const Icon(Icons.notifications, color: Colors.purple),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _formatReminderText(
-                          _appointment!.reminderMinutesBefore!, loc),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
-                          ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-        const SizedBox(height: 16),
-
-        // Buttons - Neu angeordnet, um Overflow zu vermeiden
-        Column(
-          children: [
-            // Erste Zeile: Löschen und Bearbeiten
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: _buildAdaptiveOutlinedButton(
-                    icon: Icons.delete,
-                    label: loc.delete,
-                    onPressed: _deleteAppointment,
-                  ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildAdaptiveFilledButton(
-                    icon: Icons.edit,
-                    label: loc.edit,
-                    onPressed: _editAppointment,
-                  ),
-                ),
-              ],
+              ),
             ),
-
-            // Zweite Zeile: Google Sync Button (volle Breite)
-            const SizedBox(height: 12),
-
-            // Info-Anzeige über den Google-Sync-Status
-            if (_appointment!.externalIdGoogle != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
+          // Erinnerung anzeigen (wenn vorhanden)
+          if (_appointment!.reminderMinutesBefore != null &&
+              _appointment!.reminderMinutesBefore! > 0)
+            Card(
+              color: Theme.of(context).cardColor,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
                 child: Row(
                   children: [
-                    const Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
-                      size: 18,
-                    ),
+                    const Icon(Icons.notifications, color: Colors.purple),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        _appointment!.lastSyncedAt != null
-                            ? "Zuletzt synchronisiert: ${DateFormat('dd.MM.yyyy, HH:mm').format(_appointment!.lastSyncedAt!)}"
-                            : "Termin mit Google Kalender synchronisiert",
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        _formatReminderText(
+                            _appointment!.reminderMinutesBefore!, loc),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color:
                                   Theme.of(context).textTheme.bodyLarge?.color,
                             ),
@@ -764,27 +1076,73 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                   ],
                 ),
               ),
+            ),
 
-            // SizedBox(
-            //   width: double.infinity,
-            //   child: _buildAdaptiveOutlinedButton(
-            //     icon: _appointment!.syncWithGoogleCalendar
-            //         ? Icons.sync
-            //         : Icons.sync_disabled,
-            //     label: _appointment!.externalIdGoogle != null
-            //         ? "Mit Google erneut synchronisieren"
-            //         : "Mit Google synchronisieren",
-            //     onPressed: () async {
-            //       // Direkt die Synchronisierungsmethode aufrufen
-            //       debugPrint("Google Sync Button wurde gedrückt");
-            //       await _syncWithGoogleCalendar();
-            //     },
-            //   ),
-            // ),
-          ],
-        ),
-      ],
-    );
+          const SizedBox(height: 16),
+
+          // Buttons werden nur auf Nicht-iOS-Geräten angezeigt
+          if (!_isIos)
+            Column(
+              children: [
+                // Erste Zeile: Löschen und Bearbeiten
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: _buildAdaptiveOutlinedButton(
+                        icon: Icons.delete,
+                        label: loc.delete,
+                        onPressed: _deleteAppointment,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildAdaptiveFilledButton(
+                        icon: Icons.edit,
+                        label: loc.edit,
+                        onPressed: _editAppointment,
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Zweite Zeile: Google Sync Button (volle Breite)
+                const SizedBox(height: 12),
+
+                // Info-Anzeige über den Google-Sync-Status (bleibt bestehen)
+                if (_appointment!.externalIdGoogle != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.check_circle,
+                          color: Colors.green,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _appointment!.lastSyncedAt != null
+                                ? "Zuletzt synchronisiert: ${DateFormat('dd.MM.yyyy, HH:mm').format(_appointment!.lastSyncedAt!)}"
+                                : "Termin mit Google Kalender synchronisiert",
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge
+                                          ?.color,
+                                    ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+        ],
+      );
+    }
   }
 
   /// Adaptive Bestätigungs-Dialog

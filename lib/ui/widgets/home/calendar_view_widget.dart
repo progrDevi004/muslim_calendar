@@ -18,6 +18,7 @@ class CalendarViewWidget extends StatelessWidget {
   final Function(CalendarView) onViewChanged;
   final Function(DateTime?) onSelectedDateChanged;
   final VoidCallback onAppointmentsChanged;
+  final List<TimeRegion> specialTimeRegions;
 
   const CalendarViewWidget({
     super.key,
@@ -33,10 +34,34 @@ class CalendarViewWidget extends StatelessWidget {
     required this.onViewChanged,
     required this.onSelectedDateChanged,
     required this.onAppointmentsChanged,
+    this.specialTimeRegions = const [],
   });
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('🔍 CalendarViewWidget.build - mit ${specialTimeRegions.length} TimeRegions');
+    
+    // Debug: Zeige Details für TimeRegions, wenn vorhanden
+    if (specialTimeRegions.isNotEmpty) {
+      final firstRegion = specialTimeRegions.first;
+      debugPrint('🔍 Erste TimeRegion: ${firstRegion.text} von ${firstRegion.startTime} bis ${firstRegion.endTime}');
+      
+      // Gruppiere nach Tagen für besseres Debugging
+      final Map<String, int> regionCountByDay = {};
+      for (var region in specialTimeRegions) {
+        final day = "${region.startTime.year}-${region.startTime.month.toString().padLeft(2, '0')}-${region.startTime.day.toString().padLeft(2, '0')}";
+        regionCountByDay[day] = (regionCountByDay[day] ?? 0) + 1;
+      }
+      
+      // Zeige Anzahl der Regionen pro Tag
+      debugPrint('🔍 TimeRegion-Verteilung nach Tagen:');
+      regionCountByDay.forEach((day, count) {
+        debugPrint('🔍   $day: $count Regionen');
+      });
+    } else {
+      debugPrint('⚠️ Keine TimeRegions verfügbar!');
+    }
+    
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
       child: Localizations.override(
@@ -56,6 +81,7 @@ class CalendarViewWidget extends StatelessWidget {
           dataSource: dataSource,
           allowAppointmentResize: true,
           showDatePickerButton: true,
+          specialRegions: specialTimeRegions,
           monthViewSettings: const MonthViewSettings(
             appointmentDisplayMode: MonthAppointmentDisplayMode.indicator,
             showAgenda: true,
@@ -204,6 +230,9 @@ class CalendarViewWidget extends StatelessWidget {
             // Wenn sich die Ansicht ändert, aktualisieren wir die Variablen
             if (calendarController.view != null) {
               CalendarView newView = calendarController.view!;
+
+              // Debug-Info über verfügbare TimeRegions bei Ansichtswechsel
+              debugPrint('🔍 Ansichtswechsel zu $newView - ${specialTimeRegions.length} TimeRegions verfügbar');
 
               // Nur wenn sich die Ansicht tatsächlich geändert hat
               if (newView != selectedView) {

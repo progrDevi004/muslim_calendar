@@ -9,9 +9,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_dialog.dart';
 import 'package:Taqvimi/ui/components/platform_adaptive_list_tile.dart';
-import 'package:Taqvimi/ui/components/platform_adaptive_navigation.dart';
 import 'package:Taqvimi/ui/components/app_drawer.dart';
-import 'package:Taqvimi/ui/components/platform_adaptive_scaffold_fab.dart';
 
 // Repositories & Services
 import 'package:Taqvimi/data/repositories/appointment_repository.dart';
@@ -123,31 +121,28 @@ class HomePageState extends State<HomePage> {
   int _selectedNavIndex = 0;
 
   CalendarView _selectedView = CalendarView.month;
-  late CalendarController _calendarController;
+  CalendarController _calendarController = CalendarController();
   CalendarDataSource? _dataSource;
 
-  final AppointmentRepository _appointmentRepo = AppointmentRepository();
-  final PrayerTimeRepository _prayerTimeRepo = PrayerTimeRepository();
-  final CategoryRepository _categoryRepo = CategoryRepository();
-
-  final PrayerTimeAppointmentAdapter _adapter = PrayerTimeAppointmentAdapter(
-    prayerTimeService: PrayerTimeService(PrayerTimeRepository()),
-    recurrenceService: RecurrenceService(),
-  );
-
-  DateTime? _selectedDate;
+  // Kalenderdatum (immer aktuelles Datum als Default)
+  DateTime _selectedDate = DateTime.now();
   List<CategoryModel> _allCategories = [];
   Set<int> _selectedCategoryIds = {};
+
+  // Flag, ob Termine gerade geladen werden
+  bool _isLoadingAppointments = false;
+
+  // Repositories und Services
+  late PrayerTimeAppointmentAdapter _adapter;
+  late AppointmentRepository _appointmentRepo;
+  late PrayerTimeRepository _prayerTimeRepo;
+  late PrayerTimeService _prayerTimeService;
+  late CategoryRepository _categoryRepo;
+  late CalendarSyncService _calendarSyncService;
 
   DashboardPageState? _dashboardPageState;
 
   bool _use24hFormat = false;
-
-  // Referenz auf den CalendarSyncService
-  late CalendarSyncService _calendarSyncService;
-
-  // Referenz auf den PrayerTimeService hinzufügen
-  PrayerTimeService? _prayerTimeService;
 
   // Dezenter Farbton für Gebetszeiten (BlueGrey 300)
   static const Color _prayerTimeColor = Color(0xFF90A4AE);
@@ -158,57 +153,80 @@ class HomePageState extends State<HomePage> {
   bool _showPrayerTimesInWeekView = true;
   bool _showPrayerTimesInMonthView = false;
 
-  // Variablen am Anfang der HomePageState-Klasse hinzufügen
-  bool _isLoadingAppointments = false;
-
-  // Schlüssel für den Scaffold, um den Drawer zu öffnen
+  // Key für Scaffolding (für Drawer-Zugriff)
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  final List<TimeRegion> _prayerTimeRegions = <TimeRegion>[];
+
   @override
+
+  /// Initialisiert Kalender-Controller, Standardansicht, lädt Benutzereinstellungen,
+  /// Kategorien, Gebetszeiten und Termine für die App-Startansicht
   void initState() {
     super.initState();
+    debugPrint('📅 HomePage initState');
 
-    _calendarController = CalendarController();
-    _selectedNavIndex = 0; // Standard: Dashboard
+    // Setze Standardansicht auf Tag
+    _selectedView = CalendarView.day;
+    // Controller mit der ausgewählten Ansicht initialisieren
+    _calendarController.view = _selectedView;
 
-    // Standardmäßig heute auswählen
-    _selectedDate = DateTime.now();
+    // Datum im Controller setzen
     _calendarController.selectedDate = _selectedDate;
     _calendarController.displayDate = _selectedDate;
 
-    // Zuerst die Benutzereinstellungen laden
-    _loadUserPrefs().then((_) {
-      // Dann die Kalenderansicht aktualisieren
-      _updateCalendarViewFromNavIndex();
+    // Lade Benutzerpräferenzen
+    _loadUserPrefs();
 
-      // Kategorien laden
-      _loadAllCategories();
-
-      // Prüfen, ob die Import-Option bereits gesetzt wurde
-      _checkImportSettingsInitialized();
-
-      // Gebetszeiten für das ganze Jahr laden, falls nötig
-      _fetchYearlyPrayerTimesIfNeeded().then((_) {
-        // Termine laden, nachdem alle Vorbereitungen abgeschlossen sind
-        loadAllAppointments();
-      });
+    // Die ersten Termine direkt laden, weitere Initialisierung in didChangeDependencies
+    Future.microtask(() {
+      // Sichere Methode, die nur mit lokalen Daten arbeitet
+      _loadStaticAppointments();
     });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    debugPrint('📅 HomePage didChangeDependencies');
 
-    // CalendarSyncService registrieren
-    _calendarSyncService =
-        Provider.of<CalendarSyncService>(context, listen: false);
+    try {
+      // Services und Repositories initialisieren
+      _prayerTimeRepo =
+          Provider.of<PrayerTimeRepository>(context, listen: false);
+      _appointmentRepo =
+          Provider.of<AppointmentRepository>(context, listen: false);
+      _categoryRepo = Provider.of<CategoryRepository>(context, listen: false);
+      _prayerTimeService =
+          Provider.of<PrayerTimeService>(context, listen: false);
+      _calendarSyncService =
+          Provider.of<CalendarSyncService>(context, listen: false);
 
-    // PrayerTimeService registrieren und Listener hinzufügen
-    _prayerTimeService = Provider.of<PrayerTimeService>(context, listen: false);
-    _prayerTimeService!.addListener(_onPrayerTimesChanged);
+      // RecurrenceService für den Adapter holen
+      final recurrenceService =
+          Provider.of<RecurrenceService>(context, listen: false);
 
-    // Listener hinzufügen, um auf Kategorieänderungen zu reagieren
-    _calendarSyncService.addListener(_onCategoriesChanged);
+      // Adapter für die Terminumwandlung erstellen
+      _adapter = PrayerTimeAppointmentAdapter(
+        prayerTimeService: _prayerTimeService,
+        recurrenceService: recurrenceService,
+      );
+
+      // Jetzt können wir sicher die Gebetszeiten laden
+      _fetchYearlyPrayerTimesIfNeeded();
+
+      // PrayerTimeService Listener hinzufügen
+      _prayerTimeService.addListener(_onPrayerTimesChanged);
+
+      // Listener hinzufügen, um auf Kategorieänderungen zu reagieren
+      _calendarSyncService.addListener(_onCategoriesChanged);
+
+      // Komplette Termindaten laden
+      loadAllAppointments();
+    } catch (e) {
+      debugPrint(
+          '❌ Fehler bei der Initialisierung in didChangeDependencies: $e');
+    }
   }
 
   @override
@@ -217,28 +235,20 @@ class HomePageState extends State<HomePage> {
     _calendarSyncService.removeListener(_onCategoriesChanged);
 
     // PrayerTimeService Listener entfernen
-    _prayerTimeService!.removeListener(_onPrayerTimesChanged);
+    _prayerTimeService.removeListener(_onPrayerTimesChanged);
 
     super.dispose();
   }
 
   // Wird aufgerufen, wenn sich Gebetszeiten ändern
   void _onPrayerTimesChanged() {
-    if (!mounted) return;
-
     debugPrint(
-        "🕌 HomePage: Gebetszeiten wurden geändert, lade Termine neu...");
-
-    // Gebetszeiten für das ganze Jahr neu laden, falls nötig
-    _fetchYearlyPrayerTimesIfNeeded(forceReload: true).then((_) {
-      // Termine neu laden
+        '📅 _onPrayerTimesChanged: Gebetszeiten haben sich geändert, lade Termine neu');
+    // Wenn sich die Gebetszeiten ändern (z.B. durch Location-Änderung),
+    // sollten wir die Termine neu laden
+    if (mounted) {
       loadAllAppointments();
-
-      // Dashboard aktualisieren, falls es aktiv ist
-      if (_selectedNavIndex == 0) {
-        _dashboardPageState?.reloadData();
-      }
-    });
+    }
   }
 
   // Wird aufgerufen, wenn sich Kategorien ändern
@@ -284,25 +294,77 @@ class HomePageState extends State<HomePage> {
     });
   }
 
-  /// Prüft, ob bereits das ganze Jahr an Gebetszeiten gespeichert wurde.
+  /// Lädt die Gebetszeiten für ein Jahr, falls sie noch nicht in der Datenbank sind
   Future<void> _fetchYearlyPrayerTimesIfNeeded(
       {bool forceReload = false}) async {
-    final prefs = await SharedPreferences.getInstance();
-    String? country = prefs.getString('defaultCountry');
-    String? city = prefs.getString('defaultCity');
+    try {
+      debugPrint(
+          '📅 Prüfe, ob Gebetszeiten für das ganze Jahr geladen werden müssen');
 
-    // Prüfen, ob die Standorteinstellungen fehlen
-    if (country == null || city == null) {
-      // Da diese Methode von verschiedenen Stellen aufgerufen werden kann,
-      // können wir hier keine UI-Fehlermeldung anzeigen
-      // Die aufrufende Methode muss sich darum kümmern
-      return; // Abbrechen, bis die Einstellungen gesetzt sind
+      if (_prayerTimeRepo == null) {
+        debugPrint(
+            '❌ _fetchYearlyPrayerTimesIfNeeded: _prayerTimeRepo ist noch nicht initialisiert');
+        return;
+      }
+
+      // Aktuelle Zeit
+      final now = DateTime.now();
+
+      // Wir laden Gebetszeiten für 3 Monate vor dem aktuellen Monat bis Ende des nächsten Jahres
+      final currentYear = now.year;
+      final currentMonth = now.month;
+
+      // Berechne Startjahr und -monat (3 Monate zurück)
+      final startYear = currentMonth <= 3 ? currentYear - 1 : currentYear;
+      final startMonth =
+          currentMonth <= 3 ? currentMonth + 9 : currentMonth - 3;
+
+      debugPrint(
+          '📅 Lade Gebetszeiten von $startYear/$startMonth bis ${currentYear + 1}/$currentMonth');
+
+      // Standort aus SharedPreferences holen
+      final prefs = await SharedPreferences.getInstance();
+      final country = prefs.getString('defaultCountry');
+      final city = prefs.getString('defaultCity');
+
+      if (country == null || city == null) {
+        debugPrint(
+            '❌ Land oder Stadt nicht definiert - keine jährlichen Gebetszeiten geladen');
+        return;
+      }
+
+      final location = "${city.trim()},${country.trim()}";
+
+      // Lade Gebetszeiten für das Vorjahr, falls unser Startdatum ins Vorjahr reicht
+      if (startYear < currentYear) {
+        await _prayerTimeRepo!.fetchAndSaveYearlyPrayerTimes(
+          startYear,
+          location,
+          forceReload: forceReload,
+        );
+        debugPrint(
+            '✅ Gebetszeiten für Vorjahr $startYear wurden geladen (forceReload: $forceReload)');
+      }
+
+      // Lade Gebetszeiten für das aktuelle Jahr
+      await _prayerTimeRepo!.fetchAndSaveYearlyPrayerTimes(
+        currentYear,
+        location,
+        forceReload: forceReload,
+      );
+
+      // Lade Gebetszeiten für das nächste Jahr
+      await _prayerTimeRepo!.fetchAndSaveYearlyPrayerTimes(
+        currentYear + 1,
+        location,
+        forceReload: forceReload,
+      );
+
+      debugPrint(
+          '✅ Gebetszeiten für den Zeitraum $startYear bis ${currentYear + 1} wurden erfolgreich geladen');
+    } catch (e) {
+      debugPrint('❌ Fehler in _fetchYearlyPrayerTimesIfNeeded: $e');
     }
-
-    final location = '${city.trim()},${country.trim()}'.toLowerCase();
-    final now = DateTime.now();
-    await _prayerTimeRepo.fetchAndSaveYearlyPrayerTimes(now.year, location,
-        forceReload: forceReload);
   }
 
   /// Updated den CalendarView und lädt neu
@@ -379,168 +441,232 @@ class HomePageState extends State<HomePage> {
   }
 
   /// Lädt alle normalen Appointments plus Gebetszeiten (falls aktiviert)
-  Future<void> loadAllAppointments() async {
-    // Verhindere mehrfache gleichzeitige Aufrufe
-    if (_isLoadingAppointments) return;
+  Future<void> loadAllAppointments({bool addPrayers = true}) async {
+    debugPrint('📅 loadAllAppointments aufgerufen (addPrayers: $addPrayers)');
+    if (_isLoadingAppointments) {
+      debugPrint('📅 loadAllAppointments: Bereits am Laden, überspringe...');
+      return;
+    }
     _isLoadingAppointments = true;
 
     try {
+      // Normale Termine laden (aus dem Appointment Repository)
+      final repo = Provider.of<AppointmentRepository>(context, listen: false);
+      final appointments = await repo.getAllAppointments();
+      debugPrint('📅 ${appointments.length} normale Termine geladen');
+
+      // Kategoriefilter anwenden
+      final filteredAppointments = _selectedCategoryIds.isEmpty
+          ? appointments
+          : appointments
+              .where((a) =>
+                  a.categoryId != null &&
+                  _selectedCategoryIds.contains(a.categoryId))
+              .toList();
+      debugPrint(
+          '📅 ${filteredAppointments.length} Termine nach Kategoriefilter');
+
+      // Variable für das DataSource
       List<Appointment> allAppointments = [];
 
-      // Termine aus der Datenbank laden
-      final appointments = await _appointmentRepo.getAllAppointments();
+      // Gebetszeiten-Region Liste leeren
+      _prayerTimeRegions.clear();
 
-      // Adapter verwenden, um Termine zu konvertieren
-      for (var appointment in appointments) {
-        // Nur Termine der ausgewählten Kategorien hinzufügen
-        if (appointment.categoryId != null &&
-            _selectedCategoryIds.contains(appointment.categoryId)) {
-          final appointmentList = await _adapter.getAppointmentsForRange(
-            appointment,
-            DateTime.now().subtract(const Duration(days: 365)),
-            DateTime.now().add(const Duration(days: 365)),
-          );
-          allAppointments.addAll(appointmentList);
-        }
-      }
+      // Zugriff auf PrayerTimeService sicherstellen
+      final prayerTimeService =
+          Provider.of<PrayerTimeService>(context, listen: false);
 
-      // Die aktuelle Kalenderansicht bestimmen
-      CalendarView currentView = _selectedView;
+      // Termin-Start- und Endzeiten berechnen
+      for (final appointment in filteredAppointments) {
+        // Startzeit ist null => überspringen
+        if (appointment.startTime == null) continue;
 
-      // Gebetszeiten nur hinzufügen, wenn sie für die aktuelle Ansicht aktiviert sind
-      bool addPrayers = false; // Default: keine Gebetszeiten anzeigen
+        // Gebetszeitbezogene Termine berechnen (unverändert)
+        if (appointment.isRelatedToPrayerTimes) {
+          final date = appointment.startTime!;
+          final baseDate = DateTime(date.year, date.month, date.day);
+          DateTime? start =
+              await prayerTimeService.getCalculatedStartTime(appointment, date);
+          DateTime? end =
+              await prayerTimeService.getCalculatedEndTime(appointment, date);
 
-      if (_selectedView == CalendarView.day) {
-        // In Tagesansicht nur anzeigen, wenn die entsprechende Einstellung aktiviert ist
-        addPrayers = _showPrayerTimesInDayView;
-      } else if (_selectedView == CalendarView.week) {
-        // In Wochenansicht nur anzeigen, wenn die entsprechende Einstellung aktiviert ist
-        addPrayers = _showPrayerTimesInWeekView;
-      } else if (_selectedView == CalendarView.month) {
-        // In Monatsansicht explizit keine Gebetszeiten anzeigen
-        addPrayers = false;
-      }
-
-      if (addPrayers && _selectedNavIndex != 0) {
-        final now = DateTime.now();
-        // Für Tag- und Wochenansicht brauchen wir nicht so viele Daten, nur einen begrenzten Zeitraum
-        final int daysBack = currentView == CalendarView.day ? 7 : 30;
-        final int daysForward = currentView == CalendarView.day ? 7 : 30;
-
-        final startRange = now.subtract(Duration(days: daysBack));
-        final endRange = now.add(Duration(days: daysForward));
-
-        final prayerTimeEntries = await _prayerTimeRepo.getPrayerTimesInRange(
-          startRange,
-          endRange,
-        );
-
-        final prefs = await SharedPreferences.getInstance();
-        String? country = prefs.getString('defaultCountry');
-        String? city = prefs.getString('defaultCity');
-
-        // Prüfen, ob die Standorteinstellungen fehlen
-        if (country == null || city == null) {
-          // Zeige eine Fehlermeldung an
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                    "Standorteinstellungen fehlen. Bitte in den Einstellungen konfigurieren."),
-                backgroundColor: Colors.red,
-                duration: Duration(seconds: 5),
-              ),
-            );
-          }
-
-          // Einstellungen öffnen, damit der Benutzer die Standorteinstellungen setzen kann
-          await _openSettings();
-          _isLoadingAppointments = false;
-          return; // Keine Termine laden, bis die Einstellungen gesetzt sind
-        }
-
-        final userLocation = '${city.trim()},${country.trim()}'.toLowerCase();
-        final filteredEntries = prayerTimeEntries.where((row) {
-          final dbLoc = (row['location'] as String).toLowerCase();
-          return dbLoc == userLocation;
-        }).toList();
-
-        // Lade die Islam-Kategorie (ID 2) für Gebetszeiten
-        final islamCategory = await _categoryRepo.getCategory(2);
-        final prayerTimeColor = islamCategory?.color ?? _prayerTimeColor;
-
-        int gebetszeitenAnzahl = 0;
-
-        for (var row in filteredEntries) {
-          final dateStr = row['date'].toString();
-          final parts = dateStr.split('-');
-          final year = int.parse(parts[0]);
-          final month = int.parse(parts[1]);
-          final day = int.parse(parts[2]);
-          final baseDay = DateTime(year, month, day);
-
-          // Dauer von 15 Minuten für Gebetszeiten-Slots
-          const gebetszeitDuration = 15;
-
-          Appointment? createPrayerAppointment(String name, int? minutes) {
-            if (minutes == null) return null;
-            final start = baseDay.add(Duration(minutes: minutes));
-            final end = start.add(const Duration(minutes: gebetszeitDuration));
-            return Appointment(
-              id: 'prayer_${name}_${baseDay.toIso8601String()}',
-              subject: name,
-              notes: 'prayerTime',
+          if (start != null && end != null) {
+            allAppointments.add(Appointment(
+              id: appointment.id,
+              subject: appointment.subject,
               startTime: start,
               endTime: end,
-              isAllDay: false,
-              color: Colors.grey
-                  .shade400, // Verwende ein deutlicheres Grau statt prayerTimeColor
-            );
+              color: appointment.color,
+              isAllDay: appointment.isAllDay,
+              notes: appointment.notes,
+              location: appointment.location,
+              recurrenceRule: appointment.recurrenceRule,
+              recurrenceExceptionDates: appointment.recurrenceExceptionDates,
+            ));
+          }
+        } else {
+          // Wenn kein gebetszeitbezogener Termin, direkt übernehmen
+          allAppointments.add(Appointment(
+            id: appointment.id,
+            subject: appointment.subject,
+            startTime: appointment.startTime!,
+            endTime: appointment.endTime ?? appointment.startTime!,
+            color: appointment.color,
+            isAllDay: appointment.isAllDay,
+            notes: appointment.notes,
+            location: appointment.location,
+            recurrenceRule: appointment.recurrenceRule,
+            recurrenceExceptionDates: appointment.recurrenceExceptionDates,
+          ));
+        }
+      }
+
+      // Gebetszeiten als TimeRegions, wenn aktiviert
+      List<TimeRegion> newPrayerTimeRegions = <TimeRegion>[];
+      int gebetszeitenAnzahl = 0;
+      if (addPrayers) {
+        final currentView = _calendarController.view ?? _selectedView;
+        debugPrint('📅 Aktuelle Kalenderansicht: $currentView');
+
+        // Bestimmen, ob Gebetszeiten in der aktuellen Ansicht angezeigt werden sollen
+        bool shouldShowPrayerTimes = false;
+        if (currentView == CalendarView.day) {
+          shouldShowPrayerTimes = _showPrayerTimesInDayView;
+        } else if (currentView == CalendarView.week) {
+          shouldShowPrayerTimes = _showPrayerTimesInWeekView;
+        } else {
+          shouldShowPrayerTimes = false; // Keine Gebetszeiten in Monatsansicht
+        }
+
+        // Nur laden, wenn sie angezeigt werden sollen
+        if (shouldShowPrayerTimes) {
+          debugPrint('📅 Erzeuge TimeRegions für Gebetszeiten');
+
+          // Gebetszeiten aus der Datenbank laden
+          DateTime now = DateTime.now();
+          DateTime today = DateTime(now.year, now.month, now.day);
+
+          // Die Namen der Gebetszeiten
+          List<String> prayerNames = [
+            'Fajr',
+            'Dhuhr',
+            'Asr',
+            'Maghrib',
+            'Isha'
+          ];
+          List<PrayerTime> prayerEnums = [
+            PrayerTime.fajr,
+            PrayerTime.dhuhr,
+            PrayerTime.asr,
+            PrayerTime.maghrib,
+            PrayerTime.isha
+          ];
+
+          // Bei Wochenansicht für jede sichtbare Woche Gebetszeiten anlegen
+          List<DateTime> daysToProcess = [];
+
+          if (currentView == CalendarView.week) {
+            // Verwende das angezeigte Datum als Referenz
+            DateTime displayDate = _calendarController.displayDate ?? today;
+
+            // Berechne den ersten und letzten Tag der sichtbaren Woche
+            DateTime firstDay =
+                displayDate.subtract(Duration(days: displayDate.day - 90));
+            DateTime lastDay = firstDay.add(Duration(days: 250));
+
+            // Für jeden Tag der Woche (Montag bis Sonntag) Gebetszeiten erstellen
+            for (int i = 0; i < 340; i++) {
+              daysToProcess.add(firstDay.add(Duration(days: i)));
+            }
+            debugPrint(
+                '📅 Erzeuge Gebetszeiten für alle ${daysToProcess.length} Tage der Woche (${firstDay.toIso8601String().split('T')[0]} bis ${lastDay.toIso8601String().split('T')[0]})');
+          } else {
+            // Für Tagesansicht nur den ausgewählten Tag verwenden
+            daysToProcess.add(_calendarController.displayDate ?? today);
+            debugPrint('📅 Erzeuge Gebetszeiten nur für den aktuellen Tag');
           }
 
-          final fajrApp = createPrayerAppointment('Fajr', _toInt(row['fajr']));
-          if (fajrApp != null) {
-            allAppointments.add(fajrApp);
-            gebetszeitenAnzahl++;
+          // Standort aus SharedPreferences holen
+          final prefs = await SharedPreferences.getInstance();
+          final country = prefs.getString('defaultCountry');
+          final city = prefs.getString('defaultCity');
+
+          if (country == null || city == null) {
+            debugPrint(
+                '❌ Land oder Stadt nicht definiert - keine Gebetszeiten geladen');
+            return;
           }
 
-          final dhuhrApp =
-              createPrayerAppointment('Dhuhr', _toInt(row['dhuhr']));
-          if (dhuhrApp != null) {
-            allAppointments.add(dhuhrApp);
-            gebetszeitenAnzahl++;
+          final location = "${city.trim()},${country.trim()}";
+
+          // Für jeden Tag Gebetszeiten aus der Datenbank laden
+          for (DateTime day in daysToProcess) {
+            for (int i = 0; i < prayerNames.length; i++) {
+              try {
+                // Tatsächliche Gebetsminuten aus der Datenbank laden
+                final minutes = await _prayerTimeRepo.getPrayerTimeMinutes(
+                    day, location, prayerEnums[i]);
+
+                if (minutes != null) {
+                  // Berechne Stunden und Minuten
+                  final hours = minutes ~/ 60;
+                  final mins = minutes % 60;
+
+                  // Erstelle die Zeit mit den tatsächlichen Gebetszeiten
+                  DateTime startTime =
+                      DateTime(day.year, day.month, day.day, hours, mins);
+
+                  // Gebetszeit geht 15 Minuten
+                  DateTime endTime = startTime.add(const Duration(minutes: 15));
+
+                  newPrayerTimeRegions.add(TimeRegion(
+                    startTime: startTime,
+                    endTime: endTime,
+                    enablePointerInteraction: false,
+                    color: Colors.grey.withOpacity(0.4),
+                    text: prayerNames[i],
+                    textStyle: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ));
+
+                  gebetszeitenAnzahl++;
+
+                  debugPrint(
+                      '📅 Gebetszeit ${prayerNames[i]} für ${day.toString().split(' ')[0]} geladen: ${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}');
+                } else {
+                  debugPrint(
+                      '❌ Keine ${prayerNames[i]}-Zeit für ${day.toString().split(' ')[0]} gefunden');
+                }
+              } catch (e) {
+                debugPrint(
+                    '❌ Fehler beim Laden der Gebetszeit ${prayerNames[i]} für ${day.toString().split(' ')[0]}: $e');
+              }
+            }
           }
 
-          final asrApp = createPrayerAppointment('Asr', _toInt(row['asr']));
-          if (asrApp != null) {
-            allAppointments.add(asrApp);
-            gebetszeitenAnzahl++;
-          }
-
-          final maghribApp =
-              createPrayerAppointment('Maghrib', _toInt(row['maghrib']));
-          if (maghribApp != null) {
-            allAppointments.add(maghribApp);
-            gebetszeitenAnzahl++;
-          }
-
-          final ishaApp = createPrayerAppointment('Isha', _toInt(row['isha']));
-          if (ishaApp != null) {
-            allAppointments.add(ishaApp);
-            gebetszeitenAnzahl++;
-          }
+          debugPrint(
+              '📅 ${newPrayerTimeRegions.length} TimeRegions für Gebetszeiten erstellt');
         }
       }
 
       if (mounted) {
         setState(() {
           _dataSource = EventDataSource(allAppointments);
+          // Übernehme neue TimeRegions und löse einen Neuaufbau aus
+          _prayerTimeRegions.clear();
+          _prayerTimeRegions.addAll(newPrayerTimeRegions);
+          // Debugging-Meldung zur Bestätigung, dass die State-Aktualisierung durchgeführt wird
+          debugPrint(
+              '📅 State aktualisiert: ${allAppointments.length} Termine, ${_prayerTimeRegions.length} Gebetszeit-Regionen');
         });
       }
     } catch (e) {
-      // debugPrint('Error loading appointments: $e');
+      debugPrint('❌ Fehler beim Laden der Termine: $e');
     } finally {
-      _isLoadingAppointments = false;
+      _isLoadingAppointments = false; 
     }
 
     // Dashboard aktualisieren, falls es aktiv ist
@@ -618,6 +744,40 @@ class HomePageState extends State<HomePage> {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const QiblaCompassPage()),
     );
+  }
+
+  /// Verarbeitet Änderungen der Kalenderansicht
+  void _handleViewChanged(CalendarView newView) {
+    debugPrint('📅 _handleViewChanged: $newView');
+
+    if (_selectedView != newView) {
+      setState(() {
+        _selectedView = newView;
+      });
+
+      // Ansichtswechsel kann bedeuten, dass wir andere Gebetszeiten laden müssen
+      loadAllAppointments();
+    }
+  }
+
+  /// Verarbeitet Änderungen des ausgewählten Datums im Kalender
+  void _handleSelectedDateChanged(DateTime? date) {
+    if (date == null) return;
+
+    debugPrint('📅 _handleSelectedDateChanged: $date');
+    final oldDate = _selectedDate;
+    setState(() {
+      _selectedDate = date;
+    });
+
+    // Nur neu laden, wenn sich Jahr, Monat oder Tag geändert haben, um unnötige Ladevorgänge zu vermeiden
+    if (oldDate.year != date.year ||
+        oldDate.month != date.month ||
+        oldDate.day != date.day) {
+      // Gebetszeiten für das neue Datum neu laden
+      _prayerTimeRegions.clear(); // Alte Regionen löschen
+      loadAllAppointments();
+    }
   }
 
   /// Wandelt den internen AppLanguage-Wert in einen Locale-Code (String) um.
@@ -706,476 +866,323 @@ class HomePageState extends State<HomePage> {
     _updateCalendarViewFromNavIndex();
   }
 
-  void _handleViewChanged(CalendarView newView) {
-    if (_selectedView == newView) return; // Keine Änderung nötig, wenn gleich
-
-    // Zuerst merken wir uns die alte Ansicht, um Änderungen zu erkennen
-    final oldView = _selectedView;
-
-    setState(() {
-      _selectedView = newView;
-
-      // Synchronisiere _selectedNavIndex mit der neuen Ansicht
-      if (newView == CalendarView.day) {
-        _selectedNavIndex = 1;
-      } else if (newView == CalendarView.week) {
-        _selectedNavIndex = 2;
-      } else if (newView == CalendarView.month) {
-        _selectedNavIndex = 3;
-      }
-    });
-
-    // Spezielles Handling für den Wechsel zur Monatsansicht
-    // Wenn wir zur Monatsansicht wechseln, stellen wir sicher, dass keine Gebetszeiten angezeigt werden
-    if (newView == CalendarView.month) {
-      debugPrint("Wechsel zur Monatsansicht: Keine Gebetszeiten anzeigen");
-      _showPrayerTimesInMonthView = false;
-    }
-
-    // UI aktualisieren und Termine neu laden - mit Verzögerung
-    Future.microtask(() {
-      loadAllAppointments();
-    });
-  }
-
   /// Zeigt ein Popup-Menü mit Synchronisationsoptionen an
   void _showSyncOptionsMenu(BuildContext context, RenderBox button) {
-    // Wichtig: Längere Verzögerung hinzufügen, um Fokus-Probleme zu vermeiden
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
+    final localizations = Provider.of<AppLocalizations>(context, listen: false);
 
-      // Explizit den aktuellen Fokus zurücksetzen
-      FocusManager.instance.primaryFocus?.unfocus();
-
-      // WidgetsBinding verwenden, um sicherzustellen, dass der Fokus-Reset abgeschlossen ist
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-
-        final localizations =
-            Provider.of<AppLocalizations>(context, listen: false);
-
-        // Dialog-Inhalt erstellen, der für beide Plattformen passt
-        final content = Column(
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(localizations.calendarSync),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Google Kalender Option
-            PlatformAdaptiveListTile(
+            ListTile(
               leading: Icon(
                 Platform.isIOS ? CupertinoIcons.calendar : Icons.calendar_today,
-                color: logoColor,
+                color: Theme.of(context).primaryColor,
               ),
-              title: localizations.googleCalendar,
-              subtitle: localizations.syncImportExport,
-              titleStyle: const TextStyle(fontWeight: FontWeight.bold),
+              title: Text(localizations.googleCalendar),
+              subtitle: Text(localizations.syncImportExport),
               onTap: () {
-                Navigator.pop(context); // Dialog schließen
-                _showGoogleSyncDialog(context);
-              },
-            ),
-
-            // Outlook Option (deaktiviert)
-            PlatformAdaptiveListTile(
-              leading: Icon(
-                Platform.isIOS
-                    ? CupertinoIcons.calendar_badge_plus
-                    : Icons.calendar_month,
-                color: Colors.grey,
-              ),
-              title: localizations.outlookCalendar,
-              subtitle: localizations.comingSoon,
-              enabled: false, // Deaktiviert, da noch nicht implementiert
-            ),
-          ],
-        );
-
-        // Dialog-Aktionen erstellen
-        final actions = [
-          PlatformAdaptiveDialog.adaptiveDialogAction(
-            context: context,
-            text: localizations.cancel,
-            onPressed: () => Navigator.pop(context),
-            color: logoColor,
-          ),
-        ];
-
-        // Plattformspezifischen Dialog anzeigen
-        PlatformAdaptiveDialog.showAdaptiveDialog(
-          context: context,
-          title: 'Kalender Synchronisation',
-          content: content,
-          actions: actions,
-        );
-      });
-    });
-  }
-
-  /// Zeigt einen Dialog mit Google Calendar Synchronisationsoptionen
-  void _showGoogleSyncDialog(BuildContext context) {
-    // Wichtig: Längere Verzögerung hinzufügen, um Fokus-Probleme zu vermeiden
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
-
-      // Explizit den aktuellen Fokus zurücksetzen
-      FocusManager.instance.primaryFocus?.unfocus();
-
-      // WidgetsBinding verwenden, um sicherzustellen, dass der Fokus-Reset abgeschlossen ist
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-
-        final localizations =
-            Provider.of<AppLocalizations>(context, listen: false);
-
-        // Dialog-Inhalt erstellen, der für beide Plattformen passt
-        final content = Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Vollständig synchronisieren
-            PlatformAdaptiveListTile(
-              leading: Icon(
-                Platform.isIOS ? CupertinoIcons.arrow_2_circlepath : Icons.sync,
-                color: logoColor,
-              ),
-              title: localizations.fullSync,
-              subtitle: localizations.importAndExport,
-              titleStyle: const TextStyle(fontWeight: FontWeight.bold),
-              onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(ctx);
                 _performGoogleSync(context);
               },
             ),
-
-            // Nur importieren
-            PlatformAdaptiveListTile(
-              leading: Icon(
-                Platform.isIOS
-                    ? CupertinoIcons.arrow_down_circle
-                    : Icons.download,
-                color: logoColor,
-              ),
-              title: localizations.importOnly,
-              subtitle: localizations.importFromCalendar,
-              titleStyle: const TextStyle(fontWeight: FontWeight.bold),
-              onTap: () {
-                Navigator.pop(context);
-                _performGoogleImport(context);
-              },
-            ),
-
-            // Nur exportieren
-            PlatformAdaptiveListTile(
-              leading: Icon(
-                Platform.isIOS ? CupertinoIcons.arrow_up_circle : Icons.upload,
-                color: logoColor,
-              ),
-              title: localizations.exportOnly,
-              subtitle: localizations.exportToCalendar,
-              titleStyle: const TextStyle(fontWeight: FontWeight.bold),
-              onTap: () {
-                Navigator.pop(context);
-                _performGoogleExport(context);
-              },
-            ),
           ],
-        );
-
-        // Dialog-Aktionen erstellen
-        final actions = [
-          PlatformAdaptiveDialog.adaptiveDialogAction(
-            context: context,
-            text: localizations.cancel,
-            onPressed: () => Navigator.pop(context),
-            color: logoColor,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(localizations.cancel),
           ),
-        ];
-
-        // Plattformspezifischen Dialog anzeigen
-        PlatformAdaptiveDialog.showAdaptiveDialog(
-          context: context,
-          title: localizations.googleCalendar,
-          content: content,
-          actions: actions,
-        );
-      });
-    });
+        ],
+      ),
+    );
   }
 
-  /// Führt eine vollständige Synchronisation mit Google Calendar durch
-  void _performGoogleSync(BuildContext context) async {
-    // Referenzen speichern, bevor asynchrone Operationen beginnen
-    final scaffold = ScaffoldMessenger.of(context);
+  /// Führt eine Synchronisation mit Google Calendar durch
+  void _performGoogleSync(BuildContext context) {
+    debugPrint('📅 Starte Google Calendar Synchronisation');
     final localizations = Provider.of<AppLocalizations>(context, listen: false);
-    final currentMounted = mounted;
 
-    try {
-      if (currentMounted) {
-        scaffold.showSnackBar(
-          SnackBar(content: Text(localizations.syncingWithGoogleCalendar)),
-        );
-      }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(localizations.syncingWithGoogleCalendar)),
+    );
 
-      // Vollständige Synchronisation durchführen ohne expliziten categoryOption-Wert,
-      // damit die gespeicherte Option aus den SharedPreferences verwendet wird
-      await _calendarSyncService.syncGoogleCalendarNow();
+    // Wir verwenden hier direkt die vereinfachte Implementierung für den Test
+    _calendarSyncService.syncGoogleCalendarNow().then((_) {
+      // Termine neu laden nach erfolgreicher Synchronisation
+      loadAllAppointments();
 
-      // Nach erfolgreicher Synchronisation Termine neu laden
-      await loadAllAppointments();
-
-      if (currentMounted) {
-        scaffold.clearSnackBars();
-        scaffold.showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(localizations.syncCompleted),
             backgroundColor: Colors.green,
           ),
         );
       }
-    } catch (e) {
-      debugPrint('Sync-Fehler: $e');
+    }).catchError((e) {
+      debugPrint('❌ Synchronisationsfehler: $e');
 
-      if (currentMounted) {
-        scaffold.clearSnackBars();
-        scaffold.showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(localizations.syncSyncError(e.toString())),
+            content: Text('Fehler: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
       }
-    }
+    });
   }
 
-  /// Führt einen direkten Import ohne weitere Dialogabfrage durch
-  /// Verwendet die bereits gespeicherte Import-Option, die gleiche Funktion wie bei der vollständigen Synchronisation
-  void _performGoogleImport(BuildContext context) async {
-    debugPrint("📥 HomePage: Google Import gestartet");
+  // Sicherheitsfunktion, die nur mit hartkodierten Daten arbeitet
+  void _loadStaticAppointments() {
+    debugPrint('📅 Lade statische Appointments für initiale Anzeige');
 
-    // Referenzen speichern, bevor asynchrone Operationen beginnen
-    final scaffold = ScaffoldMessenger.of(context);
-    final localizations = Provider.of<AppLocalizations>(context, listen: false);
-    final currentMounted = mounted;
+    // Zunächst prüfen, ob _prayerTimeRepo bereits initialisiert ist
+    if (_prayerTimeRepo == null) {
+      debugPrint(
+          '❌ _loadStaticAppointments: _prayerTimeRepo ist noch nicht initialisiert');
+      // Einfache Fallback-Lösung mit hartkodierten Zeiten
+      _loadFallbackPrayerTimes();
+      return;
+    }
 
-    try {
-      if (currentMounted) {
-        scaffold.showSnackBar(
-          SnackBar(content: Text(localizations.importingFromGoogleCalendar)),
-        );
+    // Wir wechseln zu einem Future-basierten Ansatz, um asynchrone Operationen zu ermöglichen
+    Future<void> loadPrayerTimes() async {
+      try {
+        // Aktuelle Ansicht bestimmen
+        final currentView = _calendarController.view ?? _selectedView;
+
+        // Gebetszeiten-Anzeige je nach Ansicht steuern
+        bool shouldShowPrayerTimes = false;
+        if (currentView == CalendarView.day) {
+          shouldShowPrayerTimes = _showPrayerTimesInDayView;
+        } else if (currentView == CalendarView.week) {
+          shouldShowPrayerTimes = _showPrayerTimesInWeekView;
+        } else {
+          shouldShowPrayerTimes = false; // Keine Gebetszeiten in Monatsansicht
+        }
+
+        if (!shouldShowPrayerTimes) {
+          debugPrint('📅 Gebetszeiten sind für diese Ansicht ausgeschaltet');
+          return;
+        }
+
+        // Zuerst sicherstellen, dass Gebetszeiten für einen längeren Zeitraum geladen sind
+        await _fetchYearlyPrayerTimesIfNeeded();
+
+        // Gebetszeiten aus der Datenbank laden
+        DateTime now = DateTime.now();
+        DateTime today = DateTime(now.year, now.month, now.day);
+
+        // Die Namen der Gebetszeiten
+        List<String> prayerNames = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+        List<PrayerTime> prayerEnums = [
+          PrayerTime.fajr,
+          PrayerTime.dhuhr,
+          PrayerTime.asr,
+          PrayerTime.maghrib,
+          PrayerTime.isha
+        ];
+
+        // Gebetszeiten-Region Liste leeren
+        List<TimeRegion> newPrayerTimeRegions = [];
+
+        // Bei Wochenansicht für jede sichtbare Woche Gebetszeiten anlegen
+        List<DateTime> daysToProcess = [];
+
+        if (currentView == CalendarView.week) {
+          // Verwende das angezeigte Datum als Referenz
+          DateTime displayDate = _calendarController.displayDate ?? today;
+
+          // Berechne den ersten und letzten Tag der sichtbaren Woche
+          DateTime firstDay =
+              displayDate.subtract(Duration(days: displayDate.weekday - 1));
+          DateTime lastDay = firstDay.add(Duration(days: 6));
+
+          // Für jeden Tag der Woche (Montag bis Sonntag) Gebetszeiten erstellen
+          for (int i = 0; i < 7; i++) {
+            daysToProcess.add(firstDay.add(Duration(days: i)));
+          }
+          debugPrint(
+              '📅 Erzeuge statische Gebetszeiten für alle ${daysToProcess.length} Tage der Woche (${firstDay.toIso8601String().split('T')[0]} bis ${lastDay.toIso8601String().split('T')[0]})');
+        } else {
+          // Für Tagesansicht nur den ausgewählten Tag verwenden
+          daysToProcess.add(_calendarController.displayDate ?? today);
+          debugPrint(
+              '📅 Erzeuge statische Gebetszeiten nur für den aktuellen Tag');
+        }
+
+        // Standort aus SharedPreferences holen
+        final prefs = await SharedPreferences.getInstance();
+        final country = prefs.getString('defaultCountry');
+        final city = prefs.getString('defaultCity');
+
+        if (country == null || city == null) {
+          debugPrint(
+              '❌ Land oder Stadt nicht definiert - keine statischen Gebetszeiten geladen');
+          return;
+        }
+
+        final location = "${city.trim()},${country.trim()}";
+
+        // Für jeden Tag Gebetszeiten aus der Datenbank laden
+        for (DateTime day in daysToProcess) {
+          for (int i = 0; i < prayerNames.length; i++) {
+            try {
+              // Tatsächliche Gebetsminuten aus der Datenbank laden
+              final minutes = await _prayerTimeRepo.getPrayerTimeMinutes(
+                  day, location, prayerEnums[i]);
+
+              if (minutes != null) {
+                // Berechne Stunden und Minuten
+                final hours = minutes ~/ 60;
+                final mins = minutes % 60;
+
+                // Erstelle die Zeit mit den tatsächlichen Gebetszeiten
+                DateTime startTime =
+                    DateTime(day.year, day.month, day.day, hours, mins);
+
+                // Gebetszeit geht 15 Minuten
+                DateTime endTime = startTime.add(const Duration(minutes: 15));
+
+                newPrayerTimeRegions.add(TimeRegion(
+                  startTime: startTime,
+                  endTime: endTime,
+                  enablePointerInteraction: false,
+                  color: Colors.grey.withOpacity(0.4),
+                  text: prayerNames[i],
+                  textStyle: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ));
+
+                debugPrint(
+                    '📅 Statische Gebetszeit ${prayerNames[i]} für ${day.toString().split(' ')[0]} geladen: ${hours.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}');
+              } else {
+                debugPrint(
+                    '❌ Keine statische ${prayerNames[i]}-Zeit für ${day.toString().split(' ')[0]} gefunden');
+              }
+            } catch (e) {
+              debugPrint(
+                  '❌ Fehler beim Laden der statischen Gebetszeit ${prayerNames[i]} für ${day.toString().split(' ')[0]}: $e');
+            }
+          }
+        }
+
+        // State aktualisieren, wenn noch montiert
+        if (mounted) {
+          setState(() {
+            _prayerTimeRegions.clear();
+            _prayerTimeRegions.addAll(newPrayerTimeRegions);
+            debugPrint(
+                '📅 ${_prayerTimeRegions.length} statische TimeRegions erstellt');
+          });
+        }
+      } catch (e) {
+        debugPrint('❌ Fehler in loadPrayerTimes: $e');
+        // Bei Fehlern auf Fallback zurückgreifen
+        if (mounted) {
+          _loadFallbackPrayerTimes();
+        }
+      }
+    }
+
+    // Starte den Ladevorgang
+    loadPrayerTimes();
+  }
+
+  // Fallback-Methode mit hartkodierten Zeiten
+  void _loadFallbackPrayerTimes() {
+    setState(() {
+      // Gebetszeiten als TimeRegions für die erste Anzeige
+      _prayerTimeRegions.clear();
+
+      // Aktuelle Ansicht bestimmen
+      final currentView = _calendarController.view ?? _selectedView;
+
+      // Gebetszeiten-Anzeige je nach Ansicht steuern
+      bool shouldShowPrayerTimes = false;
+      if (currentView == CalendarView.day) {
+        shouldShowPrayerTimes = _showPrayerTimesInDayView;
+      } else if (currentView == CalendarView.week) {
+        shouldShowPrayerTimes = _showPrayerTimesInWeekView;
+      } else {
+        shouldShowPrayerTimes = false; // Keine Gebetszeiten in Monatsansicht
+      }
+
+      if (!shouldShowPrayerTimes) {
+        debugPrint('📅 Gebetszeiten sind für diese Ansicht ausgeschaltet');
+        return;
+      }
+
+      // Test-TimeRegion für erste Anzeige
+      DateTime now = DateTime.now();
+      DateTime today = DateTime(now.year, now.month, now.day);
+
+      // Testweise 5 TimeRegions für Gebetszeiten erstellen
+      List<String> prayerNames = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+      List<int> prayerHours = [
+        5,
+        12,
+        15,
+        19,
+        21
+      ]; // Ungefähre Stunden für Tests
+
+      // Bei Wochenansicht für jeden Tag der Woche Gebetszeiten anlegen
+      List<DateTime> daysToProcess = [];
+
+      if (currentView == CalendarView.week) {
+        // Berechne den ersten Tag der aktuellen Woche (Montag)
+        DateTime displayDate = _calendarController.displayDate ?? today;
+        DateTime firstDay =
+            displayDate.subtract(Duration(days: displayDate.weekday - 1));
+
+        // Für jeden Tag der Woche (Montag bis Sonntag) Gebetszeiten erstellen
+        for (int i = 0; i < 7; i++) {
+          daysToProcess.add(firstDay.add(Duration(days: i)));
+        }
+        debugPrint(
+            '📅 Erzeuge Fallback-Gebetszeiten für alle ${daysToProcess.length} Tage der Woche');
+      } else {
+        // Für Tagesansicht nur den aktuellen Tag verwenden
+        daysToProcess.add(_calendarController.displayDate ?? today);
+        debugPrint(
+            '📅 Erzeuge Fallback-Gebetszeiten nur für den aktuellen Tag');
+      }
+
+      // Für jeden Tag Gebetszeiten anlegen
+      for (DateTime day in daysToProcess) {
+        for (int i = 0; i < prayerNames.length; i++) {
+          DateTime startTime =
+              DateTime(day.year, day.month, day.day, prayerHours[i]);
+          DateTime endTime = startTime.add(const Duration(minutes: 15));
+
+          _prayerTimeRegions.add(TimeRegion(
+            startTime: startTime,
+            endTime: endTime,
+            enablePointerInteraction: false,
+            color: Colors.grey.withOpacity(0.4),
+            text: prayerNames[i],
+            textStyle: const TextStyle(
+              color: Colors.black87,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ));
+        }
       }
 
       debugPrint(
-          "📥 Starte importAppointments über den CalendarSyncService...");
-      // Import durchführen mit der zentral gespeicherten Option
-      // Verwendet die gleiche Logik wie die vollständige Synchronisationsfunktion
-      await _calendarSyncService.importAppointments();
-      debugPrint("📥 importAppointments abgeschlossen");
-
-      // Nach erfolgreichem Import Termine neu laden
-      await loadAllAppointments();
-      debugPrint("📥 Termine wurden neu geladen");
-
-      if (currentMounted) {
-        scaffold.clearSnackBars();
-        scaffold.showSnackBar(
-          SnackBar(
-            content: Text(localizations.importCompleted),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-        debugPrint("📥 Import erfolgreich abgeschlossen");
-      }
-    } catch (e) {
-      debugPrint('🔄 Import-Fehler: $e');
-
-      if (currentMounted) {
-        scaffold.clearSnackBars();
-        scaffold.showSnackBar(
-          SnackBar(
-            content: Text(localizations.importError(e.toString())),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
-  }
-
-  /// Führt einen Export nach Google Calendar durch
-  void _performGoogleExport(BuildContext context) async {
-    // Referenzen speichern, bevor asynchrone Operationen beginnen
-    final scaffold = ScaffoldMessenger.of(context);
-    final localizations = Provider.of<AppLocalizations>(context, listen: false);
-    final currentMounted = mounted;
-
-    try {
-      if (currentMounted) {
-        scaffold.showSnackBar(
-          SnackBar(content: Text(localizations.exportingToGoogleCalendar)),
-        );
-      }
-
-      // Export durchführen
-      await _calendarSyncService.exportAppointments();
-
-      if (currentMounted) {
-        scaffold.clearSnackBars(); // Bestehende Snackbars löschen
-        scaffold.showSnackBar(
-          SnackBar(
-            content: Text(localizations.syncExportCompleted ??
-                localizations.exportCompleted),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('🔄 Export-Fehler: $e');
-
-      if (currentMounted) {
-        scaffold.clearSnackBars(); // Bestehende Snackbars löschen
-        scaffold.showSnackBar(
-          SnackBar(
-            content: Text(localizations.exportError(e.toString())),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
-  }
-
-  /// Prüft, ob die Import-Option bereits initialisiert wurde und zeigt ggf. eine Abfrage an
-  Future<void> _checkImportSettingsInitialized() async {
-    final importOption = await ImportSettingsService.getImportOption();
-    final hasBeenInitialized = await _hasImportOptionBeenInitialized();
-
-    // Wenn wir noch keine Import-Option gespeichert haben oder diese noch nicht
-    // explizit initialisiert wurde, zeigen wir den Dialog an
-    if (!hasBeenInitialized) {
-      if (mounted) {
-        // Warte kurz, damit die UI vollständig geladen ist
-        await Future.delayed(const Duration(milliseconds: 500));
-        // Dialog anzeigen
-        _showInitialImportOptionsDialog(context);
-      }
-    }
-  }
-
-  /// Prüft, ob die Import-Option bereits explizit initialisiert wurde
-  Future<bool> _hasImportOptionBeenInitialized() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('import_option_initialized') ?? false;
-  }
-
-  /// Markiert die Import-Option als initialisiert
-  Future<void> _markImportOptionAsInitialized() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('import_option_initialized', true);
-  }
-
-  /// Zeigt den initialen Dialog für Import-Optionen an (nur bei erster App-Nutzung)
-  void _showInitialImportOptionsDialog(BuildContext context) {
-    debugPrint("HomePage: Initialer Import-Options-Dialog wird angezeigt");
-
-    // Wichtig: Längere Verzögerung hinzufügen, um Fokus-Probleme zu vermeiden
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
-
-      // Explizit den aktuellen Fokus zurücksetzen
-      FocusManager.instance.primaryFocus?.unfocus();
-
-      // WidgetsBinding verwenden, um sicherzustellen, dass der Fokus-Reset abgeschlossen ist
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-
-        final localizations =
-            Provider.of<AppLocalizations>(context, listen: false);
-
-        // Dialog-Inhalt erstellen, der für beide Plattformen passt
-        final content = Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            PlatformAdaptiveListTile(
-              title: localizations.howToHandleCategories,
-              titleStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-
-            // Bestehende Kategorien verwenden
-            PlatformAdaptiveListTile(
-              leading: Icon(
-                Platform.isIOS ? CupertinoIcons.tag : Icons.category_outlined,
-                color: logoColor,
-              ),
-              title: localizations.useGoogleCalendarCategories,
-              subtitle: localizations.searchForMatchingCategories,
-              titleStyle: const TextStyle(fontWeight: FontWeight.bold),
-              onTap: () async {
-                Navigator.pop(context);
-                // Option 2 = Kalendernamen als Kategorien verwenden
-                await ImportSettingsService.saveImportOption(2);
-                await _markImportOptionAsInitialized();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(localizations.importOptionSaved)),
-                  );
-                  debugPrint(
-                      "🛠️ Import-Option 2 gespeichert und initialisiert");
-                }
-              },
-            ),
-
-            // Neue Kategorien erstellen
-            PlatformAdaptiveListTile(
-              leading: Icon(
-                Platform.isIOS
-                    ? CupertinoIcons.add_circled
-                    : Icons.add_circle_outline,
-                color: logoColor,
-              ),
-              title: localizations.useDefaultCategory,
-              subtitle: localizations.importedAppointmentsToDefaultCategory,
-              titleStyle: const TextStyle(fontWeight: FontWeight.bold),
-              onTap: () async {
-                Navigator.pop(context);
-                // Option 0 = Standardkategorie verwenden
-                await ImportSettingsService.saveImportOption(0);
-                await _markImportOptionAsInitialized();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(localizations.importOptionSaved)),
-                  );
-                  debugPrint(
-                      "🛠️ Import-Option 0 gespeichert und initialisiert");
-                }
-              },
-            ),
-          ],
-        );
-
-        // Dialog-Aktionen erstellen
-        final actions = [
-          PlatformAdaptiveDialog.adaptiveDialogAction(
-            context: context,
-            text: localizations.cancel,
-            onPressed: () {
-              Navigator.pop(context);
-              // Bei Abbruch trotzdem als initialisiert markieren (Option 0 standardmäßig verwenden)
-              _markImportOptionAsInitialized();
-            },
-            color: logoColor,
-          ),
-        ];
-
-        // Plattformspezifischen Dialog anzeigen
-        PlatformAdaptiveDialog.showAdaptiveDialog(
-          context: context,
-          title: localizations.importOptions,
-          content: content,
-          actions: actions,
-        );
-      });
+          '📅 ${_prayerTimeRegions.length} Fallback-TimeRegions erstellt');
     });
   }
 
@@ -1259,25 +1266,7 @@ class HomePageState extends State<HomePage> {
                 _dashboardPageState = state;
               },
             )
-          : CalendarViewWidget(
-              selectedView: _selectedView,
-              calendarController: _calendarController,
-              dataSource: _dataSource,
-              selectedDate: _selectedDate,
-              use24hFormat: _use24hFormat,
-              showPrayerTimesInDayView: _showPrayerTimesInDayView,
-              showPrayerTimesInWeekView: _showPrayerTimesInWeekView,
-              showPrayerTimesInMonthView: _showPrayerTimesInMonthView,
-              languageCode:
-                  _mapAppLanguageToCode(localizations.currentLanguage),
-              onViewChanged: _handleViewChanged,
-              onSelectedDateChanged: (date) {
-                setState(() {
-                  _selectedDate = date;
-                });
-              },
-              onAppointmentsChanged: loadAllAppointments,
-            ),
+          : _buildCalendarView(),
       floatingActionButton: _selectedNavIndex >= 1 && !Platform.isIOS
           ? FloatingActionButton(
               onPressed: () async {
@@ -1305,6 +1294,55 @@ class HomePageState extends State<HomePage> {
         localizations: localizations,
         onAppointmentAdded: loadAllAppointments,
       ),
+    );
+  }
+
+  Widget _buildCalendarView() {
+    if (_isLoadingAppointments) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    debugPrint(
+        '📅 _buildCalendarView aufgerufen - ${_prayerTimeRegions.length} Gebetszeit-Regionen');
+
+    // Mindestens eine TimeRegion zur Überprüfung
+    if (_prayerTimeRegions.isEmpty) {
+      // Hinzufügen einer Beispiel-TimeRegion, um zu testen, ob es grundsätzlich funktioniert
+      DateTime now = DateTime.now();
+      DateTime today = DateTime(now.year, now.month, now.day);
+
+      _prayerTimeRegions.add(TimeRegion(
+        startTime: today.add(const Duration(hours: 10)),
+        endTime: today.add(const Duration(hours: 10, minutes: 30)),
+        enablePointerInteraction: false,
+        color: Colors.red.withOpacity(0.5),
+        text: "TEST-REGION",
+        textStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ));
+      debugPrint('📅 Testregion hinzugefügt');
+    }
+
+    return CalendarViewWidget(
+      selectedView: _selectedView,
+      calendarController: _calendarController,
+      dataSource: _dataSource,
+      selectedDate: _selectedDate,
+      use24hFormat: _use24hFormat,
+      showPrayerTimesInDayView: _showPrayerTimesInDayView,
+      showPrayerTimesInWeekView: _showPrayerTimesInWeekView,
+      languageCode: _mapAppLanguageToCode(
+          Provider.of<AppLocalizations>(context, listen: false)
+              .currentLanguage),
+      onViewChanged: _handleViewChanged,
+      onSelectedDateChanged: _handleSelectedDateChanged,
+      onAppointmentsChanged: loadAllAppointments,
+      specialTimeRegions: _prayerTimeRegions,
     );
   }
 }

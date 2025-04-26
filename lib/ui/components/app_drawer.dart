@@ -24,7 +24,11 @@ import 'package:Taqvimi/data/services/calendar_sync_service.dart';
 const Color logoColor = Color(0xFF468178);
 
 // Enum für aktuelle Seite
-enum CurrentPage { calendar, projectManagement, other }
+enum CurrentPage {
+  calendar,
+  projectManagement,
+  other
+} //Statt Projectmanagement später ToDo Page einfügen
 
 /// Gemeinsames Menü für Dashboard und Home Page
 /// Diese Komponente kann in beiden Seiten verwendet werden und bietet das gleiche Menü
@@ -535,42 +539,6 @@ class AppDrawer extends StatelessWidget {
               iOSIcon: CupertinoIcons.arrow_2_circlepath,
               iconColor: logoColor,
               onTap: () => _showSyncOptionsDialog(context),
-            ),
-
-            // Kalender- oder Projektmanagement-Navigation, je nach aktueller Seite
-            if (currentPage == CurrentPage.projectManagement)
-              // Kalenderverwaltung anzeigen, wenn auf Projektmanagement-Seite
-              _buildDrawerItem(
-                context: context,
-                icon: Platform.isIOS
-                    ? CupertinoIcons.calendar
-                    : Icons.calendar_today,
-                title: loc.calendar ?? 'Kalender',
-                onTap: () {
-                  if (onCloseDrawer != null) {
-                    onCloseDrawer!();
-                  } else {
-                    Navigator.pop(context);
-                  }
-                  Navigator.pushNamed(context, '/');
-                },
-              ),
-
-            // Projektmanagement anzeigen, wenn nicht auf Projektmanagement-Seite
-            _buildDrawerItem(
-              context: context,
-              icon: Platform.isIOS
-                  ? CupertinoIcons.chart_bar
-                  : Icons.stacked_bar_chart,
-              title: loc.projectManagement ?? 'Projektmanagement',
-              onTap: () {
-                if (onCloseDrawer != null) {
-                  onCloseDrawer!();
-                } else {
-                  Navigator.pop(context);
-                }
-                Navigator.pushNamed(context, '/project-management');
-              },
             ),
           ],
         ),

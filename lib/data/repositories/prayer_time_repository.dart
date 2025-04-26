@@ -1,14 +1,21 @@
 // lib/data/repositories/prayer_time_repository.dart
 
 import 'dart:convert';
+import 'dart:ui';
+import 'package:googleapis/calendar/v3.dart';
 import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:Taqvimi/models/enums.dart';
+import 'package:syncfusion_flutter_calendar/calendar.dart';
 import '../database_helper.dart';
 import 'package:flutter/foundation.dart';
-///TODO: Erklären, was heir gemacht wird. Liste von den Funktionen kurz beschrieben in 1-3 Worten.
-///
+/// Repository zur Verwaltung von Gebetszeiten
+/// - fetchAndSaveYearlyPrayerTimes: Lädt Jahresgebetszeiten
+/// - _hasFullYearInDB: Prüft Datenvollständigkeit
+/// - databaseHelper: DB-Zugriff
+/// - Weitere Funktionen für Abruf, Speicherung und Aktualisierung von Gebetszeiten
+
 class PrayerTimeRepository {
   final DatabaseHelper dbHelper = DatabaseHelper();
 
@@ -262,4 +269,23 @@ class PrayerTimeRepository {
     final yyyy = parts[2].padLeft(4, '0');
     return '$yyyy-$mm-$dd';
   }
+}
+
+List<TimeRegion> _getTimeRegions(startTime, endtime) {
+  return <TimeRegion>[
+    TimeRegion(
+      startTime: DateTime.now(),
+      endTime: DateTime.now().add(const Duration(hours: 1)),
+      enablePointerInteraction: false,
+      color: const Color.fromARGB(99, 80, 80, 80),
+      text: 'Blockiert',
+    ),
+    TimeRegion(
+      startTime: DateTime(2024, 4, 17, 14, 0),
+      endTime: DateTime(2024, 4, 17, 15, 0),
+      enablePointerInteraction: false,
+      color: const Color.fromARGB(99, 80, 80, 80),
+      text: 'Pause',
+    ),
+  ];
 }

@@ -7027,4 +7027,105 @@ class AppLocalizations extends ChangeNotifier {
         return 'Reminder';
     }
   }
+
+  // NEU: Hinzugefügte Lokalisierungen für AppointmentDetailsPage (iOS)
+  String get details {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Details';
+      case AppLanguage.turkish:
+        return 'Detaylar';
+      case AppLanguage.arabic:
+        return 'تفاصيل';
+      case AppLanguage.bosnian:
+        return 'Detalji';
+      case AppLanguage.spanish:
+        return 'Detalles';
+      case AppLanguage.persian:
+        return 'جزئیات';
+      case AppLanguage.english:
+      default:
+        return 'Details';
+    }
+  }
+
+  String get yes {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Ja';
+      case AppLanguage.turkish:
+        return 'Evet';
+      case AppLanguage.arabic:
+        return 'نعم';
+      case AppLanguage.bosnian:
+        return 'Da';
+      case AppLanguage.spanish:
+        return 'Sí';
+      case AppLanguage.persian:
+        return 'بله';
+      case AppLanguage.english:
+      default:
+        return 'Yes';
+    }
+  }
+
+  String get prayerTimeDetails {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Gebetszeit-Details';
+      case AppLanguage.turkish:
+        return 'Namaz Vakti Detayları';
+      case AppLanguage.arabic:
+        return 'تفاصيل وقت الصلاة';
+      case AppLanguage.bosnian:
+        return 'Detalji o vremenu molitve';
+      case AppLanguage.spanish:
+        return 'Detalles del tiempo de oración';
+      case AppLanguage.persian:
+        return 'جزئیات وقت نماز';
+      case AppLanguage.english:
+      default:
+        return 'Prayer Time Details';
+    }
+  }
+
+  String get lastSync {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Letzte Synchronisierung';
+      case AppLanguage.turkish:
+        return 'Son Senkronizasyon';
+      case AppLanguage.arabic:
+        return 'آخر مزامنة';
+      case AppLanguage.bosnian:
+        return 'Posljednja sinhronizacija';
+      case AppLanguage.spanish:
+        return 'Última sincronización';
+      case AppLanguage.persian:
+        return 'آخرین همگام سازی';
+      case AppLanguage.english:
+      default:
+        return 'Last Sync';
+    }
+  }
+
+  String get syncedWithGoogle {
+    switch (_currentLanguage) {
+      case AppLanguage.german:
+        return 'Mit Google Kalender synchronisiert';
+      case AppLanguage.turkish:
+        return 'Google Takvim ile senkronize edildi';
+      case AppLanguage.arabic:
+        return 'تمت المزامنة مع تقويم Google';
+      case AppLanguage.bosnian:
+        return 'Sinhronizovano sa Google kalendarom';
+      case AppLanguage.spanish:
+        return 'Sincronizado con Google Calendar';
+      case AppLanguage.persian:
+        return 'همگام سازی شده با تقویم گوگل';
+      case AppLanguage.english:
+      default:
+        return 'Synced with Google Calendar';
+    }
+  }
 }

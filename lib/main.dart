@@ -116,6 +116,10 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => prayerTimeService,
         ),
+        // RecurrenceService als Provider
+        Provider<RecurrenceService>(
+          create: (_) => recurrenceService,
+        ),
         // Google Calendar Service als Provider
         Provider(
           create: (_) => googleCalendarService,
@@ -132,7 +136,10 @@ void main() async {
         Provider(
           create: (_) => appointmentRepository,
         ),
-        
+        // PrayerTimeRepository als Provider
+        Provider<PrayerTimeRepository>(
+          create: (_) => prayerTimeRepository,
+        ),
       ],
       child: const MyApp(),
     ),
