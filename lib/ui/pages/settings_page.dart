@@ -1208,10 +1208,7 @@ class _SettingsPageState extends State<SettingsPage> {
           padding: const EdgeInsets.all(16.0),
           child: TextButton.icon(
             icon: const Icon(Icons.add),
-            label: Text(loc.connectWithOutlookCalendar,
-                style: const TextStyle(
-                  inherit: true,
-                )),
+            label: Text(loc.connectWithOutlookCalendar),
             onPressed: () async {
               try {
                 // Placeholder für Outlook-Verbindungsimplementierung

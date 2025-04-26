@@ -307,6 +307,18 @@ class PlatformAdaptiveTheme {
           ),
         ),
       ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: seedColor,
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.w600,
+          ),
+          padding: EdgeInsets.symmetric(
+            horizontal: defaultSpacing * 1.5,
+            vertical: defaultSpacing,
+          ),
+        ),
+      ),
     );
   }
 }

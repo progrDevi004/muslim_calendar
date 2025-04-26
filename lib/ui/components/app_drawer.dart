@@ -350,11 +350,10 @@ class AppDrawer extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               PlatformAdaptiveListTile(
-                leading: const Icon(Icons.sync, color: logoColor),
+                leading: const Icon(Icons.sync_outlined),
                 title: localizations.fullSync,
                 subtitle: localizations.importAndExport,
-                titleStyle:
-                    const TextStyle(fontWeight: FontWeight.bold, inherit: true),
+                titleStyle: const TextStyle(fontWeight: FontWeight.bold),
                 onTap: () async {
                   Navigator.pop(context);
                   try {
@@ -390,11 +389,10 @@ class AppDrawer extends StatelessWidget {
                 },
               ),
               PlatformAdaptiveListTile(
-                leading: const Icon(Icons.download, color: logoColor),
+                leading: const Icon(Icons.download),
                 title: localizations.importOnly,
                 subtitle: localizations.importFromCalendar,
-                titleStyle:
-                    const TextStyle(fontWeight: FontWeight.bold, inherit: true),
+                titleStyle: const TextStyle(fontWeight: FontWeight.bold),
                 onTap: () {
                   Navigator.pop(context);
                   calendarSyncService.importAppointments();
@@ -402,11 +400,10 @@ class AppDrawer extends StatelessWidget {
                 },
               ),
               PlatformAdaptiveListTile(
-                leading: const Icon(Icons.upload, color: logoColor),
+                leading: const Icon(Icons.import_export_outlined),
                 title: localizations.exportOnly,
                 subtitle: localizations.exportToCalendar,
-                titleStyle:
-                    const TextStyle(fontWeight: FontWeight.bold, inherit: true),
+                titleStyle: const TextStyle(fontWeight: FontWeight.bold),
                 onTap: () async {
                   Navigator.pop(context);
                   try {

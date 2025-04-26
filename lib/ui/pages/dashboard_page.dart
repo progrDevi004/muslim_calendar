@@ -579,7 +579,6 @@ class DashboardPageState extends State<DashboardPage> {
               titleStyle: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
-                inherit: true,
               ),
             ),
 
@@ -590,8 +589,7 @@ class DashboardPageState extends State<DashboardPage> {
                   color: iconColor),
               title: localizations.useExistingCategories,
               subtitle: localizations.searchForMatchingCategories,
-              titleStyle:
-                  const TextStyle(fontWeight: FontWeight.bold, inherit: true),
+              titleStyle: const TextStyle(fontWeight: FontWeight.bold),
               onTap: () async {
                 Navigator.pop(globalContext);
 
@@ -616,8 +614,7 @@ class DashboardPageState extends State<DashboardPage> {
                   color: iconColor),
               title: localizations.createNewCategories,
               subtitle: localizations.forEachNewAppointment,
-              titleStyle:
-                  const TextStyle(fontWeight: FontWeight.bold, inherit: true),
+              titleStyle: const TextStyle(fontWeight: FontWeight.bold),
               onTap: () async {
                 Navigator.pop(globalContext);
 
