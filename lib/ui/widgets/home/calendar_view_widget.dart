@@ -66,7 +66,7 @@ class CalendarViewWidget extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 100),
       child: Localizations.override(
         context: context,
         locale: Locale(languageCode),

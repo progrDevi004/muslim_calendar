@@ -65,55 +65,58 @@ class HomeNavigationBar extends StatelessWidget {
     const Color logoColor = Color(0xFF468178);
 
     return Container(
-      height: 60,
+      height: 80,
       decoration: BoxDecoration(
         color: CupertinoColors.systemBackground,
         border: Border(
           top: BorderSide(color: CupertinoColors.separator),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          // Dashboard
-          _buildIOSTabItem(
-            context,
-            CupertinoIcons.home,
-            localizations.dashboard,
-            0,
-            selectedIndex == 0,
-          ),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 16.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            // Dashboard
+            _buildIOSTabItem(
+              context,
+              CupertinoIcons.home,
+              localizations.dashboard,
+              0,
+              selectedIndex == 0,
+            ),
 
-          // Day
-          _buildIOSTabItem(
-            context,
-            CupertinoIcons.calendar_today,
-            localizations.day,
-            1,
-            selectedIndex == 1,
-          ),
+            // Day
+            _buildIOSTabItem(
+              context,
+              CupertinoIcons.calendar_today,
+              localizations.day,
+              1,
+              selectedIndex == 1,
+            ),
 
-          // Mittiger "+"-Button
-          _buildAddButton(context),
+            // Mittiger "+"-Button
+            _buildAddButton(context),
 
-          // Week
-          _buildIOSTabItem(
-            context,
-            CupertinoIcons.calendar,
-            localizations.week,
-            2,
-            selectedIndex == 2,
-          ),
+            // Week
+            _buildIOSTabItem(
+              context,
+              CupertinoIcons.calendar,
+              localizations.week,
+              2,
+              selectedIndex == 2,
+            ),
 
-          // Month
-          _buildIOSTabItem(
-            context,
-            CupertinoIcons.calendar_badge_plus,
-            localizations.month,
-            3,
-            selectedIndex == 3,
-          ),
-        ],
+            // Month
+            _buildIOSTabItem(
+              context,
+              CupertinoIcons.calendar_badge_plus,
+              localizations.month,
+              3,
+              selectedIndex == 3,
+            ),
+          ],
+        ),
       ),
     );
   }
