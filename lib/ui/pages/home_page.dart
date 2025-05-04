@@ -570,8 +570,8 @@ class HomePageState extends State<HomePage> {
 
             // Berechne den ersten und letzten Tag der sichtbaren Woche
             DateTime firstDay =
-                displayDate.subtract(Duration(days: displayDate.day - 90));
-            DateTime lastDay = firstDay.add(Duration(days: 250));
+                displayDate.subtract(Duration(days: displayDate.day));
+            DateTime lastDay = firstDay.add(Duration(days: 7));
 
             // Für jeden Tag der Woche (Montag bis Sonntag) Gebetszeiten erstellen
             for (int i = 0; i < 340; i++) {

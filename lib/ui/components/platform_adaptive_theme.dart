@@ -24,7 +24,7 @@ class PlatformAdaptiveTheme {
       fontFamily: fontFamily,
       colorScheme: ColorScheme.fromSeed(seedColor: seedColor),
       // CupertinoTheme für Light Mode
-      cupertinoOverrideTheme: CupertinoThemeData(
+      cupertinoOverrideTheme: const CupertinoThemeData(
         brightness: Brightness.light,
         primaryColor: seedColor,
         textTheme: CupertinoTextThemeData(
