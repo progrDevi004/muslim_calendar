@@ -2651,20 +2651,20 @@ class AppLocalizations extends ChangeNotifier {
   String get upcomingTasksLabel {
     switch (_currentLanguage) {
       case AppLanguage.german:
-        return "Anstehende Termine";
+        return "Anstehende Termine heute";
       case AppLanguage.turkish:
-        return "Yaklaşan Randevular";
+        return "Bugünkü Randevular";
       case AppLanguage.arabic:
-        return "المواعيد القادمة";
+        return "مواعيد اليوم";
       case AppLanguage.bosnian:
-        return "Nadolazeći termini";
+        return "Današnji termini";
       case AppLanguage.spanish:
-        return "Próximas citas";
+        return "Citas de hoy";
       case AppLanguage.persian:
-        return "قرارهای پیش رو";
+        return "قرارهای امروز";
       case AppLanguage.english:
       default:
-        return "Upcoming Appointments";
+        return "Today's Appointments";
     }
   }
 
