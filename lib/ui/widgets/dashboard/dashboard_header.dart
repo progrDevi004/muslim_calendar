@@ -28,16 +28,13 @@ class DashboardHeader extends StatelessWidget {
         ? TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 18,
-            color: isDark ? Colors.white : Colors.black,
-            inherit: true,
+            color: isDark ? Colors.white : Colors.black87,
           )
-        : Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                  inherit: true,
-                ) ??
-            const TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 20, inherit: true);
+        : TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: isDark ? Colors.white : Colors.black87,
+          );
 
     // Plattformspezifisches Padding
     final EdgeInsets padding = Platform.isIOS

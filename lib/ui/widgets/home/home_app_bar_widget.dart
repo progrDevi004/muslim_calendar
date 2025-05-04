@@ -6,7 +6,6 @@ import 'package:Taqvimi/ui/components/platform_adaptive_app_bar.dart';
 import 'package:provider/provider.dart';
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
-  final VoidCallback onQiblaCompassPressed;
   final VoidCallback onSettingsPressed;
   final VoidCallback onCategoryFilterPressed;
   final VoidCallback onSyncPressed;
@@ -15,7 +14,6 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   const HomeAppBar({
     super.key,
-    required this.onQiblaCompassPressed,
     required this.onSettingsPressed,
     required this.onCategoryFilterPressed,
     required this.onSyncPressed,

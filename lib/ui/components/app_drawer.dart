@@ -14,7 +14,6 @@ import 'package:Taqvimi/ui/components/platform_adaptive_dialog.dart';
 
 // Seiten für Navigation
 import 'package:Taqvimi/ui/pages/settings_page.dart';
-import 'package:Taqvimi/ui/pages/qibla_compass_page.dart';
 import 'package:Taqvimi/ui/widgets/home/category_filter_dialog.dart';
 
 // Services
@@ -81,22 +80,6 @@ class AppDrawer extends StatelessWidget {
 
     // Callback für Settings-Update
     onSettingsOpen();
-  }
-
-  /// Öffnet den Qibla-Kompass
-  Future<void> _openQiblaCompass(BuildContext context) async {
-    // Schließe den Drawer, falls vorhanden
-    if (onCloseDrawer != null) {
-      onCloseDrawer!();
-    } else {
-      Navigator.pop(context);
-    }
-
-    // Speichern der Route, um keinen BuildContext über async gap zu verwenden
-    final route =
-        MaterialPageRoute(builder: (context) => const QiblaCompassPage());
-
-    await Navigator.of(context).push(route);
   }
 
   /// Zeigt den Dialog zum Filtern nach Kategorien an
@@ -455,42 +438,89 @@ class AppDrawer extends StatelessWidget {
     });
   }
 
+  // Hilfsmethode zum Erstellen von PlatformAdaptiveListTile mit korrekten Dark Mode-Farben
+  Widget _buildMenuTile(
+    BuildContext context, {
+    required String title,
+    required IconData androidIcon,
+    required IconData iOSIcon,
+    required VoidCallback onTap,
+    String? subtitle,
+  }) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDarkMode ? Colors.white : Colors.black87;
+    final iconColor = logoColor;
+
+    return PlatformAdaptiveListTile(
+      title: title,
+      subtitle: subtitle,
+      leading: Icon(
+        Platform.isIOS ? iOSIcon : androidIcon,
+        color: iconColor,
+      ),
+      titleStyle: TextStyle(
+        fontWeight: FontWeight.bold,
+        color: textColor, // Explizite Textfarbe
+      ),
+      subtitleStyle: subtitle != null
+          ? TextStyle(
+              color: textColor
+                  .withOpacity(0.7), // Explizite Subtitlefarbe mit Transparency
+            )
+          : null,
+      onTap: onTap,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isIOS = Platform.isIOS;
-    final theme = Theme.of(context);
-    final loc = Provider.of<AppLocalizations>(context);
+    final localizations = Provider.of<AppLocalizations>(context);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDarkMode ? Colors.white : Colors.black87;
+    final backgroundColor = isDarkMode ? Colors.grey[900] : Colors.white;
 
     return Drawer(
-      backgroundColor: isIOS
-          ? CupertinoColors.systemBackground
-          : theme.drawerTheme.backgroundColor,
+      backgroundColor: backgroundColor, // Expliziter Hintergrund für Dark Mode
       child: SafeArea(
-        child: Column(
+        child: ListView(
+          padding: EdgeInsets.zero,
           children: [
-            // Logo und Titel
+            // Header mit Logo und App-Namen
             Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: isIOS
-                    ? CupertinoColors.systemBackground
-                    : theme.drawerTheme.backgroundColor,
-                border: Border(
-                  bottom: BorderSide(
-                    color:
-                        isIOS ? CupertinoColors.separator : theme.dividerColor,
-                  ),
-                ),
-              ),
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
               child: Row(
                 children: [
-                  Image.asset(
-                    Theme.of(context).brightness == Brightness.dark
-                        ? 'assets/images/text_dark.png'
-                        : 'assets/images/text_light.png',
-                    height: 30,
+                  const CircleAvatar(
+                    backgroundColor: logoColor,
+                    radius: 25,
+                    child: Icon(
+                      Icons.calendar_month,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Taqvimi',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: textColor, // Dynamische Textfarbe
+                        ),
+                      ),
+                      Text(
+                        'Muslim Calendar App',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: textColor.withOpacity(
+                              0.7), // Dynamische Textfarbe mit Opacity
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -498,45 +528,34 @@ class AppDrawer extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Menu Items
-            PlatformAdaptiveNavigation.buildNavigationItem(
-              context: context,
-              title: loc.settings,
+            const Divider(),
+
+            // Navigationseinträge mit expliziten Dark Mode-Anpassungen
+            _buildMenuTile(
+              context,
+              title: localizations.settings,
               androidIcon: Icons.settings,
               iOSIcon: CupertinoIcons.settings,
-              iconColor: logoColor,
               onTap: () => _openSettings(context),
             ),
 
-            PlatformAdaptiveNavigation.buildNavigationItem(
-              context: context,
-              title: loc.qiblaCompass,
-              androidIcon: Icons.explore,
-              iOSIcon: CupertinoIcons.compass,
-              iconColor: logoColor,
-              onTap: () => _openQiblaCompass(context),
-            ),
-
-            PlatformAdaptiveNavigation.buildNavigationItem(
-              context: context,
-              title: loc.categoryLabel,
+            _buildMenuTile(
+              context,
+              title: localizations.categoryLabel,
               androidIcon: Icons.category,
               iOSIcon: CupertinoIcons.tag,
-              iconColor: logoColor,
               onTap: () => _showCategoryFilterDialog(context),
             ),
 
-            const SizedBox(height: 8),
-            const Divider(),
-            const SizedBox(height: 8),
-
-            PlatformAdaptiveNavigation.buildNavigationItem(
-              context: context,
-              title: loc.synchronization,
+            _buildMenuTile(
+              context,
+              title: localizations.synchronization,
               androidIcon: Icons.sync,
               iOSIcon: CupertinoIcons.arrow_2_circlepath,
-              iconColor: logoColor,
               onTap: () => _showSyncOptionsDialog(context),
             ),
+
+            const Divider(),
           ],
         ),
       ),

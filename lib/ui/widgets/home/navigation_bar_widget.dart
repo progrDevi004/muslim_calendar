@@ -166,19 +166,19 @@ class HomeNavigationBar extends StatelessWidget {
           onAppointmentAdded!();
         }
       },
-      child: Column(
+      child: const Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Einfaches, größeres Plus-Icon im nativen iOS-Stil
-          const Icon(
+          Icon(
             CupertinoIcons.add,
             color: logoColor,
             size: 30,
           ),
 
           // Optional: Text unter dem Icon (wie bei anderen Tab Items)
-          const SizedBox(height: 4),
-          const Text(
+          SizedBox(height: 4),
+          Text(
             "Neu",
             style: TextStyle(
               fontSize: 11,

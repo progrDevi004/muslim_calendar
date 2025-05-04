@@ -404,38 +404,39 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final loc = Provider.of<AppLocalizations>(context);
-    final theme = Theme.of(context);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    Widget settingsContent = SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: _buildSettingsContent(context),
-        ),
-      ),
-    );
+    // Plattformspezifischer Zurück-Button
+    final leadingButton = _isIos
+        ? CupertinoButton(
+            padding: EdgeInsets.zero,
+            child: const Icon(CupertinoIcons.back),
+            onPressed: () => Navigator.of(context).pop(),
+          )
+        : IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).pop(),
+          );
 
-    if (_isIos) {
-      return CupertinoPageScaffold(
-        navigationBar: CupertinoNavigationBar(
-          middle: Text(loc.settings),
-          backgroundColor: theme.scaffoldBackgroundColor,
-        ),
-        backgroundColor: theme.scaffoldBackgroundColor,
-        child: Material(
-          type: MaterialType.transparency,
-          child: settingsContent,
-        ),
-      );
-    } else {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text(loc.settings),
-        ),
-        body: settingsContent,
-      );
-    }
+    return _isIos
+        ? CupertinoPageScaffold(
+            navigationBar: CupertinoNavigationBar(
+              middle: Text(loc.settings),
+              leading: leadingButton,
+            ),
+            child: Material(
+              // Material Widget für iOS, um ListTile zu unterstützen
+              type: MaterialType.transparency,
+              child: _buildSettingsList(context, isDarkMode),
+            ),
+          )
+        : Scaffold(
+            appBar: AppBar(
+              title: Text(loc.settings),
+              leading: leadingButton,
+            ),
+            body: _buildSettingsList(context, isDarkMode),
+          );
   }
 
   List<Widget> _buildSettingsContent(BuildContext context) {
@@ -1496,6 +1497,19 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         );
       },
+    );
+  }
+
+  // Baut die Liste der Einstellungen auf
+  Widget _buildSettingsList(BuildContext context, bool isDarkMode) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: _buildSettingsContent(context),
+        ),
+      ),
     );
   }
 }

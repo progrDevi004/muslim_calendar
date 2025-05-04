@@ -28,7 +28,6 @@ import 'package:Taqvimi/ui/pages/appointment_creation_page.dart';
 // Andere Pages
 import 'package:Taqvimi/ui/pages/home_page.dart';
 import 'package:Taqvimi/ui/pages/settings_page.dart';
-import 'package:Taqvimi/ui/pages/qibla_compass_page.dart';
 
 // Dashboard Widgets
 import 'package:Taqvimi/ui/widgets/dashboard/dashboard_content.dart';
@@ -231,16 +230,6 @@ class DashboardPageState extends State<DashboardPage> {
     // HomePage aktualisieren falls nötig
     final homePageState = context.findAncestorStateOfType<HomePageState>();
     homePageState?.loadAllAppointments();
-  }
-
-  /// Öffnet den Qibla-Kompass
-  Future<void> _openQiblaCompass() async {
-    // Schließe den Drawer, falls er offen ist
-    Navigator.pop(context);
-
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const QiblaCompassPage()),
-    );
   }
 
   /// Zeigt den Dialog zum Filtern nach Kategorien an

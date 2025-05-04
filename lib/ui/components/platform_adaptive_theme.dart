@@ -23,6 +23,30 @@ class PlatformAdaptiveTheme {
       useMaterial3: true,
       fontFamily: fontFamily,
       colorScheme: ColorScheme.fromSeed(seedColor: seedColor),
+      // CupertinoTheme für Light Mode
+      cupertinoOverrideTheme: CupertinoThemeData(
+        brightness: Brightness.light,
+        primaryColor: seedColor,
+        textTheme: CupertinoTextThemeData(
+          navLargeTitleTextStyle: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 26.0,
+            color: Colors.black87, // Explizite Farbe für Light Mode
+            inherit: true,
+          ),
+          navTitleTextStyle: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 17.0,
+            color: Colors.black87, // Explizite Farbe für Light Mode
+            inherit: true,
+          ),
+          textStyle: TextStyle(
+            fontSize: 16.0,
+            color: Colors.black87, // Explizite Farbe für Light Mode
+            inherit: true,
+          ),
+        ),
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor:
             isIOS ? CupertinoColors.systemBackground : Colors.white,
@@ -210,12 +234,80 @@ class PlatformAdaptiveTheme {
 
     return ThemeData.dark().copyWith(
       useMaterial3: true,
+      // CupertinoTheme für Dark Mode
+      cupertinoOverrideTheme: CupertinoThemeData(
+        brightness: Brightness.dark,
+        primaryColor: seedColor,
+        textTheme: CupertinoTextThemeData(
+          navLargeTitleTextStyle: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 26.0,
+            color: Colors.white, // Explizite Farbe für Dark Mode
+            inherit: true,
+          ),
+          navTitleTextStyle: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 17.0,
+            color: Colors.white, // Explizite Farbe für Dark Mode
+            inherit: true,
+          ),
+          textStyle: TextStyle(
+            fontSize: 16.0,
+            color: Colors.white, // Explizite Farbe für Dark Mode
+            inherit: true,
+          ),
+        ),
+      ),
+      // Erweitertes textTheme für Dark Mode mit allen benötigten Stilen
       textTheme: TextTheme(
-        bodyMedium: TextStyle(fontFamily: fontFamily),
+        // Basis-Textstile
+        bodyLarge: TextStyle(color: Colors.white, fontFamily: fontFamily),
+        bodyMedium: TextStyle(color: Colors.white, fontFamily: fontFamily),
+        bodySmall: TextStyle(color: Colors.white70, fontFamily: fontFamily),
+
+        // Titel-Textstile
+        displayLarge: TextStyle(
+            color: Colors.white,
+            fontFamily: fontFamily,
+            fontWeight: FontWeight.bold),
+        displayMedium: TextStyle(
+            color: Colors.white,
+            fontFamily: fontFamily,
+            fontWeight: FontWeight.bold),
+        displaySmall: TextStyle(
+            color: Colors.white,
+            fontFamily: fontFamily,
+            fontWeight: FontWeight.bold),
+
+        headlineLarge: TextStyle(color: Colors.white, fontFamily: fontFamily),
+        headlineMedium: TextStyle(color: Colors.white, fontFamily: fontFamily),
+        headlineSmall: TextStyle(color: Colors.white, fontFamily: fontFamily),
+
+        titleLarge: TextStyle(
+            color: Colors.white,
+            fontFamily: fontFamily,
+            fontWeight: FontWeight.w600),
+        titleMedium: TextStyle(
+            color: Colors.white,
+            fontFamily: fontFamily,
+            fontWeight: FontWeight.w600),
+        titleSmall: TextStyle(
+            color: Colors.white,
+            fontFamily: fontFamily,
+            fontWeight: FontWeight.w600),
+
+        labelLarge: TextStyle(color: Colors.white, fontFamily: fontFamily),
+        labelMedium: TextStyle(color: Colors.white, fontFamily: fontFamily),
+        labelSmall: TextStyle(color: Colors.white70, fontFamily: fontFamily),
       ),
       colorScheme: ColorScheme.fromSeed(
         seedColor: seedColor,
         brightness: Brightness.dark,
+        // Definiere spezifische Farben für den Dark Mode
+        surface: Colors.grey[850],
+        background: Colors.black,
+        onBackground: Colors.white,
+        onSurface: Colors.white,
       ),
       appBarTheme: AppBarTheme(
         backgroundColor:
@@ -239,7 +331,7 @@ class PlatformAdaptiveTheme {
                   color: CupertinoColors.systemGrey5.darkColor, width: 0.5)
               : BorderSide.none,
         ),
-        color: isIOS ? CupertinoColors.systemGrey6.darkColor : Colors.grey[900],
+        color: isIOS ? CupertinoColors.systemGrey6.darkColor : Colors.grey[850],
         margin: EdgeInsets.all(defaultSpacing),
       ),
       dialogTheme: DialogTheme(
@@ -273,6 +365,10 @@ class PlatformAdaptiveTheme {
           horizontal: defaultSpacing * 1.5,
           vertical: defaultSpacing,
         ),
+        labelStyle: TextStyle(color: Colors.white70),
+        hintStyle: TextStyle(color: Colors.white54),
+        suffixIconColor: Colors.white70,
+        prefixIconColor: Colors.white70,
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: seedColor,
@@ -309,7 +405,7 @@ class PlatformAdaptiveTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: seedColor,
+          foregroundColor: Colors.cyan[300],
           textStyle: const TextStyle(
             fontWeight: FontWeight.w600,
           ),
@@ -318,6 +414,66 @@ class PlatformAdaptiveTheme {
             vertical: defaultSpacing,
           ),
         ),
+      ),
+      drawerTheme: DrawerThemeData(
+        backgroundColor: isIOS
+            ? CupertinoColors.systemBackground.darkColor
+            : Colors.grey[900],
+        scrimColor: Colors.black54,
+        elevation: isIOS ? 0 : 8,
+      ),
+      // ListTile Theme für bessere Darstellung in Listen und Drawers
+      listTileTheme: ListTileThemeData(
+        textColor: Colors.white,
+        iconColor: Colors.white70,
+        tileColor: Colors.transparent,
+        selectedTileColor: seedColor.withOpacity(0.2),
+        selectedColor: seedColor,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16),
+      ),
+      dividerTheme: DividerThemeData(
+        thickness: isIOS ? 0.5 : 1.0,
+        space: isIOS ? 0.5 : 1.0,
+        color: isIOS
+            ? CupertinoColors.systemGrey5.darkColor
+            : Colors.grey.withOpacity(0.3),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: isIOS ? CupertinoColors.systemGrey6.darkColor : Colors.grey[850],
+        textStyle: TextStyle(color: Colors.white, fontFamily: fontFamily),
+        elevation: isIOS ? 4 : 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+      ),
+      // DatePicker für bessere Lesbarkeit im Dark Mode
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: isIOS
+            ? CupertinoColors.systemBackground.darkColor
+            : Colors.grey[850],
+        headerBackgroundColor: seedColor.withOpacity(0.8),
+        headerForegroundColor: Colors.white,
+        dayForegroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.white;
+          }
+          return Colors.white;
+        }),
+        dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return seedColor;
+          }
+          return null;
+        }),
+        todayForegroundColor: WidgetStateProperty.resolveWith((states) {
+          return seedColor;
+        }),
+        yearForegroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.white;
+          }
+          return Colors.white;
+        }),
       ),
     );
   }

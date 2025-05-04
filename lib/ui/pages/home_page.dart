@@ -36,7 +36,6 @@ import 'package:Taqvimi/ui/widgets/home/add_appointment_fab.dart';
 // Pages
 import 'package:Taqvimi/ui/pages/settings_page.dart';
 import 'package:Taqvimi/ui/pages/dashboard_page.dart';
-import 'package:Taqvimi/ui/pages/qibla_compass_page.dart';
 import 'package:Taqvimi/ui/pages/appointment_creation_page.dart';
 
 // Dialogs
@@ -666,7 +665,7 @@ class HomePageState extends State<HomePage> {
     } catch (e) {
       debugPrint('❌ Fehler beim Laden der Termine: $e');
     } finally {
-      _isLoadingAppointments = false; 
+      _isLoadingAppointments = false;
     }
 
     // Dashboard aktualisieren, falls es aktiv ist
@@ -738,12 +737,6 @@ class HomePageState extends State<HomePage> {
 
     // UI aktualisieren
     setState(() {});
-  }
-
-  Future<void> _openQiblaCompass() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const QiblaCompassPage()),
-    );
   }
 
   /// Verarbeitet Änderungen der Kalenderansicht
@@ -1196,7 +1189,6 @@ class HomePageState extends State<HomePage> {
       key: _scaffoldKey,
       appBar: _selectedNavIndex != 0
           ? HomeAppBar(
-              onQiblaCompassPressed: () => _openQiblaCompass(),
               onSettingsPressed: () => _openSettings(),
               onCategoryFilterPressed: () => _showCategoryFilterDialog(context),
               onSyncPressed: () {
