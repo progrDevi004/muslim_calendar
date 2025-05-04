@@ -82,54 +82,6 @@ class DashboardContent extends StatelessWidget {
             weekdayString: weekdayString,
           ),
 
-          // Kacheln für Wetter und Gebetszeiten
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Wetter-Kachel
-                Expanded(
-                  child: Container(
-                    margin: EdgeInsets.only(right: tileMargin),
-                    padding: EdgeInsets.all(tilePadding),
-                    decoration: BoxDecoration(
-                      color: accentCardColor,
-                      borderRadius: BorderRadius.circular(borderRadius),
-                    ),
-                    child: WeatherTile(
-                      temperature: weatherTemp,
-                      location: weatherLocation,
-                      symbol: weatherSymbol,
-                      errorMessage: weatherErrorMessage,
-                      isLoading: isWeatherLoading,
-                      accentTextColor: accentTextColor,
-                    ),
-                  ),
-                ),
-
-                // Gebetszeiten-Kachel
-                Expanded(
-                  child: Container(
-                    margin: EdgeInsets.only(left: tileMargin),
-                    padding: EdgeInsets.all(tilePadding),
-                    decoration: BoxDecoration(
-                      color: accentCardColor,
-                      borderRadius: BorderRadius.circular(borderRadius),
-                    ),
-                    child: PrayerTimeTile(
-                      prayerTimesDisplay: prayerTimesDisplay,
-                      errorMessage: prayerTimeErrorMessage,
-                      isLoading: isPrayerTimesLoading,
-                      accentTextColor: accentTextColor,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          SizedBox(height: betweenSectionsPadding),
-
           // Aufgabenliste
           TaskList(
             tasks: todayTasks,

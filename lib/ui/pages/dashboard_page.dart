@@ -644,108 +644,26 @@ class DashboardPageState extends State<DashboardPage> {
 
   /// Lädt alle Daten für das Dashboard: Wetter, Gebetszeiten, heutige Termine
   Future<void> _initData() async {
-    if (!mounted) return;
+    // Timer für Debug-Zwecke
+    // final timer = Stopwatch()..start();
 
-    final loc = Provider.of<AppLocalizations>(context, listen: false);
-    final languageCode = _mapAppLanguageToCode(loc.currentLanguage);
-    await initializeDateFormatting(languageCode, null);
-
-    if (!mounted) return; // Prüfung nach dem asynchronen Aufruf
-
+    // 1. Benutzereinstellungen laden
     final prefs = await SharedPreferences.getInstance();
     _use24hFormat = prefs.getBool('use24hFormat') ?? false;
     _showPrayerSlotsInDashboard =
         prefs.getBool('showPrayerSlotsInDashboard') ?? true;
 
-    if (!mounted) return; // Prüfung nach dem asynchronen Aufruf
-
-    setState(() {
-      _isWeatherLoading = true;
-      _isPrayerTimesLoading = true;
-      _isAppointmentsLoading = true;
-    });
-
+    // Gebetszeiten für die Slots in der Terminliste laden
     final defaultCountry = prefs.getString('defaultCountry') ?? 'Turkey';
     final defaultCity = prefs.getString('defaultCity') ?? 'Istanbul';
     final locationString = '$defaultCity,$defaultCountry';
-
-    // 1) Wetter
-    await _fetchWeather(defaultCity);
-
-    if (!mounted) return; // Prüfung nach dem asynchronen Aufruf
-
-    // 2) Gebetszeiten
     await _fetchPrayerTimesForToday(locationString);
 
-    if (!mounted) return; // Prüfung nach dem asynchronen Aufruf
-
-    // 3) Nur heutige Termine
+    // 3. Termine für heute laden
     await _loadTodayAppointments();
 
-    if (!mounted) return;
-
-    setState(() {});
-  }
-
-  /// Wetter abrufen
-  Future<void> _fetchWeather(String city) async {
-    if (!mounted) return; // Sicherheitsprüfung am Anfang
-
-    setState(() {
-      _isWeatherLoading = true;
-      _weatherErrorMessage = null;
-    });
-
-    const apiKey = 'ea71a51c210c3fa6760039a8b592c19c';
-    try {
-      final url = Uri.parse(
-        'https://api.openweathermap.org/data/2.5/weather?q=$city&units=metric&appid=$apiKey',
-      );
-
-      final response = await http.get(url).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw TimeoutException(
-              'Netzwerk-Timeout beim Abrufen der Wetterdaten');
-        },
-      );
-
-      if (!mounted) return; // Wichtige Prüfung nach asynchronem Aufruf
-
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        final temp = jsonData['main']['temp'];
-        final tempStr = '${temp.toStringAsFixed(1)}°C';
-
-        final mainCondition =
-            (jsonData['weather'] != null && jsonData['weather'].isNotEmpty)
-                ? (jsonData['weather'][0]['main'] as String?) ?? ''
-                : '';
-
-        final symbol = _mapWeatherSymbol(mainCondition);
-
-        setState(() {
-          _weatherTemp = tempStr;
-          _weatherSymbol = symbol;
-          _weatherLocation = city;
-          _weatherErrorMessage = null;
-          _isWeatherLoading = false;
-        });
-      } else {
-        setState(() {
-          _weatherErrorMessage = 'Weather error: ${response.statusCode}';
-          _isWeatherLoading = false;
-        });
-      }
-    } catch (e) {
-      if (!mounted) return; // Wichtige Prüfung vor setState im catch-Block
-
-      setState(() {
-        _weatherErrorMessage =
-            'Weather error:\nClientException with SocketException:\nFailed host lookup: \'openweathermap.org\'';
-        _isWeatherLoading = false;
-      });
-    }
+    // Debugging-Timer stoppen
+    // debugPrint("⏱ Dashboard Init: ${timer.elapsedMilliseconds}ms");
   }
 
   /// Gebetszeiten nur für HEUTE
