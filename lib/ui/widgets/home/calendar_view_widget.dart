@@ -39,20 +39,23 @@ class CalendarViewWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('🔍 CalendarViewWidget.build - mit ${specialTimeRegions.length} TimeRegions');
-    
+    debugPrint(
+        '🔍 CalendarViewWidget.build - mit ${specialTimeRegions.length} TimeRegions');
+
     // Debug: Zeige Details für TimeRegions, wenn vorhanden
     if (specialTimeRegions.isNotEmpty) {
       final firstRegion = specialTimeRegions.first;
-      debugPrint('🔍 Erste TimeRegion: ${firstRegion.text} von ${firstRegion.startTime} bis ${firstRegion.endTime}');
-      
+      debugPrint(
+          '🔍 Erste TimeRegion: ${firstRegion.text} von ${firstRegion.startTime} bis ${firstRegion.endTime}');
+
       // Gruppiere nach Tagen für besseres Debugging
       final Map<String, int> regionCountByDay = {};
       for (var region in specialTimeRegions) {
-        final day = "${region.startTime.year}-${region.startTime.month.toString().padLeft(2, '0')}-${region.startTime.day.toString().padLeft(2, '0')}";
+        final day =
+            "${region.startTime.year}-${region.startTime.month.toString().padLeft(2, '0')}-${region.startTime.day.toString().padLeft(2, '0')}";
         regionCountByDay[day] = (regionCountByDay[day] ?? 0) + 1;
       }
-      
+
       // Zeige Anzahl der Regionen pro Tag
       debugPrint('🔍 TimeRegion-Verteilung nach Tagen:');
       regionCountByDay.forEach((day, count) {
@@ -61,7 +64,7 @@ class CalendarViewWidget extends StatelessWidget {
     } else {
       debugPrint('⚠️ Keine TimeRegions verfügbar!');
     }
-    
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
       child: Localizations.override(
@@ -199,11 +202,22 @@ class CalendarViewWidget extends StatelessWidget {
             }
 
             // Für normale Termine in Tag- und Wochenansicht
+            // Hinzufügen von Margin, damit die Gebetszeiten sichtbar bleiben
             return Container(
+              margin:
+                  const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: appointment.color,
                 borderRadius: BorderRadius.circular(4),
+                // Optionaler Schatten für bessere Sichtbarkeit
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
@@ -232,7 +246,8 @@ class CalendarViewWidget extends StatelessWidget {
               CalendarView newView = calendarController.view!;
 
               // Debug-Info über verfügbare TimeRegions bei Ansichtswechsel
-              debugPrint('🔍 Ansichtswechsel zu $newView - ${specialTimeRegions.length} TimeRegions verfügbar');
+              debugPrint(
+                  '🔍 Ansichtswechsel zu $newView - ${specialTimeRegions.length} TimeRegions verfügbar');
 
               // Nur wenn sich die Ansicht tatsächlich geändert hat
               if (newView != selectedView) {
